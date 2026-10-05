@@ -1,0 +1,29 @@
+{
+  "notice_id": "5493b9ce-5ac5-4b9e-82cc-f4736b04d6b9",
+  "title": "천안 아이파크 시티 1단지(2회차)",
+  "status": "success",
+  "row_count": 1,
+  "criterion_date": "2026-06-26",
+  "rows": [
+    {
+      "unit_type": "084.9800A",
+      "residence_area": "local",
+      "min_score": 37.0,
+      "max_score": 60.0,
+      "average_score": 42.79,
+      "house_manage_no": "2026000300",
+      "notice_no": "2026000300",
+      "supply_type": "일반공급",
+      "rank": 1,
+      "selection_path": "points",
+      "verification": "official",
+      "source": "cheongyak_competition",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTCompetitionPopup.do?houseManageNo=2026000300&pblancNo=2026000300",
+      "evidence_text": "084.9800A / 139 / 1순위 / 해당지역 / 564 / 4.06 / 청약 접수 종료 / 해당지역 / 37 / 60 / 42.79",
+      "evidence_location": "#compitTbl · 1순위 당첨가점",
+      "document_hash": "e8565a10a2e32cd1fb48f8dd747e33284bb507fa16a8f0ce5cc7a4fc94fe7df7",
+      "observed_at": "2026-10-05T11:45:00.437815+00:00"
+    }
+  ],
+  "profileValuesInReport": false
+}

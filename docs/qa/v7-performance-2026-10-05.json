@@ -1,0 +1,312 @@
+{
+  "date": "2026-10-05",
+  "base": "http://localhost:8080",
+  "publicFixtureCount": 40,
+  "passed": 74,
+  "cohorts": [
+    {
+      "width": 1280,
+      "cpuSlowdown": 1,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "Input/click paint p95 is at most 100ms",
+        "Latest full result follows final typing within 1 second",
+        "거주지: removed repeated date/address/account questions stay absent",
+        "세대·주택: removed repeated date/address/account questions stay absent",
+        "청약통장: removed repeated date/address/account questions stay absent",
+        "Common history presence is asked once",
+        "소득·자산: removed repeated date/address/account questions stay absent",
+        "특별공급: removed repeated date/address/account questions stay absent",
+        "Unmarried profile is preserved",
+        "Unmarried profile does not ask marriage duration",
+        "Close flushes the latest draft before debounce",
+        "Focus changes alone issue no API request",
+        "Reload preserves the last draft",
+        "Page termination flushes the latest draft before debounce",
+        "Delayed obsolete worker reply cannot replace a newer profile",
+        "Only the coalesced latest worker revision is applied",
+        "Personal changes retain all notices, prices and competition rows",
+        "Personally unavailable notices remain gray",
+        "Unmarried known state creates no marriage-duration missing-input action",
+        "Opening conditions retains expanded evidence and scroll",
+        "Results keep every notice and every price",
+        "Results keep every official competition row",
+        "Unavailable competition rows stay gray rather than disappearing",
+        "Results have no horizontal overflow",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 32,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 28.4,
+          "p95Ms": 60.4,
+          "maximumMs": 60.4
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 28.4,
+          "p95Ms": 31.2,
+          "maximumMs": 31.2
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 26.2,
+          "p95Ms": 27.3,
+          "maximumMs": 27.3
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 27.8,
+          "p95Ms": 31.2,
+          "maximumMs": 60.4
+        },
+        "latestResultAfterTypingMs": 361.7,
+        "workerExecutionMs": [
+          0.1,
+          95.4,
+          54
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 225,
+            "startMs": 5
+          },
+          {
+            "durationMs": 134,
+            "startMs": 449
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "resultsSnapshot": {
+        "cards": 74,
+        "priceRows": 418,
+        "competitionRows": 1706,
+        "grayCompetitionRows": 4
+      },
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "cpuSlowdown": 1,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "Input/click paint p95 is at most 100ms",
+        "Latest full result follows final typing within 1 second",
+        "거주지: removed repeated date/address/account questions stay absent",
+        "세대·주택: removed repeated date/address/account questions stay absent",
+        "청약통장: removed repeated date/address/account questions stay absent",
+        "Common history presence is asked once",
+        "소득·자산: removed repeated date/address/account questions stay absent",
+        "특별공급: removed repeated date/address/account questions stay absent",
+        "Unmarried profile is preserved",
+        "Unmarried profile does not ask marriage duration",
+        "Close flushes the latest draft before debounce",
+        "Focus changes alone issue no API request",
+        "Reload preserves the last draft",
+        "Page termination flushes the latest draft before debounce",
+        "Delayed obsolete worker reply cannot replace a newer profile",
+        "Only the coalesced latest worker revision is applied",
+        "Personal changes retain all notices, prices and competition rows",
+        "Personally unavailable notices remain gray",
+        "Unmarried known state creates no marriage-duration missing-input action",
+        "Opening conditions retains expanded evidence and scroll",
+        "Results keep every notice and every price",
+        "Results keep every official competition row",
+        "Unavailable competition rows stay gray rather than disappearing",
+        "Results have no horizontal overflow",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 32,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 28.7,
+          "p95Ms": 29.6,
+          "maximumMs": 29.6
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 28.4,
+          "p95Ms": 28.9,
+          "maximumMs": 28.9
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 26.8,
+          "p95Ms": 27.6,
+          "maximumMs": 27.6
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 28.2,
+          "p95Ms": 29.3,
+          "maximumMs": 29.6
+        },
+        "latestResultAfterTypingMs": 383.1,
+        "workerExecutionMs": [
+          0,
+          82.5,
+          72.2
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 196,
+            "startMs": 4
+          },
+          {
+            "durationMs": 122,
+            "startMs": 395
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "resultsSnapshot": {
+        "cards": 74,
+        "priceRows": 418,
+        "competitionRows": 1706,
+        "grayCompetitionRows": 4
+      },
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "cpuSlowdown": 4,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "Input/click paint p95 is at most 100ms",
+        "Latest full result follows final typing within 1 second",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 10,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 39.3,
+          "p95Ms": 68.4,
+          "maximumMs": 68.4
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 21,
+          "p95Ms": 25.6,
+          "maximumMs": 25.6
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 26.1,
+          "p95Ms": 39.9,
+          "maximumMs": 39.9
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 27,
+          "p95Ms": 63.4,
+          "maximumMs": 68.4
+        },
+        "latestResultAfterTypingMs": 392.7,
+        "workerExecutionMs": [
+          0,
+          102.1,
+          58.3
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 1080,
+            "startMs": 6
+          },
+          {
+            "durationMs": 145,
+            "startMs": 1219
+          },
+          {
+            "durationMs": 126,
+            "startMs": 1373
+          },
+          {
+            "durationMs": 737,
+            "startMs": 1625
+          },
+          {
+            "durationMs": 72,
+            "startMs": 2655
+          },
+          {
+            "durationMs": 59,
+            "startMs": 2962
+          },
+          {
+            "durationMs": 92,
+            "startMs": 3190
+          },
+          {
+            "durationMs": 65,
+            "startMs": 3510
+          },
+          {
+            "durationMs": 51,
+            "startMs": 3693
+          },
+          {
+            "durationMs": 55,
+            "startMs": 4081
+          },
+          {
+            "durationMs": 65,
+            "startMs": 4946
+          },
+          {
+            "durationMs": 65,
+            "startMs": 5346
+          },
+          {
+            "durationMs": 54,
+            "startMs": 5777
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "resultsSnapshot": null,
+      "profileValuesInReport": false
+    }
+  ],
+  "profileValuesInReport": false,
+  "strictPerformance": true
+}

@@ -1,0 +1,55 @@
+{
+  "cpuSlowdown": 4,
+  "publicNotices": 40,
+  "actions": [
+    {
+      "action": "open",
+      "paintMs": 613,
+      "TaskDurationMs": 2315.0,
+      "ScriptDurationMs": 231.9,
+      "LayoutDurationMs": 1436.4,
+      "RecalcStyleDurationMs": 153.5
+    },
+    {
+      "action": "close",
+      "paintMs": 140.5,
+      "TaskDurationMs": 202.9,
+      "ScriptDurationMs": 130.9,
+      "LayoutDurationMs": 0.6,
+      "RecalcStyleDurationMs": 2.6
+    },
+    {
+      "action": "open",
+      "paintMs": 196.9,
+      "TaskDurationMs": 1292.5,
+      "ScriptDurationMs": 163.0,
+      "LayoutDurationMs": 784.3,
+      "RecalcStyleDurationMs": 10.3
+    },
+    {
+      "action": "close",
+      "paintMs": 186.6,
+      "TaskDurationMs": 252.4,
+      "ScriptDurationMs": 165.1,
+      "LayoutDurationMs": 0.9,
+      "RecalcStyleDurationMs": 4.5
+    },
+    {
+      "action": "open",
+      "paintMs": 314.2,
+      "TaskDurationMs": 566.1,
+      "ScriptDurationMs": 262.5,
+      "LayoutDurationMs": 13.6,
+      "RecalcStyleDurationMs": 13.7
+    },
+    {
+      "action": "close",
+      "paintMs": 220.2,
+      "TaskDurationMs": 347.2,
+      "ScriptDurationMs": 206.3,
+      "LayoutDurationMs": 1.1,
+      "RecalcStyleDurationMs": 3.2
+    }
+  ],
+  "profileValuesInReport": false
+}

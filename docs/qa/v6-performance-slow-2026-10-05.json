@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-05",
+  "base": "http://localhost:8080",
+  "publicFixtureCount": 40,
+  "passed": 10,
+  "cohorts": [
+    {
+      "width": 375,
+      "cpuSlowdown": 4,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "Input/click paint p95 is at most 100ms",
+        "Latest full result follows final typing within 1 second",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 10,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 24.5,
+          "p95Ms": 34.1,
+          "maximumMs": 34.1
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 37.6,
+          "p95Ms": 152.7,
+          "maximumMs": 152.7
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 24.3,
+          "p95Ms": 26.5,
+          "maximumMs": 26.5
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 24.8,
+          "p95Ms": 91.6,
+          "maximumMs": 152.7
+        },
+        "latestResultAfterTypingMs": 368.3,
+        "workerExecutionMs": [
+          0,
+          64.1,
+          45.4
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 938,
+            "startMs": 7
+          },
+          {
+            "durationMs": 57,
+            "startMs": 1038
+          },
+          {
+            "durationMs": 665,
+            "startMs": 1217
+          },
+          {
+            "durationMs": 124,
+            "startMs": 2316
+          },
+          {
+            "durationMs": 134,
+            "startMs": 2643
+          },
+          {
+            "durationMs": 126,
+            "startMs": 2995
+          },
+          {
+            "durationMs": 114,
+            "startMs": 3334
+          },
+          {
+            "durationMs": 112,
+            "startMs": 3617
+          },
+          {
+            "durationMs": 116,
+            "startMs": 3884
+          },
+          {
+            "durationMs": 117,
+            "startMs": 4151
+          },
+          {
+            "durationMs": 88,
+            "startMs": 4400
+          },
+          {
+            "durationMs": 142,
+            "startMs": 4568
+          },
+          {
+            "durationMs": 59,
+            "startMs": 4882
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "resultsSnapshot": null,
+      "profileValuesInReport": false
+    }
+  ],
+  "profileValuesInReport": false,
+  "strictPerformance": true
+}

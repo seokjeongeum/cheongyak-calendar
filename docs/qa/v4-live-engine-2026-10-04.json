@@ -1,0 +1,968 @@
+{
+  "base": "http://localhost:8080",
+  "asOf": "2026-10-04T14:17:32.010420+00:00",
+  "readOnly": {
+    "publicGetOnly": true,
+    "browserProfileRead": false,
+    "fictionalProfilesLocalOnly": true,
+    "profileValuesInReport": false
+  },
+  "engine": {
+    "sourceHashes": {
+      "types.ts": "086244e98bb1a7815b1720c39725281118fca0168d9bb83ac5270597b0db51fd",
+      "qualification.ts": "4e0d7c27a668e5772451f0377b4472fc8f5a7ef7b4156c792dfaf0e084060c2c",
+      "eligibility.ts": "391cbfb217982ca84e2d1ff37a3d1bbb06152f08f3c1e890040a051d05f4171c",
+      "competition.ts": "a203c1501f21b14f80f90fc1c4c57d1f751ef44d381cb5cda3a069df10b0a042",
+      "ownership.ts": "445bb2954a655729b8dba572c2adf6bb8be61a671c1b166c310a10f461fe24e1",
+      "regions.ts": "af22a29a8636e61306d1d479e6bfe9eba9f87803c8b08209dab324a07498cac0",
+      "household.ts": "75f5524464267a7fbdba4bdbb088c9de689f78cb17a180d1c94d6ba4b3d732ad",
+      "profile.ts": "c3d0343eae584003ceb03a094b0763571ef49d75f4a755fc8d2a527c1ce25459"
+    },
+    "bundleHash": "3b1c7b55d38fe581addb206dbab6278b008360fa1c1dfa126b74bd48e8e796ec"
+  },
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/notices/0f434f69-2838-4e6f-a186-445940910a13",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/ede290da-b467-42b9-a944-eae51d0fa705",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/1706ac8d-4c6a-4472-88fa-9a43dbdbf8da",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/342f3968-02fd-4d2a-aa79-71baecedf9c4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/46bcf351-feda-4a60-ab2d-2c29cbd2bc16",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/0458dfae-6269-4b94-b1fa-9e7034e805ee",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/dabc205e-71fb-4ce9-b0c9-ac75e58f9872",
+      "status": 200
+    }
+  ],
+  "publicNotices": {
+    "sejong": {
+      "id": "0f434f69-2838-4e6f-a186-445940910a13",
+      "title": "세종 우미 린 센터파크(행정중심복합도시 5-2생활권 S1블록, 글미마을 9단지)",
+      "version": 13,
+      "housingKind": "private",
+      "documentHash": "77bb487853d5002ecc64590d7466c3672b8d8149e9a50359d912d607a09b7959",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026910249&pblancNo=2026910249",
+      "priceRows": 3,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "official_document_parser",
+        "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910249&pblancNo=2026910249&atchmnflSeqNo=1988068&atchmnflSn=3",
+        "evidence_text": "구글플레이스토어 애플앱스토어 세종 우미 린 센터파크(행정중심복합도시 5-2생활권 S1블록, 글미마을 9단지) 무순위(사후) 입주자모집공고 청약Home 앱 설치 바로가기 ※ 단지 주요정보 (분양문의) 044-866-3666 주택유형 규제지역여부 무순위(사후) 자격요건 민영 비규제지역 무순위(사후) 입주자모집공고일 현재 세종특별자치시에 거주하는 무주택세대구성원 재당첨제한 전매제한 거주의무기간 분양가상한제 없음 최초 당첨자발표일(2026.08.19.)로부터 1년 없음 적용 구분 최초 무순위(사후) 무순위(사후) 접수일 당첨자발표일 서류접수 계약체결 입주자모집공고일 입주자모집공고일 일정 2026.07.31.(금) 2026.10.01.(목) 2026.10.06.(화) 2026.10.12.(월) 2026.10.14.(수) 2026.10.16.(금) 1 공통 유의사항 ■ 한국부동산원 청약홈 콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약홈 콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미 숙지, 착오신청 등에 대해서는 청약자 본인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 입주자모집공고는 2026.06.15. 시행된 「주택공급에 관한 규칙」이 적용됩니다. 이 공고문에 명시되지 않은 사항은 「주택법」, 「주택공급에 관한 규칙」 등 관계법령에 따릅니다. ■ 본 주택을 공급받으려는 경우에는 「주",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "무순위·임의공급 · 아파트 1·2순위 적용 없음",
+        "document_hash": "77bb487853d5002ecc64590d7466c3672b8d8149e9a50359d912d607a09b7959"
+      },
+      "rules": [
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-10-01",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910249&pblancNo=2026910249&atchmnflSeqNo=1988068&atchmnflSn=3",
+          "evidenceTextPresent": true,
+          "documentHash": "77bb487853d5002ecc64590d7466c3672b8d8149e9a50359d912d607a09b7959",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-10-01",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910249&pblancNo=2026910249&atchmnflSeqNo=1988068&atchmnflSn=3",
+          "evidenceTextPresent": true,
+          "documentHash": "77bb487853d5002ecc64590d7466c3672b8d8149e9a50359d912d607a09b7959",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026910249&pblancNo=2026910249",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "sillim": {
+      "id": "ede290da-b467-42b9-a944-eae51d0fa705",
+      "title": "신림스카이아파트(20차)",
+      "version": 13,
+      "housingKind": "private",
+      "documentHash": "81b9eb927a5fb657db5158a3cfe78fc8ad8322a3e9e52b0af4c0596afbd4343f",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026910250&pblancNo=2026910250",
+      "priceRows": 3,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "official_document_parser",
+        "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910250&pblancNo=2026910250&atchmnflSeqNo=1978039&atchmnflSn=2",
+        "evidence_text": "구글플레이스토어 애플앱스토어 신림스카이아파트 무순위(사후) (20차) 입주자모집공고 청약Home 앱 설치 바로가기 ※ 단지 주요정보 (분양문의) 02-877-9273 주택유형 규제지역여부 무순위(사후) 자격요건 민영 투기과열지구/청약과열지역 무순위(사후) 입주자모집공고일 현재 서울특별시에 거주하는 무주택세대구성원 재당첨제한 전매제한 거주의무기간 분양가상한제 10년 최초 당첨자 발표일(‘21.08.10.)로부터 없음 미적용 3년간 적용되어 현재 전매제한 도과 구분 최초 무순위(사후) 무순위(사후) 접수일 당첨자발표일 서류접수 및 계약체결 입주자모집공고일 입주자모집공고일 일정 ‘21.07.22.(목) ‘26.10.01.(목) ‘26.10.06.(화) ‘26.10.12.(월) ‘26.10.22.(목) ~ ’26.10.23.(금) 1 공통 유의사항 ■ 한국부동산원 청약홈 콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약홈 콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미 숙지, 착오신청 등에 대해서는 청약자 본인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 입주자모집공고는 2026.06.15. 시행된 「주택공급에 관한 규칙」이 적용됩니다. 이 공고문에 명시되지 않은 사항은 「주택법」, 「주택공급에 관한 규칙」 등 관계법령에 따릅니다. ■ 2024.10.01. 시행된 「주택공급에 관한 규칙",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "무순위·임의공급 · 아파트 1·2순위 적용 없음",
+        "document_hash": "81b9eb927a5fb657db5158a3cfe78fc8ad8322a3e9e52b0af4c0596afbd4343f"
+      },
+      "rules": [
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-10-01",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910250&pblancNo=2026910250&atchmnflSeqNo=1978039&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "81b9eb927a5fb657db5158a3cfe78fc8ad8322a3e9e52b0af4c0596afbd4343f",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-10-01",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910250&pblancNo=2026910250&atchmnflSeqNo=1978039&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "81b9eb927a5fb657db5158a3cfe78fc8ad8322a3e9e52b0af4c0596afbd4343f",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026910250&pblancNo=2026910250",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "gang": {
+      "id": "1706ac8d-4c6a-4472-88fa-9a43dbdbf8da",
+      "title": "강변역 센트럴 아이파크",
+      "version": 14,
+      "housingKind": "private",
+      "documentHash": "97987f527a961051724f6561aca34451e3131a23ae9e11a0c65ee53ddee1d98e",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026930040&pblancNo=2026930040",
+      "priceRows": 2,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "official_document_parser",
+        "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930040&pblancNo=2026930040&atchmnflSeqNo=1982993&atchmnflSn=5",
+        "evidence_text": "구글플레이스토어 애플앱스토어 강변역 센트럴 아이파크 불법행위재공급 입주자모집공고 청약Home 앱 설치 바로가기 ※ 단지 주요정보 (분양문의)1551-3560 주택유형 규제지역여부 거주요건 재당첨제한 민영 투기과열지구/청약과열지역 서울특별시 거주자 10년 전매제한 거주의무기간 분양가상한제 택지유형 최초 당첨자발표일(2024.06.19.)로부터 없음 미적용 민간택지 3년간 적용 구분 입주자모집공고일 일반공급 청약 접수일 당첨자발표일 서류접수 계약체결 일정 2026.09.23.(수) 2026.10.06.(화) 2026.10.12.(월) 2026.10.14.(2026.10.15.(수목))~2026.10.23.(금) ※ 공통 유의사항 ■ 한국부동산원 청약홈 콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미숙지, 착오신청 등에 대해서는 청약자 본인에 게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 아파트는 2026.06.15. 시행된 「주택공급에 관한 규칙」이 적용됩니다. 이 공고문에 명시되지 않은 사항은 「주택법」, 「주택공급에 관한 규칙」 등 관계법령에 따릅니다. ■ 2024.10.01. 시행된 「주택공급에 관한 규칙」에 따라, 민간 사전청약 당첨자 및 그 세대원은 ‘24.10.01.부터 사전당첨자 지위를 유지한 상태에서 다른 주택에 청약할 수",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "계약취소 후 재공급 · 아파트 1·2순위 적용 없음",
+        "document_hash": "97987f527a961051724f6561aca34451e3131a23ae9e11a0c65ee53ddee1d98e"
+      },
+      "rules": [
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-09-23",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930040&pblancNo=2026930040&atchmnflSeqNo=1982993&atchmnflSn=5",
+          "evidenceTextPresent": true,
+          "documentHash": "97987f527a961051724f6561aca34451e3131a23ae9e11a0c65ee53ddee1d98e",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-09-23",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930040&pblancNo=2026930040&atchmnflSeqNo=1982993&atchmnflSn=5",
+          "evidenceTextPresent": true,
+          "documentHash": "97987f527a961051724f6561aca34451e3131a23ae9e11a0c65ee53ddee1d98e",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTRemndrLttotPblancDetailView.do?houseManageNo=2026930040&pblancNo=2026930040",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "gwangmyeong": {
+      "id": "342f3968-02fd-4d2a-aa79-71baecedf9c4",
+      "title": "광명 시티프라디움 에듀하임",
+      "version": 6,
+      "housingKind": "private",
+      "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+      "priceRows": 7,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=01, HOUSE_MANAGE_NO=2026000453",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "private_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "deposit_min_krw",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "household_head",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "ownership_count_max",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "previous_winning",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "regional_allocation",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": "first_rank",
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "private_rank_months",
+            "deposit_min_krw",
+            "household_head",
+            "ownership_count_max",
+            "previous_winning"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "dongin": {
+      "id": "46bcf351-feda-4a60-ab2d-2c29cbd2bc16",
+      "title": "더샵 동인센트리체",
+      "version": 9,
+      "housingKind": "private",
+      "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+      "priceRows": 4,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=01, HOUSE_MANAGE_NO=2026000494",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "private_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "deposit_min_krw",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": "first_rank",
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "private_rank_months",
+            "deposit_min_krw"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "jamsil": {
+      "id": "0458dfae-6269-4b94-b1fa-9e7034e805ee",
+      "title": "잠실에떼르넬비욘드",
+      "version": 14,
+      "housingKind": "not_applicable",
+      "documentHash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+      "priceRows": 4,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "official_document_parser",
+        "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+        "evidence_text": "구글플레이스토어 애플앱스토어 잠실에떼르넬비욘드 오피스텔 분양광고 청약Home 앱 설치 바로가기 ■ 한국부동산원 청약콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미숙지, 착오신청 등에 대해서는 청약자 본인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 오피스텔은 2025.04.04. 사용승인을 완료하였으므로 「건축물의 분양에 관한 법률」이 적용되지 않습니다. 본 분양광고를 숙지하시어 착오 없으시기 바라며 계약 시 계약금(10%), 잔금(90%) 기간 협의 후 완납 시 바로 입주가 가능하오니 이점 유념하여 주시기 바랍니다. ■ 본 오피스텔 분양광고의 내용을 숙지한 후 청약 및 계약에 응하시기 바라며, 내용 미숙지로 인한 착오 등에 대해서는 청약자 본인에게 책임이 있음을 알려드립니다. ■ 본 오피스텔의 경우 청약자 ‘만 나이’ 요건 기준일은 분양광고일(2026.09.30.) 기준입니다. ■ 인터넷 청약접수 및 전산추첨 : 청약접수 및 분양받을 자의 선정에 관한 업무를 한국부동산원에 의뢰하여 인터넷 청약을 원칙으로 하여 전산추첨의 방법으로 입주자를 선정합니다. ■ 본 오피스텔의 건설지역인 서울특별시 송파구는 투기과열지구 및 청약과열지역으로서 대출이 제한될 수 있습니다. ■ 청약자격 : 본 오피스텔은 거주지역 및 청약통장 가입여부와 무관하게",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "오피스텔 · 청약통장 불필요 · 아파트 1·2순위 적용 없음",
+        "document_hash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436"
+      },
+      "rules": [
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v4",
+          "criterionDate": "2026-09-30",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+          "evidenceTextPresent": true,
+          "documentHash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "a6": {
+      "id": "dabc205e-71fb-4ce9-b0c9-ac75e58f9872",
+      "title": "인천계양지구 A6블록 공공분양주택(본청약)",
+      "version": 9,
+      "housingKind": "national",
+      "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+      "priceRows": 13,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=03, HOUSE_MANAGE_NO=2026000414",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "national_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "recognized_payments_min",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": "first_rank",
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "national_rank_months",
+            "recognized_payments_min"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "label": "sejong: official method is independent from category",
+      "passed": true
+    },
+    {
+      "label": "sejong: every applicable criterion uses the new reception cutoff",
+      "passed": true
+    },
+    {
+      "label": "sejong: application method has page, document hash and original evidence",
+      "passed": true
+    },
+    {
+      "label": "sejong: complete official facts actually produce application possibility",
+      "passed": true
+    },
+    {
+      "label": "sejong: no apartment rank requirement is asked",
+      "passed": true
+    },
+    {
+      "label": "sejong: an outside-region applicant is definitively ineligible",
+      "passed": true
+    },
+    {
+      "label": "sejong: missing roster completeness remains review",
+      "passed": true
+    },
+    {
+      "label": "sejong: unconfirmed historical composition cannot certify eligibility",
+      "passed": true
+    },
+    {
+      "label": "sejong: exact historical composition confirmation restores the comparison",
+      "passed": true
+    },
+    {
+      "label": "sejong: foreign nationality fails its actual official condition",
+      "passed": true
+    },
+    {
+      "label": "sejong: 91-day continuous overseas residence fails without exception",
+      "passed": true
+    },
+    {
+      "label": "sejong: official livelihood exception uses concrete family residence facts",
+      "passed": true
+    },
+    {
+      "label": "sejong: prior_project_contract is compared only within the original project",
+      "passed": true
+    },
+    {
+      "label": "sejong: a different project's answer cannot establish history",
+      "passed": true
+    },
+    {
+      "label": "sejong: prior_project_winner is compared only within the original project",
+      "passed": true
+    },
+    {
+      "label": "sejong: a different project's answer cannot establish history",
+      "passed": true
+    },
+    {
+      "label": "sejong: ineligible_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "sejong: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "sejong: resale_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "sejong: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "sejong: head requirement follows this document, not all unranked notices",
+      "passed": true
+    },
+    {
+      "label": "sillim: official method is independent from category",
+      "passed": true
+    },
+    {
+      "label": "sillim: every applicable criterion uses the new reception cutoff",
+      "passed": true
+    },
+    {
+      "label": "sillim: application method has page, document hash and original evidence",
+      "passed": true
+    },
+    {
+      "label": "sillim: complete official facts actually produce application possibility",
+      "passed": true
+    },
+    {
+      "label": "sillim: no apartment rank requirement is asked",
+      "passed": true
+    },
+    {
+      "label": "sillim: an outside-region applicant is definitively ineligible",
+      "passed": true
+    },
+    {
+      "label": "sillim: missing roster completeness remains review",
+      "passed": true
+    },
+    {
+      "label": "sillim: unconfirmed historical composition cannot certify eligibility",
+      "passed": true
+    },
+    {
+      "label": "sillim: exact historical composition confirmation restores the comparison",
+      "passed": true
+    },
+    {
+      "label": "sillim: foreign nationality fails its actual official condition",
+      "passed": true
+    },
+    {
+      "label": "sillim: 91-day continuous overseas residence fails without exception",
+      "passed": true
+    },
+    {
+      "label": "sillim: official livelihood exception uses concrete family residence facts",
+      "passed": true
+    },
+    {
+      "label": "sillim: prior_project_contract is compared only within the original project",
+      "passed": true
+    },
+    {
+      "label": "sillim: a different project's answer cannot establish history",
+      "passed": true
+    },
+    {
+      "label": "sillim: prior_project_winner is compared only within the original project",
+      "passed": true
+    },
+    {
+      "label": "sillim: a different project's answer cannot establish history",
+      "passed": true
+    },
+    {
+      "label": "sillim: ineligible_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "sillim: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "sillim: resale_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "sillim: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "sillim: rewinning_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "sillim: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "sillim: head requirement follows this document, not all unranked notices",
+      "passed": true
+    },
+    {
+      "label": "gang: official method is independent from category",
+      "passed": true
+    },
+    {
+      "label": "gang: every applicable criterion uses the new reception cutoff",
+      "passed": true
+    },
+    {
+      "label": "gang: application method has page, document hash and original evidence",
+      "passed": true
+    },
+    {
+      "label": "gang: complete official facts actually produce application possibility",
+      "passed": true
+    },
+    {
+      "label": "gang: no apartment rank requirement is asked",
+      "passed": true
+    },
+    {
+      "label": "gang: an outside-region applicant is definitively ineligible",
+      "passed": true
+    },
+    {
+      "label": "gang: missing roster completeness remains review",
+      "passed": true
+    },
+    {
+      "label": "gang: unconfirmed historical composition cannot certify eligibility",
+      "passed": true
+    },
+    {
+      "label": "gang: exact historical composition confirmation restores the comparison",
+      "passed": true
+    },
+    {
+      "label": "gang: foreign nationality fails its actual official condition",
+      "passed": true
+    },
+    {
+      "label": "gang: 91-day continuous overseas residence fails without exception",
+      "passed": true
+    },
+    {
+      "label": "gang: official livelihood exception uses concrete family residence facts",
+      "passed": true
+    },
+    {
+      "label": "gang: ineligible_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "gang: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "gang: resale_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "gang: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "gang: rewinning_restriction_active applies to the exact official family scope",
+      "passed": true
+    },
+    {
+      "label": "gang: current restriction lookup is not automatically backdated",
+      "passed": true
+    },
+    {
+      "label": "gang: head requirement follows this document, not all unranked notices",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: all 28 official rows and all seven prices remain",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: the four 59A rows are unavailable instead of hidden",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: 59B stays available even at a rate of 1.10",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: legacy hide preference has no filtering effect",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: a relevant correction releases old closure decisions",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: collection failure releases live application exclusion",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: four corrected sale prices are retained",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: official office eligibility remains distinct from apartment ranking",
+      "passed": true
+    },
+    {
+      "label": "dongin: all actual private unit ranks still satisfy their official bank requirements",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong: all actual private unit ranks still satisfy their official bank requirements",
+      "passed": true
+    },
+    {
+      "label": "A6: national rank still uses twelve recognized payments",
+      "passed": true
+    },
+    {
+      "label": "A6: nine payments do not satisfy national rank",
+      "passed": true
+    },
+    {
+      "label": "Dongin: the same nine payments do not affect private first rank",
+      "passed": true
+    },
+    {
+      "label": "All public requests are GETs without profiles or request bodies",
+      "passed": true
+    },
+    {
+      "label": "Engine source hashes remain stable during the integration run",
+      "passed": true
+    }
+  ],
+  "snapshots": {
+    "sejong": {
+      "applicationMethod": "unranked_after",
+      "criterionDate": "2026-10-01",
+      "qualification": "possible",
+      "rank": "not_applicable",
+      "nonHeadOutcome": "possible",
+      "prices": 3,
+      "verifiedCriteria": 9,
+      "originalDate": "2026-07-31"
+    },
+    "sillim": {
+      "applicationMethod": "unranked_after",
+      "criterionDate": "2026-10-01",
+      "qualification": "possible",
+      "rank": "not_applicable",
+      "nonHeadOutcome": "possible",
+      "prices": 3,
+      "verifiedCriteria": 10,
+      "originalDate": "2021-07-22"
+    },
+    "gang": {
+      "applicationMethod": "cancelled_resupply",
+      "criterionDate": "2026-09-23",
+      "qualification": "possible",
+      "rank": "not_applicable",
+      "nonHeadOutcome": "mismatch",
+      "prices": 2,
+      "verifiedCriteria": 9,
+      "originalDate": "2024-05-31"
+    },
+    "gwangmyeong": {
+      "prices": 7,
+      "officialRows": 28,
+      "closed59ARows": 4,
+      "open59BRate": "1.10"
+    }
+  },
+  "passed": 78,
+  "failed": 0
+}

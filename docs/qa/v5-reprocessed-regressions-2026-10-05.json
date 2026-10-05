@@ -1,0 +1,1470 @@
+{
+  "attempted": 3,
+  "updated": 3,
+  "verified_conditions": 61,
+  "unsupported": 0,
+  "skipped": 0,
+  "failed": 0,
+  "records": [
+    {
+      "notice_id": "0458dfae-6269-4b94-b1fa-9e7034e805ee",
+      "title": "잠실에떼르넬비욘드",
+      "source": "cheongyak_home",
+      "document_hash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436",
+      "verified_condition_count": 2,
+      "offered_supplies": [],
+      "condition_coverage": [
+        [
+          {
+            "supply_type": "일반공급",
+            "complete": true,
+            "verified_rule_count": 2,
+            "missing_topics": []
+          }
+        ]
+      ],
+      "document_diagnostics": [
+        [
+          {
+            "stage": "discovery",
+            "code": "attachment_found",
+            "status": "ok",
+            "message": "공식 모집공고문 첨부를 찾았습니다.",
+            "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02"
+          },
+          {
+            "stage": "download",
+            "code": "document_downloaded",
+            "status": "ok",
+            "message": "공식 모집공고문 파일을 내려받았습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "decode",
+            "code": "document_read",
+            "status": "ok",
+            "message": "공고문 텍스트를 로컬에서 읽었습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "interpretation",
+            "code": "conditions_parsed",
+            "status": "ok",
+            "message": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+            "source_format": "pdf"
+          }
+        ]
+      ]
+    },
+    {
+      "notice_id": "342f3968-02fd-4d2a-aa79-71baecedf9c4",
+      "title": "광명 시티프라디움 에듀하임",
+      "source": "cheongyak_home",
+      "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+      "verified_condition_count": 28,
+      "offered_supplies": [
+        [
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 3,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "059.9742A",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "059.9742A",
+            "supply_count": 10,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "01 059.9742A 59A 59.9742 18.5296 78.5038 47.5470 126.0508 43.5616 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 8,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 8,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 13,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 6,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "059.7421B",
+            "supply_count": 8,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "059.7421B",
+            "supply_count": 42,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "02 059.7421B 59B 59.7421 18.5593 78.3014 47.3631 125.6645 43.4493 87 8 8 13 2 6 8 45 42 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 9,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 9,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 13,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 3,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 7,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "084.8481A",
+            "supply_count": 9,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "084.8481A",
+            "supply_count": 36,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "03 084.8481A 84A 84.8481 24.3323 109.1804 67.2669 176.4473 60.5840 86 9 9 13 3 7 9 50 36 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 3,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "084.9648B",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "084.9648B",
+            "supply_count": 10,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "2026 04 084.9648B 84B 84.9648 24.1873 109.1521 67.3593 176.5114 60.5683 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 12,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 11,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 16,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 3,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 8,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "084.9558C",
+            "supply_count": 11,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "084.9558C",
+            "supply_count": 44,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "000453 05 084.9558C 84C 84.9558 24.2280 109.1838 67.3523 176.5361 60.5859 105 12 11 16 3 8 11 61 44 5",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 3,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 1,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "084.9796D",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "084.9796D",
+            "supply_count": 10,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "06 084.9796D 84D 84.9796 24.5768 109.5564 67.3711 176.9275 60.7927 21 2 2 3 1 1 2 11 10 1",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "기관추천 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 8,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 9,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 13,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 2,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 6,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "unit_type": "084.9149E",
+            "supply_count": 9,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "084.9149E",
+            "supply_count": 38,
+            "verification": "official",
+            "source": "official_document_parser",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidence_text": "07 084.9149E 84E 84.9149 25.3601 110.2750 67.3198 177.5948 61.1914 85 8 9 13 2 6 9 47 38 4",
+            "evidence_page": 7,
+            "document_hash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+            "criterion_date": "2026-09-18"
+          }
+        ]
+      ],
+      "condition_coverage": [
+        [
+          {
+            "supply_type": "기관추천 특별공급",
+            "complete": false,
+            "verified_rule_count": 2,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-a925386cdcf85d60"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-41c866e86de940b8"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "complete": false,
+            "verified_rule_count": 3,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-2c17127138fbe4f6"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-117c2c733d349f3b"
+                ]
+              },
+              {
+                "topic": "children_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-a0f2efa4ad0ce0d8"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "complete": false,
+            "verified_rule_count": 4,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-9043e0450c014600"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-69a51fa966261539"
+                ]
+              },
+              {
+                "topic": "marriage_months_max",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-e14f83eb5b7c5852"
+                ]
+              },
+              {
+                "topic": "marital_status",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ea507a500fd83170"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "complete": false,
+            "verified_rule_count": 6,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-e9441f5b703933fc"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-449af375e55dc01a"
+                ]
+              },
+              {
+                "topic": "parent_age_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-7d7e69c5d2b829e2"
+                ]
+              },
+              {
+                "topic": "parent_support_months_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-df1d75df5488f46f"
+                ]
+              },
+              {
+                "topic": "parent_same_register",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-5dfcf048f0f6c73e"
+                ]
+              },
+              {
+                "topic": "household_head",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-aebe43d19c9f677f"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "complete": false,
+            "verified_rule_count": 4,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-95fa6790b87bb8b5"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-9f28a4e65688be49"
+                ]
+              },
+              {
+                "topic": "never_owned_home",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-93945593c1482999"
+                ]
+              },
+              {
+                "topic": "tax_years_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-58e2469d961e1afe"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "complete": false,
+            "verified_rule_count": 3,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-666b3c710e1d24cf"
+                ]
+              },
+              {
+                "topic": "private_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-b83cbb23d047cdc7"
+                ]
+              },
+              {
+                "topic": "newborn_children_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-fafe1064dca22853"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "일반공급",
+            "complete": false,
+            "verified_rule_count": 0,
+            "topics": [
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "신청 제한·연령 예외의 전체 검토",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "신청 제한·연령 예외의 전체 검토"
+            ]
+          }
+        ]
+      ],
+      "document_diagnostics": [
+        [
+          {
+            "stage": "discovery",
+            "code": "attachment_found",
+            "status": "ok",
+            "message": "공식 모집공고문 첨부를 찾았습니다.",
+            "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453"
+          },
+          {
+            "stage": "download",
+            "code": "document_downloaded",
+            "status": "ok",
+            "message": "공식 모집공고문 파일을 내려받았습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "decode",
+            "code": "document_read",
+            "status": "ok",
+            "message": "공고문 텍스트를 로컬에서 읽었습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "interpretation",
+            "code": "conditions_parsed",
+            "status": "ok",
+            "message": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
+            "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "source_format": "pdf"
+          }
+        ]
+      ]
+    },
+    {
+      "notice_id": "dabc205e-71fb-4ce9-b0c9-ac75e58f9872",
+      "title": "인천계양지구 A6블록 공공분양주택(본청약)",
+      "source": "cheongyak_home",
+      "document_hash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+      "verified_condition_count": 31,
+      "offered_supplies": [],
+      "condition_coverage": [
+        [
+          {
+            "supply_type": "지역균형발전 특별공급",
+            "complete": false,
+            "verified_rule_count": 2,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-501df09c3b17cc2e"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-5c829f9435446a53"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "다자녀가구 특별공급",
+            "complete": false,
+            "verified_rule_count": 4,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-1df391c322b81254"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ce59793f57835bcb"
+                ]
+              },
+              {
+                "topic": "national_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-52d1f980ed212965"
+                ]
+              },
+              {
+                "topic": "recognized_payments_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-65d8fe1e3dd30649"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "노부모부양 특별공급",
+            "complete": false,
+            "verified_rule_count": 6,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-1f0b23dc082a5ef4"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-8e967993b8150651"
+                ]
+              },
+              {
+                "topic": "parent_age_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-a92180e60c61004d"
+                ]
+              },
+              {
+                "topic": "parent_support_months_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-c09b341b04788042"
+                ]
+              },
+              {
+                "topic": "parent_same_register",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ec9a8f35969d9123"
+                ]
+              },
+              {
+                "topic": "household_head",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-11b1d6f272ebf2cf"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "생애최초 특별공급",
+            "complete": false,
+            "verified_rule_count": 4,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-d6af96655e2b48d2"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-93874e3e18d3fab8"
+                ]
+              },
+              {
+                "topic": "never_owned_home",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-543f2602e2a4d118"
+                ]
+              },
+              {
+                "topic": "tax_years_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-68c189f1d5741990"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "신혼부부 특별공급",
+            "complete": false,
+            "verified_rule_count": 5,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-fa33e4c52d5f0f53"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-2998ce8506d69cfb"
+                ]
+              },
+              {
+                "topic": "national_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-054f69b6a2403954"
+                ]
+              },
+              {
+                "topic": "recognized_payments_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-708b3f2b3908f88f"
+                ]
+              },
+              {
+                "topic": "신혼부부 특별공급의 신청 가족 유형",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-da3978259970c8bb"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "신생아 특별공급",
+            "complete": false,
+            "verified_rule_count": 5,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-07a70f22e4ea76ee"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ea84b5b73ff0c5c9"
+                ]
+              },
+              {
+                "topic": "national_rank_months",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-2d194ad345a3d6da"
+                ]
+              },
+              {
+                "topic": "recognized_payments_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-1a9f526c4fe3e636"
+                ]
+              },
+              {
+                "topic": "newborn_children_min",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-970e5982449fd442"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          },
+          {
+            "supply_type": "일반공급",
+            "complete": false,
+            "verified_rule_count": 2,
+            "topics": [
+              {
+                "topic": "homeless",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-f8085d1757006161"
+                ]
+              },
+              {
+                "topic": "신청 가능한 거주지역",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-dfde550689459833"
+                ]
+              },
+              {
+                "topic": "재당첨·청약 제한 및 법령 예외",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              },
+              {
+                "topic": "소득·자산 분기",
+                "status": "missing",
+                "required": true,
+                "rule_ids": []
+              }
+            ],
+            "missing_topics": [
+              "재당첨·청약 제한 및 법령 예외",
+              "소득·자산 분기"
+            ]
+          }
+        ]
+      ],
+      "document_diagnostics": [
+        [
+          {
+            "stage": "discovery",
+            "code": "attachment_found",
+            "status": "ok",
+            "message": "공식 모집공고문 첨부를 찾았습니다.",
+            "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414"
+          },
+          {
+            "stage": "download",
+            "code": "document_downloaded",
+            "status": "ok",
+            "message": "공식 모집공고문 파일을 내려받았습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "decode",
+            "code": "document_read",
+            "status": "ok",
+            "message": "공고문 텍스트를 로컬에서 읽었습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "interpretation",
+            "code": "conditions_parsed",
+            "status": "ok",
+            "message": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "source_format": "pdf"
+          }
+        ]
+      ]
+    }
+  ]
+}

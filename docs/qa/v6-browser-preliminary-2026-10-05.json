@@ -1,0 +1,401 @@
+{
+  "date": "2026-10-05",
+  "base": "http://127.0.0.1:5174",
+  "publicFixtureCount": 40,
+  "passed": 24,
+  "cohorts": [
+    {
+      "width": 1280,
+      "cpuSlowdown": 1,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 8,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 49.9,
+          "p95Ms": 131.9,
+          "maximumMs": 131.9
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 30.5,
+          "p95Ms": 170.6,
+          "maximumMs": 170.6
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 27.7,
+          "p95Ms": 28,
+          "maximumMs": 28
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 36.7,
+          "p95Ms": 131.9,
+          "maximumMs": 170.6
+        },
+        "latestResultAfterTypingMs": 393.5,
+        "workerExecutionMs": [
+          0,
+          82.2,
+          52.9
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 127,
+            "startMs": 57
+          },
+          {
+            "durationMs": 60,
+            "startMs": 1771
+          },
+          {
+            "durationMs": 68,
+            "startMs": 2122
+          },
+          {
+            "durationMs": 51,
+            "startMs": 2871
+          },
+          {
+            "durationMs": 54,
+            "startMs": 3091
+          },
+          {
+            "durationMs": 118,
+            "startMs": 3280
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "cpuSlowdown": 1,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 8,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 46.7,
+          "p95Ms": 137.1,
+          "maximumMs": 137.1
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 29.1,
+          "p95Ms": 45.1,
+          "maximumMs": 45.1
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 27.7,
+          "p95Ms": 29.3,
+          "maximumMs": 29.3
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 32.7,
+          "p95Ms": 61.7,
+          "maximumMs": 137.1
+        },
+        "latestResultAfterTypingMs": 390.4,
+        "workerExecutionMs": [
+          0,
+          72.2,
+          48
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 133,
+            "startMs": 68
+          },
+          {
+            "durationMs": 54,
+            "startMs": 551
+          },
+          {
+            "durationMs": 51,
+            "startMs": 983
+          },
+          {
+            "durationMs": 50,
+            "startMs": 1283
+          },
+          {
+            "durationMs": 59,
+            "startMs": 1683
+          },
+          {
+            "durationMs": 51,
+            "startMs": 2000
+          },
+          {
+            "durationMs": 55,
+            "startMs": 2300
+          },
+          {
+            "durationMs": 138,
+            "startMs": 3482
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "cpuSlowdown": 4,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 8,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 242.7,
+          "p95Ms": 666,
+          "maximumMs": 666
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 104.8,
+          "p95Ms": 294.9,
+          "maximumMs": 294.9
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 41.7,
+          "p95Ms": 71.3,
+          "maximumMs": 71.3
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 166.2,
+          "p95Ms": 385.2,
+          "maximumMs": 666
+        },
+        "latestResultAfterTypingMs": 699.4,
+        "workerExecutionMs": [
+          0,
+          81.3,
+          66.6
+        ],
+        "mainThreadLongTasks": [
+          {
+            "durationMs": 659,
+            "startMs": 254
+          },
+          {
+            "durationMs": 138,
+            "startMs": 1021
+          },
+          {
+            "durationMs": 148,
+            "startMs": 1254
+          },
+          {
+            "durationMs": 213,
+            "startMs": 1450
+          },
+          {
+            "durationMs": 165,
+            "startMs": 1874
+          },
+          {
+            "durationMs": 170,
+            "startMs": 2175
+          },
+          {
+            "durationMs": 253,
+            "startMs": 2418
+          },
+          {
+            "durationMs": 172,
+            "startMs": 2934
+          },
+          {
+            "durationMs": 163,
+            "startMs": 3235
+          },
+          {
+            "durationMs": 363,
+            "startMs": 3465
+          },
+          {
+            "durationMs": 201,
+            "startMs": 4123
+          },
+          {
+            "durationMs": 54,
+            "startMs": 4326
+          },
+          {
+            "durationMs": 238,
+            "startMs": 4482
+          },
+          {
+            "durationMs": 288,
+            "startMs": 4803
+          },
+          {
+            "durationMs": 169,
+            "startMs": 5353
+          },
+          {
+            "durationMs": 160,
+            "startMs": 5591
+          },
+          {
+            "durationMs": 228,
+            "startMs": 5850
+          },
+          {
+            "durationMs": 138,
+            "startMs": 6316
+          },
+          {
+            "durationMs": 113,
+            "startMs": 6564
+          },
+          {
+            "durationMs": 235,
+            "startMs": 6750
+          },
+          {
+            "durationMs": 165,
+            "startMs": 7227
+          },
+          {
+            "durationMs": 182,
+            "startMs": 7465
+          },
+          {
+            "durationMs": 250,
+            "startMs": 7734
+          },
+          {
+            "durationMs": 168,
+            "startMs": 8254
+          },
+          {
+            "durationMs": 173,
+            "startMs": 8545
+          },
+          {
+            "durationMs": 207,
+            "startMs": 8781
+          },
+          {
+            "durationMs": 176,
+            "startMs": 9208
+          },
+          {
+            "durationMs": 282,
+            "startMs": 9483
+          },
+          {
+            "durationMs": 68,
+            "startMs": 9865
+          },
+          {
+            "durationMs": 623,
+            "startMs": 10012
+          },
+          {
+            "durationMs": 95,
+            "startMs": 10665
+          },
+          {
+            "durationMs": 96,
+            "startMs": 10850
+          },
+          {
+            "durationMs": 112,
+            "startMs": 11030
+          },
+          {
+            "durationMs": 52,
+            "startMs": 11231
+          },
+          {
+            "durationMs": 62,
+            "startMs": 11437
+          },
+          {
+            "durationMs": 158,
+            "startMs": 12249
+          },
+          {
+            "durationMs": 178,
+            "startMs": 12412
+          },
+          {
+            "durationMs": 129,
+            "startMs": 12646
+          },
+          {
+            "durationMs": 142,
+            "startMs": 13744
+          },
+          {
+            "durationMs": 53,
+            "startMs": 13886
+          },
+          {
+            "durationMs": 93,
+            "startMs": 13940
+          }
+        ]
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 138,
+        "competitionRows": 0,
+        "grayCards": 9,
+        "calendarDays": 0
+      },
+      "profileValuesInReport": false
+    }
+  ],
+  "profileValuesInReport": false,
+  "strictPerformance": false
+}

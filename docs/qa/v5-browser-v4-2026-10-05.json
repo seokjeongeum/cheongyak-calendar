@@ -1,0 +1,43 @@
+{
+  "passed": 48,
+  "snapshots": {
+    "live_notices": [
+      {
+        "title": "세종 우미 린 센터파크(행정중심복합도시 5-2생활권 S1블록, 글미마을 9단지)",
+        "version": 15,
+        "application_method": "unranked_after",
+        "verified_criteria": 9
+      },
+      {
+        "title": "신림스카이아파트(20차)",
+        "version": 15,
+        "application_method": "unranked_after",
+        "verified_criteria": 10
+      },
+      {
+        "title": "강변역 센트럴 아이파크",
+        "version": 16,
+        "application_method": "cancelled_resupply",
+        "verified_criteria": 9
+      },
+      {
+        "title": "잠실에떼르넬비욘드",
+        "version": 16,
+        "application_method": "officetel",
+        "verified_criteria": 2
+      },
+      {
+        "title": "광명 시티프라디움 에듀하임",
+        "version": 8,
+        "application_method": "apt_ranked",
+        "verified_criteria": 28
+      },
+      {
+        "title": "더샵 동인센트리체",
+        "version": 11,
+        "application_method": "apt_ranked",
+        "verified_criteria": 25
+      }
+    ]
+  }
+}

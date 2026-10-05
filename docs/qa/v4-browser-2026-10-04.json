@@ -1,0 +1,93 @@
+{
+  "passed": 48,
+  "checks": [
+    "all personally unavailable notices stay in the schedule",
+    "fully closed notice is retained with explicit unavailable presentation",
+    "unranked no-rank status never bypasses its actual region criterion",
+    "price rows and original links remain usable on unavailable cards",
+    "a multichild mismatch does not mute a possible general supply card",
+    "only the failed special supply gets unavailable presentation",
+    "a fully unavailable future reception date remains selectable with a muted dot",
+    "selecting an unavailable calendar date retains its notice",
+    "focus transitions alone do not query data",
+    "historical closed unit rows stay visible and result counters include them",
+    "open 1.10 result and every price are retained",
+    "obsolete hide and restore controls are absent",
+    "375px results have no horizontal overflow",
+    "v3 migrates without losing residence, money or bank facts",
+    "former household self-confirmation never invents a complete family roster",
+    "opaque scope question and manually entered legal household count are removed",
+    "a spouse child on a separate spouse register is excluded with a readable reason",
+    "the same spouse child on the applicant register is included",
+    "a sibling on the applicant register is excluded",
+    "a separate-address legal spouse remains included",
+    "family edits clear old cutoff confirmations instead of certifying historical composition",
+    "family questions fit 375px without horizontal overflow",
+    "family edits never send API requests",
+    "an entirely unavailable first API page is displayed rather than skipped",
+    "load more and visible totals include unavailable notices",
+    "real notices distinguish two post-reception cases and cancellation resupply",
+    "real unranked eligibility rules use the new reception notice dates",
+    "actual outside-region unranked case remains with its official eligibility failure",
+    "actual no-rank card does not ask an apartment rank-base date",
+    "actual outside-region unranked case remains with its official eligibility failure",
+    "actual no-rank card does not ask an apartment rank-base date",
+    "actual outside-region unranked case remains with its official eligibility failure",
+    "actual no-rank card does not ask an apartment rank-base date",
+    "Jamsil sale price and separate application fee survive v4",
+    "the actual Dongin notice remains gray with its outside-region reason",
+    "actual Gwangmyeong shows all 28 official rows, four gray 59A rows and seven prices",
+    "actual 59B result at 1.10 stays readable",
+    "actual 375px result evidence has no horizontal overflow",
+    "gray rows remain readable and interactive",
+    "no browser error or unexpected API endpoint",
+    "all browser API calls are public GET with no profile in query or body",
+    "no browser error or unexpected API endpoint",
+    "all browser API calls are public GET with no profile in query or body",
+    "no browser error or unexpected API endpoint",
+    "all browser API calls are public GET with no profile in query or body",
+    "no browser error or unexpected API endpoint",
+    "all browser API calls are public GET with no profile in query or body",
+    "no JavaScript errors"
+  ],
+  "snapshots": {
+    "live_notices": [
+      {
+        "title": "세종 우미 린 센터파크(행정중심복합도시 5-2생활권 S1블록, 글미마을 9단지)",
+        "version": 15,
+        "application_method": "unranked_after",
+        "verified_criteria": 9
+      },
+      {
+        "title": "신림스카이아파트(20차)",
+        "version": 15,
+        "application_method": "unranked_after",
+        "verified_criteria": 10
+      },
+      {
+        "title": "강변역 센트럴 아이파크",
+        "version": 16,
+        "application_method": "cancelled_resupply",
+        "verified_criteria": 9
+      },
+      {
+        "title": "잠실에떼르넬비욘드",
+        "version": 16,
+        "application_method": "officetel",
+        "verified_criteria": 2
+      },
+      {
+        "title": "광명 시티프라디움 에듀하임",
+        "version": 8,
+        "application_method": "apt_ranked",
+        "verified_criteria": 28
+      },
+      {
+        "title": "더샵 동인센트리체",
+        "version": 11,
+        "application_method": "apt_ranked",
+        "verified_criteria": 25
+      }
+    ]
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "date": "2026-10-05",
+  "notices": 40,
+  "prices": 138,
+  "method_cards": 8,
+  "points_cards": 6,
+  "list_detail_equal": true,
+  "sources": [
+    {
+      "id": "46bcf351-feda-4a60-ab2d-2c29cbd2bc16",
+      "title": "더샵 동인센트리체",
+      "methods": [
+        {
+          "id": "2ba5e300a9e9bf09",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidence_page": 13,
+          "evidence_text": "■ ①지역 : 해당지역 거주자(대구광역시 거주자) → 기타지역 거주자(경상북도 거주자) ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "688d0d9704eefe6e",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidence_page": 23,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 전용면적 60㎡ 초과 85㎡ 이하 40% 60% 당첨자 - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) 선정방법 가점항목 가점상한 가점구분 점수 가점구분 점수 만30세 미만 미혼자 또는 유주택자 0 8년 이상 ~ 9년 미만 18 1년 미만 2 9년 이상 ~ 10년 미만 20 1년 이상 ~ 2년 미만 4 10년 이상 ~ 11년 미만 22 2년 이상 ~ 3년 미만 6 11년 이상 ~ 12년 미만 24 ①무주택기간 32 3년 이상 ~ 4년 미만 8 12년 이상 ~ 13년 미만 26 4년 이상 ~ 5년 미만 10 13년 이상 ~ 14년 미만 28 5년 이상 ~ 6년 미만 12 14년 이상 ~ 15년 미만 30 6년 이상 ~ 7년 미만 14 15년 이상 32 7년 이상 ~ 8년 미만 16 ②부양가족수 35 0명 5 4명 25 (청약신청자 본인 제외) 1명 10 5명 30 - 23 -",
+          "unit_types": [
+            "084.2551A",
+            "084.3643D",
+            "084.6092C",
+            "084.8158B"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "account_duration_then_lottery"
+        }
+      ]
+    },
+    {
+      "id": "c4576009-b468-473f-a203-759c3886bc21",
+      "title": "쌍용 더 플래티넘 한강",
+      "methods": [
+        {
+          "id": "267ad15f0664d87c",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+          "evidence_page": 16,
+          "evidence_text": "■ ①지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자) 선정방법 ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "021166a6f7db02a1",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+          "evidence_page": 22,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 전용면적 60㎡ 초과 85㎡ 이하 40% 60% 전용면적 85㎡ 초과 - 100% - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) 가점항목 가점상한 가점구분 점수 가점구분 점수 만30세 미만 미혼자 또는 유주택자 0 8년 이상 ~ 9년 미만 18 1년 미만 2 9년 이상 ~ 10년 미만 20 1년 이상 ~ 2년 미만 4 10년 이상 ~ 11년 미만 22 2년 이상 ~ 3년 미만 6 11년 이상 ~ 12년 미만 24 ①무주택기간 32 3년 이상 ~ 4년 미만 8 12년 이상 ~ 13년 미만 26 4년 이상 ~ 5년 미만 10 13년 이상 ~ 14년 미만 28 5년 이상 ~ 6년 미만 12 14년 이상 ~ 15년 미만 30 6년 이상 ~ 7년 미만 14 15년 이상 32 당첨자 7년 이상 ~ 8년 미만 16 선정방법 0명 5 4명 25 ②부양가족수 35 1명 10 5명 30 (청약신청자 본인 제외) 2명 15 6명 이상 35 3명 20 6개월 미만 1 8년 이상 ~ 9년 미만 10 6개월 이상 ~ 1년 미만 2 9년 이상 ~ 10년 미만 11 1년 이상 ~ 2년 미만 3 10년 이상 ~ 11년 미만 12 2년 이상 ~ 3년 미만 4 11년 이상 ~ 12년 미만 13 ③입주자저축 본인 3년 이상 ~ 4년 미만 5 12년 이상 ~ 13년 미만 14 가입기간 17 4년 이상 ~ 5년 미만 6 13년 이상 ~ 14년 미만 15 5년 이상 ~ 6년 미만 7 14년 이상 ~ 15년 미만 16 6년 이상 ~ 7년 미만 8 15년 이상 17 7년 이상 ~ 8년 미만 9 배우자 배우자 없음 또는 배우자 통장미가입 0 1년 이상 ~ 2년 미만 2 1년 미만 1 2년 이상 3 ※ 본인 청약가점 점수 = ① + ② + ③ ※ 2024.03.25. 시행된 「주택공급에 관한 규칙」 별표1의2 나목에 따라 가점제 청약 시 입주자저축 가입기간 점수에 배우자 입주자저축 가입기간 점수를 합산할 수 있습니다. - 배우자의 통장가입기간 점수표 배우자의 입주자저축 가입기간 배우자의 입주자저축 가입기간(50% 적용) 점수 1년 미만 6개월 미만 1점 1년 이상 ~ 2년 미만 6개월 이상 ~ 1년 미만 2점 2년 이상 1년 이상 3점 - 배우자의 입주자저축 가입기간 점수는 전체 가입기간의 50%에 해당하는 기간의 점수로 계산하며, 그 점수가 3점을 초과하는 경우 최대 3점까지만 인정 - 22 -",
+          "unit_types": [
+            "074.9845",
+            "084.8542B",
+            "084.8894C",
+            "084.9947A"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "account_duration_then_lottery"
+        },
+        {
+          "id": "2d93269bc3930167",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+          "evidence_page": 22,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 전용면적 60㎡ 초과 85㎡ 이하 40% 60% 전용면적 85㎡ 초과 - 100% - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) 가점항목 가점상한 가점구분 점수 가점구분 점수 만30세 미만 미혼자 또는 유주택자 0 8년 이상 ~ 9년 미만 18 1년 미만 2 9년 이상 ~ 10년 미만 20 1년 이상 ~ 2년 미만 4 10년 이상 ~ 11년 미만 22 2년 이상 ~ 3년 미만 6 11년 이상 ~ 12년 미만 24 ①무주택기간 32 3년 이상 ~ 4년 미만 8 12년 이상 ~ 13년 미만 26 4년 이상 ~ 5년 미만 10 13년 이상 ~ 14년 미만 28 5년 이상 ~ 6년 미만 12 14년 이상 ~ 15년 미만 30 6년 이상 ~ 7년 미만 14 15년 이상 32 당첨자 7년 이상 ~ 8년 미만 16 선정방법 0명 5 4명 25 ②부양가족수 35 1명 10 5명 30 (청약신청자 본인 제외) 2명 15 6명 이상 35 3명 20 6개월 미만 1 8년 이상 ~ 9년 미만 10 6개월 이상 ~ 1년 미만 2 9년 이상 ~ 10년 미만 11 1년 이상 ~ 2년 미만 3 10년 이상 ~ 11년 미만 12 2년 이상 ~ 3년 미만 4 11년 이상 ~ 12년 미만 13 ③입주자저축 본인 3년 이상 ~ 4년 미만 5 12년 이상 ~ 13년 미만 14 가입기간 17 4년 이상 ~ 5년 미만 6 13년 이상 ~ 14년 미만 15 5년 이상 ~ 6년 미만 7 14년 이상 ~ 15년 미만 16 6년 이상 ~ 7년 미만 8 15년 이상 17 7년 이상 ~ 8년 미만 9 배우자 배우자 없음 또는 배우자 통장미가입 0 1년 이상 ~ 2년 미만 2 1년 미만 1 2년 이상 3 ※ 본인 청약가점 점수 = ① + ② + ③ ※ 2024.03.25. 시행된 「주택공급에 관한 규칙」 별표1의2 나목에 따라 가점제 청약 시 입주자저축 가입기간 점수에 배우자 입주자저축 가입기간 점수를 합산할 수 있습니다. - 배우자의 통장가입기간 점수표 배우자의 입주자저축 가입기간 배우자의 입주자저축 가입기간(50% 적용) 점수 1년 미만 6개월 미만 1점 1년 이상 ~ 2년 미만 6개월 이상 ~ 1년 미만 2점 2년 이상 1년 이상 3점 - 배우자의 입주자저축 가입기간 점수는 전체 가입기간의 50%에 해당하는 기간의 점수로 계산하며, 그 점수가 3점을 초과하는 경우 최대 3점까지만 인정 - 22 -",
+          "unit_types": [
+            "123.7781",
+            "146.8598P"
+          ],
+          "rank": 1,
+          "points_percent": 0,
+          "lottery_percent": 100,
+          "min_area_exclusive": 85.0,
+          "max_area_inclusive": null,
+          "tie_break": "account_duration_then_lottery"
+        }
+      ]
+    },
+    {
+      "id": "26df8d2d-3cbf-4cf4-9441-a0382584f592",
+      "title": "용인 양지 서희스타힐스 하이뷰 (조합원 취소분)",
+      "methods": [
+        {
+          "id": "87541102c46af016",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000386&pblancNo=2026000386&atchmnflSeqNo=1961129&atchmnflSn=6",
+          "evidence_page": 20,
+          "evidence_text": "■ ①지역 : 해당지역 거주자(용인시 거주자) → 기타지역 거주자(서울특별시, 인천광역시 및 경기도) ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "f2e0bff19437e82c",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000386&pblancNo=2026000386&atchmnflSeqNo=1961129&atchmnflSn=6",
+          "evidence_page": 20,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 당첨자 전용면적 60㎡ 이하 40% 60% 전용면적 60㎡ 초과 85㎡ 이하 40% 60% 선정방법 - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) 가점항목 가점상한 가점구분 점수 가점구분 점수 만30세 미만 미혼자 또는 유주택자 0 8년 이상 ~ 9년 미만 18 1년 미만 2 9년 이상 ~ 10년 미만 20 1년 이상 ~ 2년 미만 4 10년 이상 ~ 11년 미만 22 ①무주택기간 32 2년 이상 ~ 3년 미만 6 11년 이상 ~ 12년 미만 24 3년 이상 ~ 4년 미만 8 12년 이상 ~ 13년 미만 26 4년 이상 ~ 5년 미만 10 13년 이상 ~ 14년 미만 28 5년 이상 ~ 6년 미만 12 14년 이상 ~ 15년 미만 30 - 20 -",
+          "unit_types": [
+            "059.9671A",
+            "059.9759C",
+            "059.9960B"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 0,
+          "max_area_inclusive": 60.0,
+          "tie_break": "account_duration_then_lottery"
+        },
+        {
+          "id": "90da7f19e15058ff",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000386&pblancNo=2026000386&atchmnflSeqNo=1961129&atchmnflSn=6",
+          "evidence_page": 20,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 당첨자 전용면적 60㎡ 이하 40% 60% 전용면적 60㎡ 초과 85㎡ 이하 40% 60% 선정방법 - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) 가점항목 가점상한 가점구분 점수 가점구분 점수 만30세 미만 미혼자 또는 유주택자 0 8년 이상 ~ 9년 미만 18 1년 미만 2 9년 이상 ~ 10년 미만 20 1년 이상 ~ 2년 미만 4 10년 이상 ~ 11년 미만 22 ①무주택기간 32 2년 이상 ~ 3년 미만 6 11년 이상 ~ 12년 미만 24 3년 이상 ~ 4년 미만 8 12년 이상 ~ 13년 미만 26 4년 이상 ~ 5년 미만 10 13년 이상 ~ 14년 미만 28 5년 이상 ~ 6년 미만 12 14년 이상 ~ 15년 미만 30 - 20 -",
+          "unit_types": [
+            "069.9865A",
+            "074.9936A",
+            "074.9980B",
+            "084.9989B",
+            "084.9999A"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "account_duration_then_lottery"
+        }
+      ]
+    },
+    {
+      "id": "60401c1e-b718-44a9-acf4-09f548ee51e5",
+      "title": "제주시 이도이동 아이린8차 아파트",
+      "methods": [
+        {
+          "id": "4f4e65dcdfa8b19a",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "834e6d70710e7bbfc03d420600fa88d9ee11b79933dd47dd72797255342822bd",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000444&pblancNo=2026000444&atchmnflSeqNo=1988268&atchmnflSn=1",
+          "evidence_page": 9,
+          "evidence_text": "■ ①지역 : 해당지역 거주자 ( 1 )제주특별자치도 년 이상 계속 거주자 → 기타지역 거주자 ( 1 )제주특별자치도 년 미만 거주자 ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "526a4fc1c4824962",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "834e6d70710e7bbfc03d420600fa88d9ee11b79933dd47dd72797255342822bd",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000444&pblancNo=2026000444&atchmnflSeqNo=1988268&atchmnflSn=1",
+          "evidence_page": 9,
+          "evidence_text": "전용면적별 순위 가점제 추첨제 적용비율 구분 가점제 추첨제 전용면적 초과 이하60 85㎡ ㎡ 40% 60% 당첨자 - ( 주택공급에 관한 규칙 별표 의 나목가점 산정기준「 」 1 2 ) 선정방법 가점항목 가점상한 가점구분 점수 가점구분 점수 만 세 미만 미혼자 또는 유주택자30 0 년 이상 년 미만8 ~ 9 18 1 2 년 이상 년 미만년 미만 9 ~ 10 20 1 ~ 2 4 년 이상 년 미만년 이상 년 미만10 ~ 11 22 2 ~ 3 6 년 이상 년 미만년 이상 년 미만11 ~ 12 24 ①무주택기간 32 3 ~ 4 8 년 이상 년 미만년 이상 년 미만12 ~ 13 26 4 ~ 5 10 년 이상 년 미만년 이상 년 미만13 ~ 14 28 5 ~ 6 12 년 이상 년 미만년 이상 년 미만14 ~ 15 30 6 ~ 7년 이상 년 미만 14 15년 이상 32 7 ~ 8년 이상 년 미만 16 ②부양가족수 35 명0 5 명4 25 - 9 -",
+          "unit_types": [
+            "084.1100C",
+            "084.1200B",
+            "084.1200E",
+            "084.4800D",
+            "084.4900A"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "unknown"
+        }
+      ]
+    },
+    {
+      "id": "71d1726a-1e92-4338-9d1d-932e5b6e3ee8",
+      "title": "천안 아이파크 시티 2단지(2회차)",
+      "methods": [
+        {
+          "id": "f53a91e897251a13",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "dd62febed115a2ed2c457820e9aa9fcb10df93b4c017764f36b6d1273f23400d",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000498&pblancNo=2026000498&atchmnflSeqNo=1991055&atchmnflSn=1",
+          "evidence_page": 15,
+          "evidence_text": "■ ①지역 : 해당지역 거주자 ( )천안시 → 기타지역 거주자 ( , )충청남도 대전광역시 및 세종특별자치시 ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "fa899320fc251ef5",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "dd62febed115a2ed2c457820e9aa9fcb10df93b4c017764f36b6d1273f23400d",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000498&pblancNo=2026000498&atchmnflSeqNo=1991055&atchmnflSn=1",
+          "evidence_page": 22,
+          "evidence_text": "전용면적별 순위 가점제 추첨제 적용비율 당첨자 구분 가점제 추첨제 선정방법 전용면적 초과 이하60 85㎡ ㎡ 40% 60% - ( 주택공급에 관한 규칙 별표 의 나목가점 산정기준「 」 1 2 ) 가점항목 가점상한 가점구분 점수 가점구분 점수 만 세 미만 미혼자 또는 유주택자30 0 년 이상 년 미만8 ~ 9 18 1 2 년 이상 년 미만년 미만9 ~ 10 20 ①무주택기간 32 1 ~ 2 4 년 이상 년 미만년 이상 년 미만10 ~ 11 22 2 ~ 3 6 년 이상 년 미만년 이상 년 미만11 ~ 12 24 - 22 -",
+          "unit_types": [
+            "084.9700B",
+            "084.9800A"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "unknown"
+        }
+      ]
+    },
+    {
+      "id": "f97e68fc-8acc-4e39-a0cf-8b1cccf465ba",
+      "title": "향남역 그로브 스위첸",
+      "methods": [
+        {
+          "id": "a9b706212d140795",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000463&pblancNo=2026000463&atchmnflSeqNo=1978209&atchmnflSn=5",
+          "evidence_page": 18,
+          "evidence_text": "■ ①지역 : 해당지역 거주자(화성특례시 거주자) → 기타지역 거주자(경기도, 서울특별시, 인천광역시 거주자) ",
+          "allocation_method": "region_priority",
+          "local_share_percent": null
+        },
+        {
+          "id": "765f207365ae3304",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000463&pblancNo=2026000463&atchmnflSeqNo=1978209&atchmnflSn=5",
+          "evidence_page": 25,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 전용면적 60㎡ 초과 85㎡ 이하 71, 84A, 84B, 84C, 84D 40% 60% 전용면적 85㎡ 초과 107A, 107B, 147P - 100% - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) - 25 -",
+          "unit_types": [
+            "071.8178",
+            "084.9140D",
+            "084.9221C",
+            "084.9592A",
+            "084.9767B"
+          ],
+          "rank": 1,
+          "points_percent": 40,
+          "lottery_percent": 60,
+          "min_area_exclusive": 60.0,
+          "max_area_inclusive": 85.0,
+          "tie_break": "account_duration_then_lottery"
+        },
+        {
+          "id": "87f2c77668411f1c",
+          "kind": "selection_method",
+          "effect": "metadata",
+          "supply_type": "일반공급",
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-10-02",
+          "housing_kind": "private",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000463&pblancNo=2026000463&atchmnflSeqNo=1978209&atchmnflSn=5",
+          "evidence_page": 25,
+          "evidence_text": "전용면적별 1순위 가점제/추첨제 적용비율 구분 가점제 추첨제 전용면적 60㎡ 초과 85㎡ 이하 71, 84A, 84B, 84C, 84D 40% 60% 전용면적 85㎡ 초과 107A, 107B, 147P - 100% - 가점 산정기준(「주택공급에 관한 규칙」 별표1의2 나목) - 25 -",
+          "unit_types": [
+            "107.8263B",
+            "107.9722A",
+            "147.9931P"
+          ],
+          "rank": 1,
+          "points_percent": 0,
+          "lottery_percent": 100,
+          "min_area_exclusive": 85.0,
+          "max_area_inclusive": null,
+          "tie_break": "account_duration_then_lottery"
+        }
+      ]
+    },
+    {
+      "id": "d2136733-94c5-461c-a504-f1c98fe44bdf",
+      "title": "인천계양 A17블록 신혼희망타운(공공분양) 입주자모집공고",
+      "methods": [
+        {
+          "id": "835a0f3cb5098b87",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": null,
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-09-30",
+          "housing_kind": "national",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68807314",
+          "evidence_page": 8,
+          "evidence_text": "우선공급 단계별 지역우선 공급기준 기준일 지역구분 우선공급 비율 지역 우선공급 거주 입력 대상자 ① 해당 주택건설지역 50% ․ 공고일 현재 인천광역시 거주자 입주자모집공고일 (인천광역시) (2026.09.30.) ② 기타지역(수도권) 50% ․ 공고일 현재 주민등록표등본상 서울특별시, 경기도에 거주하는 분 ※ 공급세대수를 상기 지역우선비율로 배분 시 소수점 이하가 발생할 경우 소수점 첫 자리에서 반올림 처리하되, 공급세대가 최소물량(3세대 미만)일 경우 해당지역 우선공급 취지를 감안하여 해당지역(인천광역시)→기타지역(수도권) 순으로 배정합니다. ※ 인천광역시 거주자가 50% 우선공급에서 낙첨될 경우, 50% 물량의 기타지역(수도권) 거주자와 다시 경쟁합니다. ※ 선정 단계별 경쟁 시 해당 주택건설지역 거주자에게 우선공급비율 만큼 우선공급하며, 해당 주택건설지역 거주자 신청 결과 미달된 물량은 기타지역(수도권) 거주자에게 공 급합니다. (단, 예비입주자의 경우 지역우선공급 기준이 적용되지 않음) ※ (수도권) 10년 이상 장기복무 무주택 군인으로서 입주자저축에 가입하여 6개월이 경과하고 6회 이상 납입 인정된 분은 입주자모집공고일 현재 해당 주택건설지역이 아닌 지 역에 거주하고 있는 경우에도 기타지역(수도권) 거주자 자격으로 신청할 수 있습니다. ※ (투기과열지구 제외한 수도권) 국방부의 추천을 받은 25년 이상 장기복무 무주택 군인으로서 입주자모집공고일 현재 입주자저축에 가입하여 6개월이 경과하고 6회 이상 납 입인정된 분은 해당 주택건설지역이 아닌 지역에 거주하고 있는 경우에도 해당 주택건설지역의 거주자 자격으로 신청할 수 있습니다. 2. 무주택세대구성원 및 주택소유여부 판정 기준 금회 공급되는 주택의 신청자격인 ‘무주택세대구성원’ 여부는 주택공급에 관한 규칙 제2조제4호 및 제53조에 따라 아래 기준으로 판단하며, 당첨자발표 (2026.11.05) 후 주택(분양권 등 포함) 소유여부 전산검색 및 주민등록표등본 확인 결과 부적격자로 판명된 분이 판명내용이 사실과 다르거나 이의가 있을 경우에는 소명기간(우리 공사가 소명요청을 안내한 날부터 7일) 내에 아래 기준에 근거하여 소명자료를 제출하여야 하며, 정당한 사유 없이 동 기한 내에 소 명자료를 제출하지 아니할 경우 당첨 및 계약을 취소합니다. ■ 적용대상 : 사전청약 당첨자, 본청약(신혼부부·예비신혼부부·한부모가족) 신청자 - 8 -",
+          "supply_types": [
+            "신혼부부(신혼희망타운)",
+            "예비신혼부부(신혼희망타운)",
+            "한부모가족(신혼희망타운)"
+          ],
+          "unit_types": null,
+          "allocation_method": "regional_quota",
+          "regional_shares": [
+            {
+              "residence_area": "local",
+              "percent": 50
+            },
+            {
+              "residence_area": "other",
+              "percent": 50
+            }
+          ],
+          "local_share_percent": 50
+        }
+      ]
+    },
+    {
+      "id": "5faf1ba8-7b13-47a3-9d08-7ae8fd2689a3",
+      "title": "인천계양 A17블록 신혼희망타운(공공분양)(본청약)",
+      "methods": [
+        {
+          "id": "835a0f3cb5098b87",
+          "kind": "regional_allocation",
+          "effect": "metadata",
+          "supply_type": null,
+          "verification": "official",
+          "source": "official_document_parser",
+          "document_hash": "f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0",
+          "parser_version": "official-sections-2026-10-05-v7",
+          "criterion_date": "2026-09-30",
+          "housing_kind": "national",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68807314",
+          "evidence_page": 8,
+          "evidence_text": "우선공급 단계별 지역우선 공급기준 기준일 지역구분 우선공급 비율 지역 우선공급 거주 입력 대상자 ① 해당 주택건설지역 50% ․ 공고일 현재 인천광역시 거주자 입주자모집공고일 (인천광역시) (2026.09.30.) ② 기타지역(수도권) 50% ․ 공고일 현재 주민등록표등본상 서울특별시, 경기도에 거주하는 분 ※ 공급세대수를 상기 지역우선비율로 배분 시 소수점 이하가 발생할 경우 소수점 첫 자리에서 반올림 처리하되, 공급세대가 최소물량(3세대 미만)일 경우 해당지역 우선공급 취지를 감안하여 해당지역(인천광역시)→기타지역(수도권) 순으로 배정합니다. ※ 인천광역시 거주자가 50% 우선공급에서 낙첨될 경우, 50% 물량의 기타지역(수도권) 거주자와 다시 경쟁합니다. ※ 선정 단계별 경쟁 시 해당 주택건설지역 거주자에게 우선공급비율 만큼 우선공급하며, 해당 주택건설지역 거주자 신청 결과 미달된 물량은 기타지역(수도권) 거주자에게 공 급합니다. (단, 예비입주자의 경우 지역우선공급 기준이 적용되지 않음) ※ (수도권) 10년 이상 장기복무 무주택 군인으로서 입주자저축에 가입하여 6개월이 경과하고 6회 이상 납입 인정된 분은 입주자모집공고일 현재 해당 주택건설지역이 아닌 지 역에 거주하고 있는 경우에도 기타지역(수도권) 거주자 자격으로 신청할 수 있습니다. ※ (투기과열지구 제외한 수도권) 국방부의 추천을 받은 25년 이상 장기복무 무주택 군인으로서 입주자모집공고일 현재 입주자저축에 가입하여 6개월이 경과하고 6회 이상 납 입인정된 분은 해당 주택건설지역이 아닌 지역에 거주하고 있는 경우에도 해당 주택건설지역의 거주자 자격으로 신청할 수 있습니다. 2. 무주택세대구성원 및 주택소유여부 판정 기준 금회 공급되는 주택의 신청자격인 ‘무주택세대구성원’ 여부는 주택공급에 관한 규칙 제2조제4호 및 제53조에 따라 아래 기준으로 판단하며, 당첨자발표 (2026.11.05) 후 주택(분양권 등 포함) 소유여부 전산검색 및 주민등록표등본 확인 결과 부적격자로 판명된 분이 판명내용이 사실과 다르거나 이의가 있을 경우에는 소명기간(우리 공사가 소명요청을 안내한 날부터 7일) 내에 아래 기준에 근거하여 소명자료를 제출하여야 하며, 정당한 사유 없이 동 기한 내에 소 명자료를 제출하지 아니할 경우 당첨 및 계약을 취소합니다. ■ 적용대상 : 사전청약 당첨자, 본청약(신혼부부·예비신혼부부·한부모가족) 신청자 - 8 -",
+          "supply_types": [
+            "신혼부부(신혼희망타운)",
+            "예비신혼부부(신혼희망타운)",
+            "한부모가족(신혼희망타운)"
+          ],
+          "unit_types": null,
+          "allocation_method": "regional_quota",
+          "regional_shares": [
+            {
+              "residence_area": "local",
+              "percent": 50
+            },
+            {
+              "residence_area": "other",
+              "percent": 50
+            }
+          ],
+          "local_share_percent": 50
+        }
+      ]
+    }
+  ],
+  "profileValuesInReport": false,
+  "database_before": {
+    "notices": 1355,
+    "unit_prices": 2496,
+    "notice_revisions": 7155,
+    "unit_competitions": 1806,
+    "competition_revisions": 79
+  },
+  "database_after_reprocessing": {
+    "notices": 1355,
+    "unit_prices": 2496,
+    "notice_revisions": 7260,
+    "unit_competitions": 1806,
+    "competition_revisions": 79
+  },
+  "before_count_basis": "SQL counts recorded before the first v7 deployment; transcribed from tool output"
+}

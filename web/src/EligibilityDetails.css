@@ -1,0 +1,49 @@
+.qualification-brief{border-top:1px solid #edf1f5;background:#fafcff;padding:14px 0 2px;display:grid;gap:10px;color:#60748d;font-size:12px;line-height:1.7}
+.qualification-brief-row,.qualification-reason{display:grid;grid-template-columns:16px minmax(0,1fr);column-gap:9px;align-items:start}
+.qualification-brief-row>div,.qualification-reason-body{min-width:0;overflow-wrap:anywhere}
+.qualification-brief-row strong{display:block;color:#405773;font-size:12px}
+.qualification-brief-row>div>span{display:block}
+.qualification-icon{display:grid;width:16px;height:16px;place-items:center;margin-top:3px;border-radius:50%;flex:none}
+.qualification-icon-pass{color:#298967;background:#e9f7ef}.qualification-icon-fail{color:#c45151;background:#fff0ef}.qualification-icon-review{color:#967342;background:#fff5df}
+.qualification-candidate{display:grid;grid-template-columns:16px minmax(0,1fr);gap:9px;margin:0}.qualification-candidate svg{margin-top:3px}
+.qualification-gap-note{margin:0;color:#708199;font-size:11px;line-height:1.7}
+.qualification-details{border-top:1px solid #edf1f5;margin-top:16px;padding-top:14px;min-width:0}
+.qualification-intro{margin:0 0 13px;color:#708199;font-size:12px;line-height:1.7}
+.qualification-section{border:1px solid #e7edf4;border-radius:9px;padding:15px;margin-top:10px;min-width:0}
+.qualification-section h5{margin:0;font-size:13px;color:#344b68;min-width:0;overflow-wrap:anywhere}
+.qualification-section h5 small{display:block;margin-top:4px;font-size:11px;font-weight:400;color:#77869a}
+.qualification-section-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:9px}
+.qualification-badge{display:inline-block;max-width:100%;font-size:10px;padding:4px 7px;border-radius:5px;line-height:1.5;overflow-wrap:anywhere;flex:none}
+.qualification-possible{color:#237b59;background:#ebf8f1}.qualification-mismatch{color:#b44747;background:#fff0ed}.qualification-review{color:#8b713e;background:#fff8e7}
+.qualification-reasons{display:grid;gap:16px;padding:0;margin:14px 0 0;list-style:none}
+.qualification-reason{font-size:12px;line-height:1.6}
+.qualification-reason-body>strong{color:#3f5674;font-size:12px;display:block}
+.qualification-comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:6px;margin:8px 0}
+.qualification-comparison>div{background:#f8faff;border:1px solid #edf1f7;border-radius:6px;padding:7px 9px;min-width:0}
+.qualification-comparison dt{font-size:10px;color:#8392a7}.qualification-comparison dd{margin:3px 0 0;color:#405977;overflow-wrap:anywhere}
+.qualification-reason-detail{margin:7px 0;color:#62738c;line-height:1.7}
+.qualification-evidence{margin:9px 0 6px;padding:8px 10px;border-left:2px solid #dbe5f1;background:#fafcff;color:#7b899c;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.qualification-reason-body a,.qualification-source-gap a,.qualification-candidates a{display:inline-flex;align-items:center;gap:4px;color:#3570cb;font-size:11px;line-height:1.6}
+.qualification-input-action{display:block;border:0;border-radius:5px;background:#edf4ff;color:#326ebd;font-size:11px;padding:5px 8px;margin-top:6px;text-align:left;cursor:pointer;max-width:100%;white-space:normal}
+.qualification-source-gap{margin-top:12px;padding:13px 15px;border-radius:8px;background:#f6f8fc;color:#63758d;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.qualification-source-gap strong{color:#435977}.qualification-source-gap p{margin:6px 0}.qualification-source-gap details{margin:7px 0}.qualification-source-gap summary,.qualification-candidates summary{cursor:pointer;font-size:11px}.qualification-source-gap ul{padding-left:17px;margin:8px 0}.qualification-source-gap li+li{margin-top:7px}
+.qualification-candidates{margin-top:12px;padding:11px 13px;border:1px solid #ede6d5;border-radius:8px;font-size:11px;color:#857146;line-height:1.7;overflow-wrap:anywhere}.qualification-candidates p{margin:9px 0}.qualification-candidates ul{margin:0;padding-left:17px}.qualification-candidates li+li{margin-top:10px}.qualification-candidates a{margin-left:7px}
+@media(max-width:640px){.qualification-brief{font-size:11px}.qualification-section{padding:12px 10px}.qualification-reasons{gap:13px}.qualification-reason{font-size:11px}.qualification-reason-body>strong{font-size:11px}.qualification-section-head{display:grid;grid-template-columns:minmax(0,1fr)}.qualification-badge{justify-self:start}.qualification-comparison{grid-template-columns:minmax(0,1fr)}.qualification-source-gap{padding:11px}.qualification-evidence{padding:7px 8px}}
+.qualification-unit-comparison{border-top:1px solid #edf1f5;margin-top:12px;padding-top:12px}.qualification-unit-comparison h6{margin:0;color:#536a87;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.qualification-shared p{margin:12px 0 0;color:#63758d;font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.qualification-account-summary{display:grid;gap:4px;padding:10px 12px;background:#edf4ff;border-radius:7px;color:#486487;min-width:0;overflow-wrap:anywhere}
+.qualification-account-summary strong{color:#36557a}.qualification-account-summary span{font-size:11px}
+.qualification-supply-overview{display:grid;gap:8px;min-width:0}
+.qualification-supply-brief{display:grid;gap:8px;padding:11px 12px;border:1px solid #e4ebf4;border-radius:8px;background:#fff;min-width:0}
+.qualification-supply-title{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;color:#405773}
+.qualification-supply-title>strong{font-size:12px;min-width:0;overflow-wrap:anywhere}.qualification-supply-title>span{font-size:10px;flex:none}.qualification-supply-brief>small{font-size:10px;overflow-wrap:anywhere;color:#75849a}
+
+.qualification-unit-ranks { display: grid; gap: 6px; }
+.qualification-unit-ranks > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.qualification-account-summary>small{font-size:10px;font-weight:700;color:#526a88}
+.qualification-application-heading{color:#405773;font-size:12px}
+.qualification-supply-brief.qualification-unavailable,.qualification-supply.qualification-unavailable{background:#f0f2f5;border-color:#cbd3dd;color:#4e5d72}
+.qualification-unavailable .qualification-supply-title>span,.qualification-unavailable .qualification-badge{background:#e5e9ee;color:#435267}
+.qualification-inventory ul{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}.qualification-inventory li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3px 10px;align-items:start;min-width:0;font-size:11px;line-height:1.7;overflow-wrap:anywhere}.qualification-inventory li strong{color:#45607c}.qualification-inventory li a{display:inline-flex;gap:4px;align-items:center;justify-self:start;color:#3570cb;font-size:10px}
+.qualification-source-diagnostics li,.qualification-remaining-topics li{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}.qualification-remaining-topics li>small{color:#728197;font-size:10px}.qualification-inventory-only{background:#f8fafc;border-color:#e7edf4}.qualification-inventory-only .qualification-supply-title>strong{color:#52677e}
+@media(max-width:640px){.qualification-inventory li{grid-template-columns:minmax(0,1fr)}}

@@ -1,0 +1,2689 @@
+{
+  "base": "http://localhost:8080",
+  "asOf": "2026-10-04T03:00:00+00:00",
+  "readOnly": {
+    "publicGetOnly": true,
+    "browserProfileRead": false,
+    "fictionalProfilesLocalOnly": true,
+    "profileValuesInReport": false
+  },
+  "engine": {
+    "sourceHashes": {
+      "types.ts": "206c7bf7ac44232ffd92362ac1c50e0ba81eb55b072c0e4a9c975238af23f827",
+      "qualification.ts": "7158d58d8b0414e8154ec65575f28b992d68d8839aba495fe7d5dd09ac3a2c25",
+      "eligibility.ts": "245460296768bdd4d588276d148a07e69d2f8df78dc033b2f3eb50c3e2dd6405",
+      "competition.ts": "51e086c2ae0236ef1abfc593aa624fcf9e08c84fb76db412a72ffd3b7f4383d2",
+      "ownership.ts": "77adbd1bddb5f529020a4295c3db70fa35b7828b98602ebb8760af6f5060a8dc",
+      "regions.ts": "af22a29a8636e61306d1d479e6bfe9eba9f87803c8b08209dab324a07498cac0"
+    },
+    "bundleHash": "2094a67fb2136e0e59f2761e3c46e7df06f0c59acfe6336a717394c4ffd4752c"
+  },
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/notices/46bcf351-feda-4a60-ab2d-2c29cbd2bc16",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/342f3968-02fd-4d2a-aa79-71baecedf9c4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/0458dfae-6269-4b94-b1fa-9e7034e805ee",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/notices/dabc205e-71fb-4ce9-b0c9-ac75e58f9872",
+      "status": 200
+    }
+  ],
+  "publicNotices": {
+    "dongin": {
+      "id": "46bcf351-feda-4a60-ab2d-2c29cbd2bc16",
+      "title": "더샵 동인센트리체",
+      "version": 8,
+      "housingKind": "private",
+      "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+      "priceRows": 4,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=01, HOUSE_MANAGE_NO=2026000494",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "private_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "deposit_min_krw",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-10-02",
+          "scope": "first_rank",
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+          "evidenceTextPresent": true,
+          "documentHash": "21bacace8ce7d1ce942a42c22e4c34547becb286c3bfa1ac5862b9be7f861acb",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "private_rank_months",
+            "deposit_min_krw"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "gwangmyeong": {
+      "id": "342f3968-02fd-4d2a-aa79-71baecedf9c4",
+      "title": "광명 시티프라디움 에듀하임",
+      "version": 5,
+      "housingKind": "private",
+      "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+      "priceRows": 7,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=01, HOUSE_MANAGE_NO=2026000453",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "private_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "deposit_min_krw",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "household_head",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "ownership_count_max",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "previous_winning",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "applicant_regions",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "regional_allocation",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": null,
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-09-18",
+          "scope": "first_rank",
+          "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "evidenceTextPresent": true,
+          "documentHash": "e4b9cd987e63bc4e2d4e33f74b616492a051aaafb90ca59053329edf05d0c693",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "private_rank_months",
+            "deposit_min_krw",
+            "household_head",
+            "ownership_count_max",
+            "previous_winning"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000453&pblancNo=2026000453",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "jamsil": {
+      "id": "0458dfae-6269-4b94-b1fa-9e7034e805ee",
+      "title": "잠실에떼르넬비욘드",
+      "version": 10,
+      "housingKind": "not_applicable",
+      "documentHash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+      "priceRows": 4,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+        "evidence_text": "getUrbtyOfctlLttotPblancDetail: HOUSE_DTL_SECD=02, HOUSE_MANAGE_NO=2026950085",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "오피스텔·생활숙박시설은 아파트 1·2순위 적용 없음",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    },
+    "a6": {
+      "id": "dabc205e-71fb-4ce9-b0c9-ac75e58f9872",
+      "title": "인천계양지구 A6블록 공공분양주택(본청약)",
+      "version": 8,
+      "housingKind": "national",
+      "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+      "officialUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+      "priceRows": 13,
+      "rankApplicability": {
+        "verification": "official",
+        "source": "cheongyak_home",
+        "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+        "evidence_text": "getAPTLttotPblancDetail: HOUSE_DTL_SECD=03, HOUSE_MANAGE_NO=2026000414",
+        "status": "applicable",
+        "account_required": true,
+        "reason": "아파트 일반공급 1·2순위 적용",
+        "document_hash": null
+      },
+      "rules": [
+        {
+          "kind": "national_rank_months",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "recognized_payments_min",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "account_type",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": null,
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true
+        },
+        {
+          "kind": "rank_requirements",
+          "verification": "official",
+          "source": "official_document_parser",
+          "parserVersion": "official-sections-2026-10-04-v3",
+          "criterionDate": "2026-08-31",
+          "scope": "first_rank",
+          "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+          "evidenceTextPresent": true,
+          "documentHash": "d6c05d1d85013d523387d55bffcc6cc721a7c88d140883ae9de7c168b6287dd5",
+          "matchesCurrentDocument": true,
+          "complete": true,
+          "requiredKinds": [
+            "account_type",
+            "national_rank_months",
+            "recognized_payments_min"
+          ]
+        },
+        {
+          "kind": "rank_applicability",
+          "verification": "official",
+          "source": "cheongyak_home",
+          "parserVersion": null,
+          "criterionDate": null,
+          "scope": null,
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000414&pblancNo=2026000414",
+          "evidenceTextPresent": true,
+          "documentHash": null,
+          "matchesCurrentDocument": null
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "label": "dongin: the expected retained public notice is returned",
+      "passed": true
+    },
+    {
+      "label": "dongin: housing classification is supported by official evidence",
+      "passed": true
+    },
+    {
+      "label": "dongin: complete official rank coverage matches the current document",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong: the expected retained public notice is returned",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong: housing classification is supported by official evidence",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong: complete official rank coverage matches the current document",
+      "passed": true
+    },
+    {
+      "label": "jamsil: the expected retained public notice is returned",
+      "passed": true
+    },
+    {
+      "label": "jamsil: housing classification is supported by official evidence",
+      "passed": true
+    },
+    {
+      "label": "a6: the expected retained public notice is returned",
+      "passed": true
+    },
+    {
+      "label": "a6: housing classification is supported by official evidence",
+      "passed": true
+    },
+    {
+      "label": "a6: complete official rank coverage matches the current document",
+      "passed": true
+    },
+    {
+      "label": "Dongin: all four real unit types meet official private first rank requirements",
+      "passed": true
+    },
+    {
+      "label": "Dongin: rank remains separate from the failing application region",
+      "passed": true
+    },
+    {
+      "label": "Dongin: the outside-region profile is not labelled as an ordinary other-region candidate",
+      "passed": true
+    },
+    {
+      "label": "Dongin: every offered supply assessment carries the official region mismatch",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: all seven real unit types meet official private first rank requirements",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: the permitted capital-region profile passes the official applicant scope",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong: additional household and winning-history rank conditions are covered",
+      "passed": true
+    },
+    {
+      "label": "A6: verified national requirements produce first rank for sufficient recognized payments",
+      "passed": true
+    },
+    {
+      "label": "A6: every actual priced unit gets the same national rank outcome",
+      "passed": true
+    },
+    {
+      "label": "A6: insufficient recognized payments produce a distinct mismatch",
+      "passed": true
+    },
+    {
+      "label": "A6: a missing recognition date remains a review",
+      "passed": true
+    },
+    {
+      "label": "A6: a recognition date after the official cutoff cannot establish historical payments",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: official officetel applicability produces no apartment rank",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: no subscription account is required by the official applicability",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: empty local inputs do not request invented rank base or balance dates",
+      "passed": true
+    },
+    {
+      "label": "Jamsil: local engine evaluation leaves the empty fictional profile untouched",
+      "passed": true
+    },
+    {
+      "label": "dongin: real official supply areas cross the exclusive-area threshold",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.2551A: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.2551A: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.3643D: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.3643D: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.6092C: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.6092C: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.8158B: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "dongin 084.8158B: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong: real official supply areas cross the exclusive-area threshold",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 059.7421B: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 059.7421B: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 059.9742A: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 059.9742A: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.8481A: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.8481A: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9149E: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9149E: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9558C: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9558C: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9648B: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9648B: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9796D: deposit tier uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "gwangmyeong 084.9796D: installment area limit uses the official exclusive area",
+      "passed": true
+    },
+    {
+      "label": "A6: missing official exclusive areas never fall back to supply area",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong results: 59A hiding follows current historical proof validity",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong results: the actual 59B first-rank 1.10 result remains visible",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong results: a remaining unit keeps the whole notice visible",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong results: restoring rows recovers every collected official result",
+      "passed": true
+    },
+    {
+      "label": "Gwangmyeong results: all seven public prices survive the competition filter",
+      "passed": true
+    },
+    {
+      "label": "All public requests are GETs without profiles or request bodies",
+      "passed": true
+    },
+    {
+      "label": "Engine source hashes remain stable during the integration run",
+      "passed": true
+    }
+  ],
+  "snapshots": {
+    "dongin": {
+      "rank": {
+        "rank": "first",
+        "status": "possible",
+        "label": "민영주택 1순위 조건 충족",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "민영 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "units": [
+        {
+          "unitType": "084.2551A",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.3643D",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.6092C",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.8158B",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            }
+          ]
+        }
+      ],
+      "applicantScope": {
+        "status": "fail",
+        "label": "신청 가능한 지역",
+        "category": "condition",
+        "profileField": null,
+        "criterionDate": "2026-10-02",
+        "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+        "evidenceTextPresent": true
+      },
+      "residenceArea": "unknown",
+      "supplies": [
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "기관추천 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "유형별 조건 정리 중",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "다자녀가구 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "자녀 수",
+              "category": "missing_input",
+              "profileField": "hasChildren",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "신혼부부 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "혼인 기간",
+              "category": "missing_input",
+              "profileField": "marriageDate",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "혼인 상태",
+              "category": "missing_input",
+              "profileField": "maritalStatus",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "노부모부양 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "부모 만 나이",
+              "category": "missing_input",
+              "profileField": "parentDateOfBirth",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "부모 연속 부양 기간",
+              "category": "missing_input",
+              "profileField": "parentSupportSince",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "부모 동일 등본",
+              "category": "missing_input",
+              "profileField": "parentSameRegister",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "생애최초 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "과거 주택 미소유",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "소득세 납부 연수",
+              "category": "missing_input",
+              "profileField": "taxYears",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "신생아 특별공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "무주택 세대구성원",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "자녀 수",
+              "category": "missing_input",
+              "profileField": "hasChildren",
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "나머지 공고 조건",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        },
+        {
+          "unitType": "전체 주택형",
+          "supplyType": "일반공급",
+          "status": "mismatch",
+          "reasons": [
+            {
+              "status": "fail",
+              "label": "신청 가능한 지역",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-10-02",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "review",
+              "label": "공고 조건 정리 중",
+              "category": "source_gap",
+              "profileField": null,
+              "criterionDate": null,
+              "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000494&pblancNo=2026000494",
+              "evidenceTextPresent": false
+            }
+          ]
+        }
+      ]
+    },
+    "gwangmyeong": {
+      "rank": {
+        "rank": "first",
+        "status": "possible",
+        "label": "민영주택 1순위 조건 충족",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "민영 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "세대주",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "법정 주택 소유 수",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "세대 당첨 이력",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "units": [
+        {
+          "unitType": "059.7421B",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.9742A",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.8481A",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.9149E",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.9558C",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.9648B",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.9796D",
+          "rank": "first",
+          "status": "possible",
+          "label": "민영주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "민영 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "민영주택 예치금",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대주",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "법정 주택 소유 수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "세대 당첨 이력",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-09-18",
+              "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+              "evidenceTextPresent": true
+            }
+          ]
+        }
+      ],
+      "applicantScope": {
+        "status": "pass",
+        "label": "신청 가능한 지역",
+        "category": "condition",
+        "profileField": null,
+        "criterionDate": "2026-09-18",
+        "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+        "evidenceTextPresent": true
+      },
+      "residenceArea": "other"
+    },
+    "a6": {
+      "sufficient": {
+        "rank": "first",
+        "status": "possible",
+        "label": "국민주택 1순위 조건 충족",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "국민 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "국민주택 납입인정횟수",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "units": [
+        {
+          "unitType": "059.7100D",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.7200E",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.8100B",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.8200H",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.8300C",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.8400A",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "059.9700G",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "069.8200P",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "074.9300O",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "077.4100A",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "077.4100C",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.7800A",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        },
+        {
+          "unitType": "084.9900B",
+          "rank": "first",
+          "status": "possible",
+          "label": "국민주택 1순위 조건 충족",
+          "reasons": [
+            {
+              "status": "pass",
+              "label": "국민 순위 인정기간",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "국민주택 납입인정횟수",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            },
+            {
+              "status": "pass",
+              "label": "통장 종류",
+              "category": "condition",
+              "profileField": null,
+              "criterionDate": "2026-08-31",
+              "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+              "evidenceTextPresent": true
+            }
+          ]
+        }
+      ],
+      "insufficient": {
+        "rank": "unknown",
+        "status": "mismatch",
+        "label": "국민주택 1순위 요건 불일치",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "국민 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "fail",
+            "label": "국민주택 납입인정횟수",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "missingRecognitionDate": {
+        "rank": "unknown",
+        "status": "review",
+        "label": "국민주택 1순위 확인 필요",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "국민 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "review",
+            "label": "국민주택 납입 인정 기준일",
+            "category": "missing_input",
+            "profileField": "nationalPaymentsAsOfDate",
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "recognitionDateAfterCutoff": {
+        "rank": "unknown",
+        "status": "review",
+        "label": "국민주택 1순위 확인 필요",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "국민 순위 인정기간",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "review",
+            "label": "국민주택 납입 인정 기준일",
+            "category": "missing_input",
+            "profileField": "nationalPaymentsAsOfDate",
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          },
+          {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-08-31",
+            "evidenceUrl": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68595376",
+            "evidenceTextPresent": true
+          }
+        ]
+      }
+    },
+    "jamsil": {
+      "rank": {
+        "rank": "not_applicable",
+        "status": "possible",
+        "label": "아파트 1·2순위 적용 없음",
+        "reasons": [
+          {
+            "status": "pass",
+            "label": "순위 적용 없음",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": null,
+            "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+            "evidenceTextPresent": true
+          }
+        ]
+      },
+      "qualification": {
+        "status": "review",
+        "reasons": [
+          {
+            "status": "review",
+            "label": "유형별 조건 비교",
+            "category": "selection",
+            "profileField": null,
+            "criterionDate": null,
+            "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+            "evidenceTextPresent": false
+          },
+          {
+            "status": "review",
+            "label": "나머지 공고 조건",
+            "category": "source_gap",
+            "profileField": null,
+            "criterionDate": null,
+            "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do?houseManageNo=2026950085&pblancNo=2026950085&houseSecd=02",
+            "evidenceTextPresent": false
+          }
+        ]
+      },
+      "accountRequired": false,
+      "rankEvidenceOfficial": true,
+      "noInputMutation": true
+    },
+    "areaThresholds": {
+      "units": [
+        {
+          "notice": "dongin",
+          "unitType": "084.2551A",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "dongin",
+          "unitType": "084.3643D",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "dongin",
+          "unitType": "084.6092C",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "dongin",
+          "unitType": "084.8158B",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-10-02",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000494&pblancNo=2026000494&atchmnflSeqNo=1988347&atchmnflSn=2",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "059.7421B",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "059.9742A",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "084.8481A",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "084.9149E",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "084.9558C",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "084.9648B",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        },
+        {
+          "notice": "gwangmyeong",
+          "unitType": "084.9796D",
+          "exclusiveAreaVerified": true,
+          "supplyAreaDiffers": true,
+          "deposit": {
+            "status": "pass",
+            "label": "민영주택 예치금",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          },
+          "installment": {
+            "status": "pass",
+            "label": "통장 종류",
+            "category": "condition",
+            "profileField": null,
+            "criterionDate": "2026-09-18",
+            "evidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+            "evidenceTextPresent": true
+          }
+        }
+      ],
+      "unverifiedExclusiveAreaUnitTypes": [
+        "069.8200P",
+        "077.4100A",
+        "077.4100C"
+      ]
+    },
+    "gwangmyeongResults": {
+      "proofValid": true,
+      "sourceProofInvalidated": false,
+      "area": "other",
+      "hidden": false,
+      "closedUnitTypes": [
+        "059.9742A"
+      ],
+      "visibleUnitTypes": [
+        "059.7421B",
+        "084.8481A",
+        "084.9648B",
+        "084.9558C",
+        "084.9796D",
+        "084.9149E"
+      ],
+      "visibleRows": 24,
+      "restoredRows": 28,
+      "priceRows": 7,
+      "closureProofs": [
+        {
+          "unitType": "059.9742A",
+          "kind": "all_local_first_exhausted",
+          "competitionEvidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTCompetitionPopup.do?houseManageNo=2026000453&pblancNo=2026000453",
+          "competitionEvidenceTextPresent": true,
+          "allocationEvidenceUrl": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000453&pblancNo=2026000453&atchmnflSeqNo=1971127&atchmnflSn=7",
+          "allocationEvidenceTextPresent": true
+        }
+      ],
+      "retainedTargetRate": [
+        {
+          "unitType": "059.7421B",
+          "rank": 1,
+          "rate": "1.10",
+          "resultStatus": "unknown",
+          "verification": "official",
+          "evidenceUrl": "https://www.applyhome.co.kr/ai/aia/selectAPTCompetitionPopup.do?houseManageNo=2026000453&pblancNo=2026000453"
+        }
+      ]
+    }
+  },
+  "passed": 59,
+  "failed": 0
+}

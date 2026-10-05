@@ -1,0 +1,4 @@
+.results-availability-note { display: grid; gap: 6px; margin-top: 14px; padding: 13px 16px; background: #f5f6f8; border: 1px solid #dce1e7; border-radius: 10px; color: #4b596c; font-size: 12px; line-height: 1.7; }
+.results-availability-note p { margin: 0; }
+.results-availability-note span { font-size: 11px; }
+@media (max-width: 600px) { .results-availability-note { padding: 12px; } }

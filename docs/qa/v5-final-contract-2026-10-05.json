@@ -1,0 +1,126 @@
+{
+  "attempted": 1,
+  "updated": 1,
+  "verified_conditions": 2,
+  "unsupported": 0,
+  "skipped": 0,
+  "failed": 0,
+  "records": [
+    {
+      "notice_id": "357d40f0-2bff-41f3-ab5e-14581230a812",
+      "title": "경산진량우림필유 미분양매입 잔여세대 선착순 일반매각 공고",
+      "source": "lh",
+      "document_hash": "d33f83bc20f2fd5caeea78007e948a9becd46e51426f27f82e5b984d4f531f00",
+      "verified_condition_count": 2,
+      "offered_supplies": [
+        [
+          {
+            "supply_type": "일반공급",
+            "unit_type": null,
+            "supply_count": 15,
+            "verification": "official",
+            "document_hash": "d33f83bc20f2fd5caeea78007e948a9becd46e51426f27f82e5b984d4f531f00",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68731064",
+            "evidence_text": "입주자저축 가입 여부, 과거 당첨사실 여부를 불문",
+            "evidence_page": 1,
+            "criterion_date": null
+          }
+        ]
+      ],
+      "condition_coverage": [
+        [
+          {
+            "supply_type": "일반공급",
+            "complete": true,
+            "verified_rule_count": 2,
+            "missing_topics": [],
+            "topics": [
+              {
+                "topic": "domestic_residence",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ae77dc7dc6fbd790"
+                ]
+              },
+              {
+                "topic": "age",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-bffb3c8af687dd55"
+                ]
+              },
+              {
+                "topic": "account",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "income",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "assets",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "home_ownership",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "prior_win",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              }
+            ],
+            "completion_basis": "document_hash_review"
+          }
+        ]
+      ],
+      "document_diagnostics": [
+        [
+          {
+            "stage": "discovery",
+            "code": "attachment_found",
+            "status": "ok",
+            "message": "공식 모집공고문 첨부를 찾았습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do?panId=2015122300020823&ccrCnntSysDsCd=03&uppAisTpCd=05&aisTpCd=05&mi=1027"
+          },
+          {
+            "stage": "download",
+            "code": "document_downloaded",
+            "status": "ok",
+            "message": "공식 모집공고문 파일을 내려받았습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68731064",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "decode",
+            "code": "document_read",
+            "status": "ok",
+            "message": "공고문 텍스트를 로컬에서 읽었습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68731064",
+            "source_format": "pdf"
+          },
+          {
+            "stage": "interpretation",
+            "code": "conditions_parsed",
+            "status": "ok",
+            "message": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68731064",
+            "source_format": "pdf"
+          }
+        ]
+      ]
+    }
+  ]
+}

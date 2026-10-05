@@ -1,0 +1,22 @@
+{
+  "schedule": {
+    "notices": 40,
+    "prices": 131,
+    "competitions": 0,
+    "verified_conditions": 129
+  },
+  "results": {
+    "notices": 74,
+    "prices": 418,
+    "competitions": 1706,
+    "verified_conditions": 1435
+  },
+  "official_conditions": {
+    "source": "official_conditions",
+    "status": "partial",
+    "message": "119개 공고 확인 · 검증된 조건 1596개 · 자동 판독 범위 밖 52개 · 변경으로 재확인 대기 0개 · 처리 실패 0개",
+    "last_attempt_at": "2026-10-03T23:49:00.522852Z",
+    "last_success_at": "2026-10-03T23:49:00.522852Z",
+    "record_count": 109
+  }
+}

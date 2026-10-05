@@ -1,0 +1,36 @@
+{
+  "observed_at": "2026-10-04T14:19:00.635088+00:00",
+  "asset": "/assets/index-B577K0Qq.js",
+  "public_queries": {
+    "schedule": {
+      "total": 40,
+      "returned": 40,
+      "prices": 131,
+      "competition_rows": 0,
+      "official_application_methods": 15
+    },
+    "results": {
+      "total": 74,
+      "returned": 74,
+      "prices": 418,
+      "competition_rows": 1706,
+      "official_application_methods": 74
+    }
+  },
+  "database_before": {
+    "notices": 1355,
+    "prices": 2308,
+    "notice_revisions": 5292,
+    "competitions": 1806,
+    "competition_revisions": 79
+  },
+  "database_after": {
+    "notices": 1355,
+    "prices": 2308,
+    "notice_revisions": 5739,
+    "competitions": 1806,
+    "competition_revisions": 79
+  },
+  "records_and_history_preserved": true,
+  "postgres_volume": "cheongyak-calendar_postgres_data"
+}

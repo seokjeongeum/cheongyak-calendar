@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cheongyak}
+      POSTGRES_USER: ${POSTGRES_USER:-cheongyak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cheongyak} -d ${POSTGRES_DB:-cheongyak}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cheongyak}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cheongyak}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  worker:
+    build: ./api
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-cheongyak}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cheongyak}
+      DATA_GO_KR_API_KEY: ${DATA_GO_KR_API_KEY:-}
+      CHEONGYAK_COMPETITION_API_KEY: ${CHEONGYAK_COMPETITION_API_KEY:-}
+      LH_API_KEY: ${LH_API_KEY:-}
+      MYHOME_API_KEY: ${MYHOME_API_KEY:-}
+      IH_API_KEY: ${IH_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_UNBILLED_PROJECT_CONFIRMED: ${GEMINI_UNBILLED_PROJECT_CONFIRMED:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m app.ingest.worker
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

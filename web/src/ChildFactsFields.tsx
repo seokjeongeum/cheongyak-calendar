@@ -1,0 +1,20 @@
+import type { LocalProfile } from './types'
+import { FactChangeFields } from './FactChangeFields'
+
+export function ChildFactsFields({ profile, onChange, today, needsPast }: { profile: LocalProfile; onChange: (value: LocalProfile) => void; today: string; needsPast: boolean }) {
+  const patch = (part: Partial<LocalProfile>) => onChange({ ...profile, ...part })
+  const fact = (field: 'hasChildren' | 'pregnant', label: string) => <fieldset className="radio-field" data-profile-field={field}><legend>{label}</legend><div>{([[true, '예'], [false, '아니요'], [null, '모름']] as const).map(([value, text]) => <button key={text} type="button" className={profile[field] === value ? 'chosen' : ''} aria-pressed={profile[field] === value} onClick={() => patch({ [field]: value })}>{text}</button>)}</div></fieldset>
+  const never = profile.hasChildren === false && profile.pregnant === false && profile.factChanges.children?.mode === 'never_changed' && profile.factChanges.pregnancy?.mode === 'never_changed'
+  const savedHistory = profile.children.length > 0 || (profile.factSnapshots || []).some((s) => ['children', 'pregnancy'].includes(s.group) && (s.values.hasChildren === true || s.values.pregnant === true || Array.isArray(s.values.children) && s.values.children.length > 0))
+  return <section className="question-group" data-profile-field="children"><h4>자녀·임신·입양</h4><p className="field-help">계속 해당 사항이 없으면 아래 한 번의 선택으로 모든 공고에 적용합니다. 현재만 없는 경우에는 각각의 변경일을 사용합니다.</p>
+    <button type="button" className={`add-fact${never ? ' chosen' : ''}`} aria-pressed={never} disabled={savedHistory} onClick={() => patch({ hasChildren: false, pregnant: false, expectedChildren: '', factChanges: { ...profile.factChanges, children: { mode: 'never_changed', date: '' }, pregnancy: { mode: 'never_changed', date: '' } } })}>계속 자녀·임신 없음</button>
+    {savedHistory && <p className="field-help">저장된 자녀·임신 이력이 있습니다. 실제 이력은 유지하고 해당 상태의 변경일을 입력하세요.</p>}
+    {!never && <>{fact('hasChildren', '현재 자녀가 있나요?')}
+      {profile.hasChildren === true && <>{profile.children.map((child, index) => <div className="child-fact" key={index}><label>자녀 {index + 1} 생년월일<input type="date" max={today} value={child.dateOfBirth} onChange={(event) => patch({ children: profile.children.map((item, i) => i === index ? { ...item, dateOfBirth: event.target.value } : item) })} /></label><label>입양 여부<select value={child.adopted === null ? 'unknown' : String(child.adopted)} onChange={(event) => patch({ children: profile.children.map((item, i) => i === index ? { ...item, adopted: event.target.value === 'unknown' ? null : event.target.value === 'true' } : item) })}><option value="unknown">모름</option><option value="false">입양 아님</option><option value="true">입양</option></select></label>{child.adopted === true && <label>입양일<input type="date" max={today} value={child.adoptionDate || ''} onChange={(event) => patch({ children: profile.children.map((item, i) => i === index ? { ...item, adoptionDate: event.target.value } : item) })} /></label>}<button type="button" className="text-button" onClick={() => patch({ children: profile.children.filter((_, i) => i !== index) })}>자녀 {index + 1} 삭제</button></div>)}<button type="button" className="add-fact" onClick={() => patch({ children: [...profile.children, { dateOfBirth: '', adopted: null }] })}>자녀 정보 추가</button></>}
+      <FactChangeFields profile={profile} onChange={onChange} today={today} group="children" label="자녀 상태" needed={needsPast && profile.hasChildren !== null} />
+      {fact('pregnant', profile.hasSpouse === true ? '본인 또는 배우자가 임신 중인가요?' : '본인이 임신 중인가요?')}
+      {profile.pregnant === true && <label data-profile-field="expectedChildren">임신 중 태아 수<input type="number" min="1" value={profile.expectedChildren} onChange={(event) => patch({ expectedChildren: event.target.value })} /></label>}
+      <FactChangeFields profile={profile} onChange={onChange} today={today} group="pregnancy" label="임신 상태" needed={needsPast && profile.pregnant !== null} />
+    </>}
+  </section>
+}
