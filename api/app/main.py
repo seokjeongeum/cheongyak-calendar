@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session, init_db
 from app.models import Notice, NoticeEvent
-from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, related_notices, source_coverage
+from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
 from app.schemas import CoveragePublic, HealthPublic, NoticeDetail, NoticePage, NoticePublic, SourceStatusPublic
 
 
@@ -51,7 +51,7 @@ def _date_match(start: date | None, end: date | None, *, application_only: bool 
     event_predicates = list(application_predicates)
     announcement_predicates = []
     if start is not None:
-        event_predicates.append(func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= start)
+        event_predicates.append(or_(func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= start, open_ended_application_clause()))
         announcement_predicates.append(Notice.announcement_date >= start)
     if end is not None:
         event_predicates.append(NoticeEvent.start_date <= end)

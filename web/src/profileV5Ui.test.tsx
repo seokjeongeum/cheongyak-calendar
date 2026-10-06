@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ProfileDialog } from './ProfileDialog'
 import { ApplicationFactsFields } from './ApplicationFactsFields'
 import { FactChangeFields } from './FactChangeFields'
+import { PointsFields } from './PointsFields'
 import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeRule } from './types'
 
 const rule = (kind: string, extra: Partial<NoticeRule> = {}): NoticeRule => ({ kind, value: true, verification: 'official', criterion_date: '2026-09-30', ...extra })
@@ -55,5 +56,10 @@ describe('v5 profile questions', () => {
     expect(html).toContain('value="2020-01-01"')
     expect(html).toContain('변경된 적 없음')
     expect(html).toContain('날짜 모름')
+  })
+  it('offers a points change input for a single applicant’s manual homeless-since fact', () => {
+    const html = renderToStaticMarkup(<PointsFields profile={{ ...profile, pointsHomelessSince: '2020-01-01' }} onChange={() => {}} today="2026-10-05" />)
+    expect(html).toContain('data-fact-group="points"')
+    expect(html).toContain('가점 산정 사실 마지막 변경일')
   })
 })

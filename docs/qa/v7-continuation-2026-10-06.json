@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-06",
+  "frontend_tests": 328,
+  "api_tests": 215,
+  "postgres_checks": 3,
+  "browser_checks": 72,
+  "performance_checks": 11,
+  "production_build_passed": true,
+  "docker_api_worker_web_builds_passed": true,
+  "docker_services_applied": true,
+  "api_health": "ok",
+  "data_mode": "recorded_official_fixtures_and_explicit_fictional_display_variants",
+  "new_live_national_validation_completed": false,
+  "prior_live_database_attached": false,
+  "applicant_profile_sent_to_server": false,
+  "gemini_live_calls": 0,
+  "latest_performance": [
+    {
+      "width": 375,
+      "cpuSlowdown": 4,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 49.7,
+          "p95Ms": 81.1,
+          "maximumMs": 81.1
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 32.8,
+          "p95Ms": 45.4,
+          "maximumMs": 45.4
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 25.4,
+          "p95Ms": 49.9,
+          "maximumMs": 49.9
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 36.5,
+          "p95Ms": 72.4,
+          "maximumMs": 81.1
+        },
+        "latestResultAfterTypingMs": 642.5,
+        "workerExecutionMs": [
+          0.1,
+          394.8,
+          280.4,
+          296.7
+        ],
+        "mainThreadLongTasks": []
+      }
+    }
+  ],
+  "limitations": [
+    "Public data API credentials are not configured in this cloud environment.",
+    "The former local database is not attached; no assertion about its row counts is made.",
+    "Browser replay validates behavior; it does not establish fresh nationwide official dates/prices.",
+    "Current notices with official reception dates: runtime report; active dry-run had zero targets."
+  ],
+  "evidence": [
+    "v7-browser-2026-10-06.json",
+    "v7-performance-2026-10-06.json",
+    "v7-postgres-2026-10-06.json",
+    "v7-runtime-2026-10-06.json",
+    "v7-active-dry-run-2026-10-06.json"
+  ]
+}

@@ -22,7 +22,7 @@ from playwright.async_api import async_playwright, expect
 
 
 ROOT = Path(__file__).resolve().parents[2]
-TODAY = date(2026, 10, 5)
+TODAY = date(2026, 10, 6)
 STORAGE_KEY = "cheongyak-profile-v5"
 GROUPS = "household household_head domestic_residence restrictions overseas military income_tax income assets bank_private bank_national citizenship employment parent_support marital children provider_employee ownership".split()
 PROFILE = {
@@ -95,7 +95,7 @@ async def route_public(route, public):
         rows = public["results"] if query.get("view") == ["results"] else public["schedule"]
         start, end = query.get("start",[str(TODAY)])[0], query.get("end",["2026-12-31"])[0]
         if query.get("view") != ["results"]:
-            rows = [n for n in rows if any(e["kind"] not in {"announcement","contract","result","winner"} and e["start_date"] <= end and (e.get("end_date") or e["start_date"]) >= start for e in n["events"])]
+            rows = [n for n in rows if any(e["kind"] not in {"announcement","contract","result","winner"} and e["start_date"] <= end and ((e.get("end_date") or e["start_date"]) >= start or (not e.get("end_date") and re.search(r"상시|마감\s*시|소진\s*시|종료일\s*미공개", e["label"]))) for e in n["events"])]
         if query.get("cap_only") == ["true"]: rows = [n for n in rows if n["price_cap_status"] == "yes"]
         offset, size = int(query.get("page",[1])[0]), int(query.get("page_size",[100])[0])
         body = {"items":rows[(offset-1)*size:offset*size],"total":len(rows),"page":offset,"page_size":size}
@@ -138,14 +138,17 @@ async def cohort(browser, base, public, *, width, slowdown, functional, strict):
     await page.goto(base,wait_until="domcontentloaded")
     await settled(page)
     panel = page.locator("#schedule-panel")
+    while await panel.locator('.load-more').count():
+        await panel.locator('.load-more').click()
     await expect(panel.locator(".notice-card")).to_have_count(len(public["schedule"]),timeout=30000)
     await settled(page)
-    initial = {"cards":await panel.locator(".notice-card").count(),"prices":await panel.locator(".price-row").count(),"competitionRows":await panel.locator(".competition-row").count(),"grayCards":await panel.locator(".notice-unavailable").count(),"calendarDays":await page.locator(".calendar-day.has-events").count()}
+    initial = {"cards":await panel.locator(".notice-card").count(),"prices":await panel.locator(".price-row").count(),"competitionRows":await panel.locator(".competition-row").count(),"grayCards":await panel.locator(".notice-unavailable").count(),"calendarDays":await page.locator(".calendar-day:has(i)").count()}
     def check(label, condition=True):
         assert condition, label
         checks.append(label)
     check("Every public active notice remains visible, including gray mismatches")
     check("All public price rows remain available without opening notices",initial["prices"]==sum(len(n["prices"]) for n in public["schedule"]))
+    check("Reception calendar dots are present",initial["calendarDays"]>0)
     check("No horizontal overflow",await page.evaluate("document.documentElement.scrollWidth<=innerWidth+2"))
     timings = {"openClose":[],"step":[],"input":[]}
     start_long = await page.evaluate("performance.now()")
@@ -250,7 +253,7 @@ async def cohort(browser, base, public, *, width, slowdown, functional, strict):
         current = await page.evaluate("({applied:Number(document.querySelector('.app-shell').dataset.evaluationRevision),latest:window.__qaMetrics.posts.at(-1).revision,saved:JSON.parse(localStorage.getItem('cheongyak-profile-v5')).annualIncomeKrw})")
         check("Only the coalesced latest worker revision is applied",current["applied"]==current["latest"] and current["saved"]=="333")
         await page.evaluate("window.__qaRevisionObserver.disconnect()")
-        final = {"cards":await panel.locator(".notice-card").count(),"prices":await panel.locator(".price-row").count(),"competitionRows":await panel.locator(".competition-row").count(),"grayCards":await panel.locator(".notice-unavailable").count(),"calendarDays":await page.locator(".calendar-day.has-events").count()}
+        final = {"cards":await panel.locator(".notice-card").count(),"prices":await panel.locator(".price-row").count(),"competitionRows":await panel.locator(".competition-row").count(),"grayCards":await panel.locator(".notice-unavailable").count(),"calendarDays":await page.locator(".calendar-day:has(i)").count()}
         check("Personal changes retain all notices, prices and competition rows",all(initial[k]==final[k] for k in ["cards","prices","competitionRows","calendarDays"]))
         check("Personally unavailable notices remain gray",initial["grayCards"]>0 and final["grayCards"]>0)
         all_links = await panel.locator('.qualification-input-action').all_text_contents()
@@ -290,6 +293,8 @@ async def cohort(browser, base, public, *, width, slowdown, functional, strict):
 
 
 async def main(args):
+    global TODAY
+    TODAY = date.fromisoformat(args.today)
     if args.snapshot:
         raw = json.loads(Path(args.snapshot).read_text())
         public = raw if "schedule" in raw else {"schedule":raw["items"],"results":[],"coverage":{"sources":[]}}
@@ -304,7 +309,7 @@ async def main(args):
             cohorts.append(result)
             print(json.dumps({"width":width,"cpu":slowdown,"passed":result["passed"],"timing":result["measurements"]},ensure_ascii=False),flush=True)
         await browser.close()
-    report = {"date":str(TODAY),"base":args.base,"publicFixtureCount":len(public["schedule"]),"passed":sum(c["passed"] for c in cohorts),"cohorts":cohorts,"profileValuesInReport":False,"strictPerformance":args.strict_performance}
+    report = {"date":str(TODAY),"base":args.base,"publicFixtureCount":len(public["schedule"]),"passed":sum(c["passed"] for c in cohorts),"cohorts":cohorts,"profileValuesInReport":False,"strictPerformance":args.strict_performance,"dataProvenance":public.get('provenance', {'mode':'public_api_snapshot'})}
     Path(args.output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"passed":report["passed"],"report":args.output},ensure_ascii=False))
 
@@ -314,7 +319,8 @@ if __name__ == "__main__":
     parser.add_argument("--base",default="http://127.0.0.1:5174")
     parser.add_argument("--source",default="http://localhost:8080")
     parser.add_argument("--snapshot",help="Previously fetched public notices; contains no personal profile")
-    parser.add_argument("--output",default=str(ROOT/"docs/qa/v6-browser-2026-10-05.json"))
+    parser.add_argument("--today",default="2026-10-06")
+    parser.add_argument("--output",default=str(ROOT/"docs/qa/v6-browser-2026-10-06.json"))
     parser.add_argument("--strict-performance",action="store_true")
     parser.add_argument("--performance-only",action="store_true")
     parser.add_argument("--cohort",choices=["desktop","mobile","slow"])

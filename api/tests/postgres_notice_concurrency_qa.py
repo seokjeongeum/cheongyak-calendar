@@ -21,8 +21,8 @@ from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base, database_url
-from app.models import Notice, NoticeRevision
-from app.repository import upsert_notice
+from app.models import Notice, NoticeEvent, NoticeRevision
+from app.repository import open_ended_application_clause, upsert_notice
 
 
 def payload(external_id: str) -> dict:
@@ -132,6 +132,19 @@ def simultaneous_first_insert(factory) -> None:
         assert [revision.version for revision in notices[0].revisions] == [1, 2]
 
 
+def open_reception_sql(factory) -> None:
+    """Verify the shared regexp on PostgreSQL as well as the SQLite unit suite."""
+    with factory() as session:
+        for index, label in enumerate(["상시 접수", "소진\t시까지", "마감 안내 시 주의", "상시 계약일"]):
+            raw = payload(f"open-sql-{index}")
+            raw["title"] = label
+            raw["events"] = [{"kind": "application", "label": label, "start_date": "2026-09-01", "end_date": None}]
+            upsert_notice(session, raw)
+        session.commit()
+        matched = session.scalars(select(NoticeEvent.label).where(open_ended_application_clause())).all()
+        assert set(matched) == {"상시 접수", "소진\t시까지"}
+
+
 def main() -> None:
     url = database_url()
     admin = create_engine(url, pool_pre_ping=True)
@@ -147,8 +160,9 @@ def main() -> None:
         factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
         existing_notice_writers(factory)
         simultaneous_first_insert(factory)
-        print(json.dumps({"passed": 2, "database": "PostgreSQL", "production_tables_touched": False,
-                          "checks": ["cached versions/children refresh under two writers", "first insert serialization"]}))
+        open_reception_sql(factory)
+        print(json.dumps({"passed": 3, "database": "PostgreSQL", "production_tables_touched": False,
+                          "checks": ["cached versions/children refresh under two writers", "first insert serialization", "exact open reception regexp"]}))
     finally:
         if engine is not None:
             engine.dispose()

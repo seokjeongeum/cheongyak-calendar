@@ -16,11 +16,11 @@ from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs, urlparse
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.db import SessionLocal
 from app.models import DocumentExtractionState, Notice, NoticeEvent
-from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, upsert_notice, record_source_status
+from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, open_ended_application_clause, upsert_notice, record_source_status
 from .pipeline import enrich_notice
 from .official_rules import PARSER_VERSION, parser_version_usable
 from app.qualification import public_contract_schedule, requirements_complete
@@ -101,7 +101,8 @@ async def reprocess(*, ids: list[str] | None = None, active: bool = False, limit
         statement = statement.where(Notice.category.in_(["apt", "private_sale", "public_sale", "unsold", "optional_supply"]))
     if active:
         reception = select(NoticeEvent.id).where(NoticeEvent.notice_id == Notice.id,
-            NoticeEvent.kind.not_in(NON_APPLICATION_KINDS), func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today).exists()
+            NoticeEvent.kind.not_in(NON_APPLICATION_KINDS),
+            or_(func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today, open_ended_application_clause())).exists()
         statement = statement.where(reception)
     statement = statement.order_by(Notice.announcement_date.desc(), Notice.id)
     if not all_targets:

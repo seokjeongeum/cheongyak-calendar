@@ -15,10 +15,18 @@ export function selectionOpportunity(notice: Notice, profile: LocalProfile, conf
   const supplies = (notice.offered_supplies || []).filter((s) => s.verification === 'official' && (s.supply_count == null || s.supply_count > 0))
   const units = [...new Set(supplies.filter((s) => s.supply_type === '일반공급').map((s) => s.unit_type).filter((unit): unit is string => !!unit))]
   const methods = publicRules.filter((r) => r.kind === 'selection_method' && r.rank === 1 && typeof r.points_percent === 'number' && typeof r.lottery_percent === 'number' && r.points_percent + r.lottery_percent === 100 && Math.min(r.points_percent, r.lottery_percent) >= 0)
-  const points = methods.some((r) => (r.points_percent as number) > 0 && units.some((unit) => forUnit(r, unit))) ? calculatePoints(notice, profile) : null
+  const methodForUnit = new Map(units.map((unit) => {
+    const matched = methods.filter((method) => forUnit(method, unit))
+    const agreed = matched.length && new Set(matched.map((r) => `${r.points_percent}:${r.lottery_percent}`)).size === 1 ? matched[0] : undefined
+    return [unit, agreed] as const
+  }))
+  const points = [...methodForUnit.values()].some((r) => r && (r.points_percent as number) > 0) ? calculatePoints(notice, profile) : null
   const rows: OpportunityRow[] = []
-  const query = new URL(notice.official_url || 'https://www.applyhome.co.kr').searchParams
-  const house = query.get('houseManageNo'), announcement = query.get('pblancNo')
+  let house: string | null = null, announcement: string | null = null
+  try {
+    const query = new URL(notice.official_url || 'https://www.applyhome.co.kr').searchParams
+    house = query.get('houseManageNo'); announcement = query.get('pblancNo')
+  } catch { /* An invalid public source URL cannot invalidate the whole catalog. */ }
   const regions = new Map<string, ReturnType<typeof regionDecision>>()
   const manualUnits = new Set<string>()
   for (const supply of supplies) {
@@ -46,10 +54,10 @@ export function selectionOpportunity(notice: Notice, profile: LocalProfile, conf
   }
   for (const unit of units) {
     const region = regions.get(`일반공급:${unit}`)!
-    const matched = methods.filter((method) => forUnit(method, unit))
-    if (!matched.length || new Set(matched.map((r) => `${r.points_percent}:${r.lottery_percent}`)).size > 1) continue
-    const method = matched[0], percent = method.points_percent as number, lottery = method.lottery_percent as number
-    const benchmark = (notice.winning_scores || []).filter((row) => row.verification === 'official' && row.collection_status !== 'error' && row.house_manage_no === house && row.notice_no === announcement && competitionUnitKey(row.unit_type) === competitionUnitKey(unit) && row.residence_area === region.status && row.supply_type === '일반공급' && row.rank === 1 && row.selection_path === 'points' && row.criterion_date === points?.date && Number.isFinite(row.min_score) && row.min_score >= 0 && row.min_score <= 84)
+    const method = methodForUnit.get(unit)
+    if (!method) continue
+    const percent = method.points_percent as number, lottery = method.lottery_percent as number
+    const benchmark = (notice.winning_scores || []).filter((row) => row.verification === 'official' && !!row.evidence_url && row.collection_status !== 'error' && row.house_manage_no === house && row.notice_no === announcement && competitionUnitKey(row.unit_type) === competitionUnitKey(unit) && row.residence_area === region.status && row.supply_type === '일반공급' && row.rank === 1 && row.selection_path === 'points' && row.criterion_date === points?.date && Number.isFinite(row.min_score) && row.min_score >= 0 && row.min_score <= 84)
     const agreed = new Set(benchmark.map((r) => r.min_score)).size === 1 ? benchmark[0] : undefined
     const minimum = agreed?.min_score
     const manualRegion = manualUnits.has(unit)
@@ -62,5 +70,5 @@ export function selectionOpportunity(notice: Notice, profile: LocalProfile, conf
     if (prior) { prior.units = [...new Set([...prior.units, ...row.units])]; prior.supplyTypes = [...new Set([...prior.supplyTypes, ...row.supplyTypes])] }
     else groups.set(key, row)
   }
-  return { rows: [...groups.values()], points, unavailableMethod: units.length > 0 && notice.housing_kind === 'private' && notice.application_method === 'apt_ranked' && units.some((unit) => !methods.some((method) => forUnit(method, unit))) }
+  return { rows: [...groups.values()], points, unavailableMethod: units.length > 0 && notice.housing_kind === 'private' && notice.application_method === 'apt_ranked' && units.some((unit) => !methodForUnit.get(unit)) }
 }

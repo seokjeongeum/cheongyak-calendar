@@ -5,10 +5,12 @@ from datetime import datetime, timezone
 
 import httpx
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
 from app.ingest.common import FeedError
-from app.db import make_engine, init_db
+from app.db import make_engine, init_db, get_session
+from app.main import app
 from app.repository import upsert_notice, notice_public, related_notices
 from app.extract.official_rules import parse_official_rules
 from app.extract.selection_rules import parse_selection_rules
@@ -93,6 +95,18 @@ def test_real_public_result_scores_read_only_first_rank_matching_regions():
         parse_score_popup(html.replace('id="compitTbl"','id="sample"'),url='https://example',house_no='a',notice_no='a',observed_at='now')
 
 
+@pytest.mark.parametrize('old,new', [
+    ('class="cpHouseTy"', 'class="unrecognized"'),
+    ('class="cpSubscrptRt"', 'class="unrecognized"'),
+    ('>1순위<', '>2순위<'),
+    ('data-sem="해당지역"', 'data-sem="기타지역"'),
+])
+def test_score_popup_requires_matching_official_row_identity(old, new):
+    html=(ROOT/'winning-score-public.html').read_text().replace(old,new)
+    rows=parse_score_popup(html,url='https://www.applyhome.co.kr/official',house_no='example',notice_no='example',observed_at='2026-10-05T00:00:00Z')
+    assert rows == []
+
+
 @pytest.mark.asyncio
 async def test_winning_score_api_auth_failure_falls_back_to_public_table():
     html=(ROOT/'winning-score-public.html').read_text()
@@ -104,6 +118,35 @@ async def test_winning_score_api_auth_failure_falls_back_to_public_table():
         rows,status=await collect_winning_scores(client,'private-key','example','example')
     assert rows and status=='fallback' and len(calls)==2
     assert 'private-key' not in json.dumps(rows)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('raw', [None, {'HOUSE_MANAGE_NO':'foreign','PBLANC_NO':'example'}])
+async def test_malformed_or_foreign_score_api_rows_use_official_popup(raw):
+    html=(ROOT/'winning-score-public.html').read_text()
+    calls=[]
+    def handle(request):
+        calls.append(request.url.path)
+        return httpx.Response(200,json={'data':[raw]}) if '/api/' in request.url.path else httpx.Response(200,text=html)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        rows,status=await collect_winning_scores(client,'private-key','example','example')
+    assert rows and status=='fallback' and len(calls)==2
+    assert {r['house_manage_no'] for r in rows} == {'example'}
+    assert 'private-key' not in json.dumps(rows)
+
+
+@pytest.mark.asyncio
+async def test_score_api_exact_full_page_uses_match_count():
+    pages=[]
+    def handle(request):
+        pages.append(int(request.url.params['page']))
+        return httpx.Response(200,json={'matchCount':100,'data':[{
+            'HOUSE_MANAGE_NO':'123','PBLANC_NO':'123','HOUSE_TY':'84A','RESIDE_SECD':'01',
+            'LWET_SCORE':37,'TOP_SCORE':60,'AVRG_SCORE':42.79,
+        }]*100})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        rows,status=await collect_winning_scores(client,'key','123','123')
+    assert len(rows)==100 and status=='success' and pages==[1]
 
 
 @pytest.mark.asyncio
@@ -129,4 +172,43 @@ def test_api_contract_preserves_notice_prices_and_retains_failed_score_evidence(
         assert public.selection_methods==[]
         record_winning_scores(s,n.id,[],'unpublished',expected_version=n.version-1,criterion_date='2026-10-02');s.commit()
         assert notice_public(related_notices(s,n)).winning_scores
+    engine.dispose()
+
+
+def test_list_and_detail_merge_selection_scores_without_losing_prices(tmp_path):
+    engine=make_engine(f'sqlite:///{tmp_path}/merged-selection.db');init_db(engine)
+    with sessionmaker(bind=engine,expire_on_commit=False)() as session:
+        base={'external_id':'same-offer','title':'공식 선정표 대조','category':'apt','address':'서울특별시 예시 1',
+              'announcement_date':'2026-10-02','official_url':'https://official.example',
+              'events':[{'kind':'general','label':'일반공급','start_date':'2026-10-07'}],
+              'prices':[{'unit_type':'84A','price_kind':'sale_max','amount_krw':100000000,'verification':'official'}]}
+        primary=upsert_notice(session,{**base,'source':'myhome'})
+        method={'kind':'selection_method','effect':'metadata','verification':'official','source':'cheongyak_home',
+                'unit_types':['84A'],'supply_type':'일반공급','rank':1,'points_percent':40,'lottery_percent':60,
+                'criterion_date':'2026-10-02','evidence_url':'https://official.example','document_hash':'score-document'}
+        secondary=upsert_notice(session,{**base,'source':'cheongyak_home','rules':[method]})
+        session.commit()
+        assert secondary.duplicate_of_id==primary.id
+        record_winning_scores(session,secondary.id,[{'unit_type':'84A','residence_area':'local','min_score':37,
+            'verification':'official','house_manage_no':'123','notice_no':'123','supply_type':'일반공급','rank':1,
+            'selection_path':'points','evidence_url':'https://official.example'}],'success',
+            expected_version=secondary.version,criterion_date='2026-10-02')
+        session.commit()
+        def override_session():
+            yield session
+        app.dependency_overrides[get_session]=override_session
+        try:
+            client=TestClient(app)
+            listing=client.get('/api/notices',params={'start':'2026-10-01','end':'2026-10-31'}).json()
+            assert listing['total']==1
+            card=listing['items'][0]
+            for notice_id in (primary.id,secondary.id):
+                detail=client.get(f'/api/notices/{notice_id}').json()
+                assert card['selection_methods']==detail['selection_methods']==[method]
+                assert card['winning_scores']==detail['winning_scores']
+                assert detail['winning_scores'][0]['min_score']==37
+                assert detail['id']==card['id']==primary.id
+                assert detail['prices'][0]['amount_krw']==100000000
+        finally:
+            app.dependency_overrides.clear()
     engine.dispose()

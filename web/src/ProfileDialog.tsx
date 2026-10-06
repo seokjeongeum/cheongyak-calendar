@@ -11,7 +11,7 @@ import type { FactChangeGroup, LocalProfile, Notice } from './types'
 import { PointsFields } from './PointsFields'
 import { ChildFactsFields } from './ChildFactsFields'
 import { FactChangeFields } from './FactChangeFields'
-import { getProfileQuestionModel } from './profileQuestionModel'
+import { getProfileHistoryTarget, getProfileQuestionModel } from './profileQuestionModel'
 
 const LAW = 'https://www.law.go.kr/법령/주택공급에관한규칙/'
 // Step navigation changes visibility, not the facts inside the five forms.
@@ -39,6 +39,7 @@ const FIELD_STEPS: Partial<Record<keyof LocalProfile, number>> = {
 }
 export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft, profile: initialProfile, onChange: commitProfile, onClose: closeDialog, today, notices, initialField }: { open?: boolean; onDraft?: (profile: LocalProfile) => void; profile: LocalProfile; onChange: (value: LocalProfile) => void; onClose: () => void; today: string; notices: Notice[]; initialField?: keyof LocalProfile }) {
   const [profile, setDraft] = useState(initialProfile)
+  const model = useMemo(() => getProfileQuestionModel(notices, today), [notices, today])
   const draftRef = useRef(profile)
   const commitRef = useRef(commitProfile)
   const closeRef = useRef(closeDialog)
@@ -72,16 +73,22 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
   useEffect(() => {
     if (!open) return
     setStep(initialField ? FIELD_STEPS[initialField] || 0 : 0)
-    if (!initialField) return
+  }, [initialField, open])
+  useEffect(() => {
+    // The requested step must be committed before focusing: hidden or inert
+    // controls silently ignore focus even if they are already in the DOM.
+    if (!open || !initialField || step !== (FIELD_STEPS[initialField] || 0)) return
     const frame = requestAnimationFrame(() => {
-      const container = document.querySelector(`[data-profile-field="${initialField}"]`)
+      const dialog = document.querySelector('.profile-dialog')
+      const historyGroup = getProfileHistoryTarget(initialField, draftRef.current, model)
+      const container = historyGroup && dialog?.querySelector(`[data-fact-group="${historyGroup}"]`) || dialog?.querySelector(`[data-profile-field="${initialField}"]`)
       for (let parent = container; parent; parent = parent.parentElement) { if (parent instanceof HTMLDetailsElement) parent.open = true }
-      const input = container?.querySelector<HTMLElement>('input,select,button')
+      const input = container?.querySelector<HTMLElement>('input:not([disabled]),select:not([disabled]),button:not([disabled])')
       input?.focus({ preventScroll: true })
       container?.scrollIntoView({ block: 'nearest' })
     })
     return () => cancelAnimationFrame(frame)
-  }, [initialField, open])
+  }, [initialField, open, model, step])
   useEffect(() => {
     if (!open) return
     const dialog = document.querySelector<HTMLElement>('.profile-dialog')
@@ -118,7 +125,6 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
   const date = (key: keyof LocalProfile, label: string, max = today) => <label data-profile-field={key}>{label}<input type="date" max={max} value={profile[key] as string} onChange={(event) => update({ [key]: event.target.value })} /></label>
   const number = (key: keyof LocalProfile, label: string) => <label data-profile-field={key}>{label}<input type="number" min="0" step="1" inputMode="numeric" value={profile[key] as string} onChange={(event) => update({ [key]: event.target.value })} /></label>
   const money = (key: keyof LocalProfile, label: string) => <div data-profile-field={key}><MoneyInput label={label} value={profile[key] as string} onChange={(value) => update({ [key]: value })} /></div>
-  const model = useMemo(() => getProfileQuestionModel(notices, today), [notices, today])
   const needsPast = (kinds: string[]) => kinds.some((kind) => model.pastKinds.has(kind))
   const needsPastGroup = (group: FactChangeGroup) => model.pastGroups.has(group)
   const { needsDetailedDistrict, needsDomestic, needsProvider, elderParent, institution, relocation, needsMonthly, needsNetAssets, needsPlannedMarriage, needsSingleParent, needsProperty } = model

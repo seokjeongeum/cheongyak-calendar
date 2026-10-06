@@ -220,6 +220,47 @@ async def test_api_figures_survive_popup_failure_without_closure_evidence(factor
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('score_response', ['unpublished', 'error', 'additional', 'conflict'])
+async def test_official_popup_scores_survive_empty_failed_or_partial_score_api(factory, monkeypatch, score_response):
+    monkeypatch.setattr(competition, "SessionLocal", factory)
+    monkeypatch.setattr(competition, "init_db", lambda: None)
+    monkeypatch.setenv("CHEONGYAK_COMPETITION_API_KEY", "approved-test-key")
+    html=(FIXTURES / "winning-score-public.html").read_text()
+    raw=payload("2026000300")
+    raw["prices"]=[{"unit_type":"084.9800A","price_kind":"sale_max","amount_krw":400_000_000,"verification":"official"}]
+    with factory() as session:
+        upsert_notice(session, raw)
+        session.commit()
+    paths=[]
+    def handler(request):
+        paths.append(request.url.path)
+        if "getAptLttotPblancScore" in request.url.path:
+            if score_response == 'error':
+                return httpx.Response(401, json={"message":"approved-test-key"})
+            if score_response in {'additional','conflict'}:
+                return httpx.Response(200,json={'matchCount':1,'data':[{
+                    'HOUSE_MANAGE_NO':'2026000300','PBLANC_NO':'2026000300',
+                    'HOUSE_TY':'084.9800A','RESIDE_SECD':'02' if score_response == 'additional' else '01',
+                    'LWET_SCORE':40,'TOP_SCORE':60,'AVRG_SCORE':45,
+                }]})
+        if request.url.host == "api.odcloud.kr":
+            return httpx.Response(200, json={"matchCount":0,"data":[]})
+        if score_response == 'error' and paths.count(request.url.path) > 1:
+            return httpx.Response(503)
+        return httpx.Response(200,text=html)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await competition.run_once(today=date(2026, 10, 1), client=client)
+    with factory() as session:
+        public=notice_public(related_notices(session, session.scalar(select(Notice))))
+        assert any(row["min_score"] == 37 and row["residence_area"] == "local" for row in public.winning_scores)
+        assert all(row["collection_status"] == "success" for row in public.winning_scores)
+        assert all(row["criterion_date"] == "2026-09-28" for row in public.winning_scores)
+        assert len(public.winning_scores) == (2 if score_response in {'additional','conflict'} else 1)
+        assert 'approved-test-key' not in str(public.winning_scores)
+    assert any("getAptLttotPblancScore" in path for path in paths)
+
+
+@pytest.mark.asyncio
 async def test_auth_and_public_screen_failure_disable_existing_exclusion(factory, monkeypatch):
     monkeypatch.setattr(competition, "SessionLocal", factory)
     monkeypatch.setattr(competition, "init_db", lambda: None)

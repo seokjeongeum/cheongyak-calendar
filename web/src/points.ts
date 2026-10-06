@@ -9,18 +9,23 @@ export interface PointsPart { label: string; score: number | null; maximum: numb
 export interface PointsResult { date: string | null; total: number | null; confirmed: number; parts: PointsPart[] }
 const years = (start: string, end: string) => Math.floor((fullMonths(start, end) ?? 0) / 12)
 function birthday(birth: string, age: number): string { const y = Number(birth.slice(0, 4)) + age; return `${y}${birth.slice(4)}`.replace(/-02-29$/, y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? '-02-29' : '-02-28') }
+function yearsBefore(date: string, years: number): string { return birthday(date, -years) }
 export function bankPoints(months: number): number { return months < 6 ? 1 : months < 12 ? 2 : Math.min(17, Math.floor(months / 12) + 2) }
-/** Matches the official calculator's 24-month pre-2024 / 60-month total minor cap. */
+/** Article 10(6): pre-2024 minor years capped at 2; total minor years capped at 5.
+ * Keep the recognized interval continuous so split dates do not discard partial months.
+ * https://www.law.go.kr/lsInfoP.do?lsiSeq=286965&viewCls=lsRvsDocInfoR
+ */
 export function recognizedAccountMonths(start: string, birth: string, cutoff: string): number | null {
   if (!parseDate(start) || !parseDate(birth) || !parseDate(cutoff) || start < birth || start > cutoff || birth > cutoff) return null
   const adult = birthday(birth, 19)
   if (start >= adult) return fullMonths(start, cutoff)
   const minorEnd = adult < cutoff ? adult : cutoff
-  const oldEnd = minorEnd < '2023-12-31' ? minorEnd : '2023-12-31'
-  const old = start <= oldEnd ? Math.min(24, fullMonths(start, oldEnd) || 0) : 0
-  const newStart = start > '2024-01-01' ? start : '2024-01-01'
-  const recent = newStart <= minorEnd ? fullMonths(newStart, minorEnd) || 0 : 0
-  return Math.min(60, old + recent) + (adult < cutoff ? fullMonths(adult, cutoff) || 0 : 0)
+  // 2024-01-01 is the shared boundary; ending on 2023-12-31 loses a day.
+  const oldEnd = minorEnd < '2024-01-01' ? minorEnd : '2024-01-01'
+  const oldStart = yearsBefore(oldEnd, 2)
+  const totalStart = yearsBefore(minorEnd, 5)
+  const recognizedStart = [start, oldStart, totalStart].sort().at(-1)!
+  return fullMonths(recognizedStart, cutoff)
 }
 function homeless(profile: LocalProfile, date: string): PointsPart {
   const part: PointsPart = { label: '무주택기간', score: null, maximum: 32, detail: '', field: 'ownershipFacts' }
@@ -34,7 +39,7 @@ function homeless(profile: LocalProfile, date: string): PointsPart {
   const age = ageAt(profile.dateOfBirth, date)
   const marriage = factsAtDate(profile, 'marital', date)
   if (age === null) return { ...part, detail: '생년월일이 필요합니다.', field: 'dateOfBirth' }
-  if (!marriage.known || profile.maritalStatus === 'unknown') return { ...part, detail: '공고일의 혼인 상태가 필요합니다.', field: 'maritalStatus' }
+  if (!marriage.known || marriage.profile.maritalStatus === 'unknown') return { ...part, detail: '공고일의 혼인 상태가 필요합니다.', field: 'maritalStatus' }
   profile = marriage.profile
   if (profile.maritalStatus === 'single' && age < 30) return { ...part, score: 0, detail: '만 30세 미만 미혼자는 무주택기간 가점 0점입니다.' }
   let base = birthday(profile.dateOfBirth, 30)
@@ -42,10 +47,11 @@ function homeless(profile: LocalProfile, date: string): PointsPart {
   if (profile.marriageDate && profile.marriageDate <= date && profile.marriageDate < base) base = profile.marriageDate
   if (['divorced', 'widowed'].includes(profile.maritalStatus) && !profile.marriageDate) return { ...part, detail: '최초 혼인신고일을 확인해야 합니다.', field: 'marriageDate' }
   const relevant = profile.ownershipFacts.filter((r) => ['applicant', 'spouse'].includes(r.ownerRelation) && r.acquiredDate <= date && !(r.ownerRelation === 'spouse' && r.disposedDate && profile.marriageDate && r.disposedDate < profile.marriageDate))
-  const reviewedSince = parseDate(profile.pointsHomelessSince) && profile.pointsHomelessSince <= date && profile.pointsHomelessSince <= getEvaluationToday() ? profile.pointsHomelessSince : ''
+  const pointsFacts = factsAtDate(profile, 'points', date)
+  const reviewedSince = pointsFacts.known && parseDate(pointsFacts.profile.pointsHomelessSince) && pointsFacts.profile.pointsHomelessSince <= date && pointsFacts.profile.pointsHomelessSince <= getEvaluationToday() ? pointsFacts.profile.pointsHomelessSince : ''
   if (relevant.some((r) => !parseDate(r.disposedDate)) && !reviewedSince) return { ...part, detail: '보유 이력·법정 예외로 무주택이 된 날을 확인하세요.', field: 'pointsHomelessSince' }
   if ((profile.applicantPreviouslyOwnedHome !== false || profile.hasSpouse === true && profile.spousePreviouslyOwnedHome !== false) && !relevant.length && !reviewedSince) return { ...part, detail: '본인·배우자의 과거 소유 이력 또는 무주택이 된 날이 필요합니다.', field: 'pointsHomelessSince' }
-  const since = [base, reviewedSince, ...relevant.map((r) => r.disposedDate)].filter(Boolean).sort().at(-1)!
+  const since = [base, reviewedSince, ...relevant.map((r) => r.disposedDate)].filter((value) => !!parseDate(value)).sort().at(-1)!
   if (since > date) return { ...part, score: 0, detail: '공고일에는 무주택기간 산정 시작일 전입니다.' }
   return { ...part, score: Math.min(32, (years(since, date) + 1) * 2), detail: `${since}부터 ${years(since, date)}년 · 본인·배우자 소유 이력 기준` }
 }
@@ -55,11 +61,13 @@ function dependants(profile: LocalProfile, date: string): PointsPart {
   if (!household.complete) return { ...part, detail: household.reviewDetail || '공고일 가족·등본 사실이 필요합니다.', field: household.profileField }
   const temporal = factsAtDate(profile, 'household', date)
   profile = temporal.profile
+  const head = factsAtDate(profile, 'household_head', date)
+  const pointsFacts = factsAtDate(profile, 'points', date)
   let count = profile.hasSpouse === true ? 1 : 0
   const exclusions: string[] = []
   const members = profile.householdMembers.filter((m) => m.register !== 'separate' && !['sibling', 'unrelated', 'descendant_spouse'].includes(m.relation))
-  if (members.some((member) => !/parent$/.test(member.relation) || member.ownsHome !== true) && (profile.pointsFamilyComplete !== true || !factsAtDate(profile, 'points', date).known)) return { ...part, detail: '가점용 가족 인정 사실과 마지막 변경일을 입력하세요.' }
-  profile = factsAtDate(profile, 'points', date).profile
+  if (members.some((member) => !/parent$/.test(member.relation) || member.ownsHome !== true) && (pointsFacts.profile.pointsFamilyComplete !== true || !pointsFacts.known)) return { ...part, detail: '가점용 가족 인정 사실과 마지막 변경일을 입력하세요.' }
+  profile = pointsFacts.profile
   for (const member of members) {
     const f = profile.pointsFamily[member.id]
     const label = household.members.find((m) => m.id === member.id)?.label || member.id
@@ -75,8 +83,8 @@ function dependants(profile: LocalProfile, date: string): PointsPart {
     if (f.overseasExcluded === true) { exclusions.push(`${label}: 공고의 국외 체류 기준으로 제외`); continue }
     if (f.overseasExcluded === null || !parseDate(f.registeredSince) || f.registeredSince > date) return { ...part, detail: `${label}의 연속 등본 등재일·국외 체류 사실이 필요합니다.` }
     if (ancestor) {
-      if (profile.isHouseholdHead === null || member.ownsHome === null || f.spouseOwnsHome === null) return { ...part, detail: `${label}의 주택·배우자 소유와 신청자의 세대주 사실이 필요합니다.` }
-      if (!profile.isHouseholdHead || (fullMonths(f.registeredSince, date) || 0) < 36) { exclusions.push(`${label}: 세대주·3년 연속 등재 요건 미충족`); continue }
+      if (!head.known || head.profile.isHouseholdHead === null || member.ownsHome === null || f.spouseOwnsHome === null) return { ...part, detail: `${label}의 주택·배우자 소유와 공고일 신청자의 세대주 사실이 필요합니다.`, field: !head.known || head.profile.isHouseholdHead === null ? 'isHouseholdHead' : part.field }
+      if (!head.profile.isHouseholdHead || (fullMonths(f.registeredSince, date) || 0) < 36) { exclusions.push(`${label}: 세대주·3년 연속 등재 요건 미충족`); continue }
     } else {
       if (f.unmarried === false) { exclusions.push(`${label}: 혼인한 직계비속 제외`); continue }
       if (f.unmarried === null) return { ...part, detail: `${label}의 미혼 여부가 필요합니다.` }
@@ -99,6 +107,9 @@ function bank(profile: LocalProfile, date: string): PointsPart {
   const months = recognizedAccountMonths(profile.privateRankBaseDate, profile.dateOfBirth, date)
   if (months === null) return { ...part, detail: '은행 인정 순위기산일과 생년월일이 필요합니다.' }
   const mine = bankPoints(months)
+  // Spouse account credit started on 2024-03-25; it cannot revise older results.
+  // https://www.korea.kr/news/policyNewsView.do?newsId=148927399
+  if (date < '2024-03-25') return { ...part, score: mine, detail: `본인 인정 ${months}개월 · ${mine}점 · 배우자 가입기간 합산 시행 전` }
   const marital = factsAtDate(profile, 'marital', date)
   if (!marital.known || marital.profile.hasSpouse === null) return { ...part, detail: '공고일 배우자 유무가 필요합니다.', field: 'maritalStatus' }
   profile = marital.profile

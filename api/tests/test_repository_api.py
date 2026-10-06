@@ -595,3 +595,37 @@ def test_coverage_retains_last_success_and_api_has_no_profile_endpoint(db, clien
     assert sources["ih"]["status"] == "pending"
     assert client.post("/api/profile", json={"address": "secret"}).status_code == 404
     assert not any("profile" in path for path in client.get("/api/openapi.json").json()["paths"])
+
+
+@pytest.mark.parametrize("label", ["상시 접수", "마감 시까지", "소진\t시까지", "종료일 미공개"])
+def test_explicit_open_reception_remains_visible_after_start_without_invented_end(db, client, label):
+    raw = example_notice(external_id="OPEN")
+    raw["events"] = [{"kind": "application", "label": label, "start_date": "2026-09-01", "end_date": None}]
+    ongoing = upsert_notice(db, raw)
+    dated_raw = example_notice(external_id="DATED")
+    dated_raw["title"] = "기한 있는 접수"
+    dated = upsert_notice(db, dated_raw)
+    db.commit()
+
+    response = client.get("/api/notices", params={"start": "2026-10-06", "end": "2026-11-30", "application_only": True})
+    assert response.status_code == 200
+    page = response.json()
+    assert page["total"] == 2
+    assert [item["id"] for item in page["items"]] == [dated.id, ongoing.id]
+    assert page["items"][1]["events"][0]["end_date"] is None
+    assert page["items"][1]["application_end_date"] is None
+    assert page["items"][1]["sort_date"] is None
+    assert client.get("/api/notices", params={"start": "2026-11-01", "end": "2026-11-30", "application_only": True}).json()["total"] == 1
+    assert client.get("/api/notices", params={"start": "2026-08-01", "end": "2026-08-31", "application_only": True}).json()["total"] == 0
+
+
+@pytest.mark.parametrize("label", ["1순위", "접수", "마감 안내 시 주의", "상시 계약일"])
+def test_missing_end_without_explicit_ongoing_wording_stays_single_day(db, client, label):
+    raw = example_notice(external_id="DAILY")
+    raw["events"] = [{"kind": "application", "label": label, "start_date": "2026-09-01", "end_date": None}]
+    upsert_notice(db, raw)
+    db.commit()
+    assert client.get("/api/notices", params={"start": "2026-10-06", "end": "2026-11-30", "application_only": True}).json()["total"] == 0
+    past = client.get("/api/notices", params={"start": "2026-09-01", "end": "2026-09-01", "application_only": True}).json()
+    assert past["total"] == 1
+    assert past["items"][0]["application_end_date"] == "2026-09-01"
