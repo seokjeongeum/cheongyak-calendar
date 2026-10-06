@@ -68,6 +68,21 @@ describe('official general-supply points', () => {
     expect(recognizedAccountMonths('2010-01-01','2000-01-01','2026-10-02')).toBe(24+93)
     expect(calculatePoints(housing({announcement_date:'2023-09-14'}),person({privateRankBaseDate:'2023-01-01'})).parts[0].score).toBe(0)
   })
+  it('keeps partial months across the 2024 and adult boundaries before applying the legal caps', () => {
+    expect(recognizedAccountMonths('2022-01-01','2010-01-01','2024-01-01')).toBe(24)
+    expect(recognizedAccountMonths('2022-01-01','2010-01-01','2024-02-01')).toBe(25)
+    expect(recognizedAccountMonths('2022-01-15','2010-01-01','2024-02-15')).toBe(25)
+    expect(recognizedAccountMonths('2018-11-15','2000-01-01','2019-02-15')).toBe(3)
+    expect(recognizedAccountMonths('2010-01-01','2010-01-01','2028-01-01')).toBe(60)
+    expect(recognizedAccountMonths('2010-01-01','2010-01-01','2030-01-01')).toBe(72)
+  })
+  it('uses historical marital and manual homeless-since facts instead of current answers', () => {
+    const p=person({maritalStatus:'unknown',factChanges:{...stable,marital:{mode:'unknown',date:''}},factSnapshots:[{group:'marital',date:'2026-10-02',values:{maritalStatus:'single',hasSpouse:false}}]})
+    expect(calculatePoints(housing(),p).parts[0].score).toBe(8)
+    const changed=person({applicantPreviouslyOwnedHome:true,pointsHomelessSince:'2020-01-01',factChanges:{...stable,points:{mode:'known',date:'2026-10-04'}}})
+    expect(calculatePoints(housing(),changed).parts[0].score).toBeNull()
+    expect(calculatePoints(housing(),{...changed,factSnapshots:[{group:'points',date:'2026-10-02',values:{pointsHomelessSince:'2026-01-01'}}]}).parts[0].score).toBe(2)
+  })
   it('excludes a homeowner parent age 60 despite the eligibility ownership exception', () => {
     const p=person({isHouseholdHead:true,householdMembers:[{id:'parent',relation:'applicant_parent',register:'applicant',dateOfBirth:'1966-01-01',ownsHome:true,previouslyOwnedHome:true}]})
     expect(calculatePoints(housing(),p).parts[1]).toMatchObject({score:5})
@@ -78,11 +93,24 @@ describe('official general-supply points', () => {
     expect(calculatePoints(housing(),p).parts[1].score).toBe(10)
     expect(calculatePoints(housing(),{...p,pointsFamily:{parent:{...p.pointsFamily.parent,registeredSince:'2023-10-03'}}}).parts[1].score).toBe(5)
   })
+  it('uses the notice-date household head and points-family confirmation', () => {
+    const family={parent:{...emptyPointsFamilyFact(),registeredSince:'2023-10-02',spouseOwnsHome:false,overseasExcluded:false}}
+    const p=person({isHouseholdHead:true,pointsFamilyComplete:true,householdMembers:[{id:'parent',relation:'applicant_parent',register:'applicant',dateOfBirth:'1966-01-01',ownsHome:false,previouslyOwnedHome:false}],pointsFamily:family,factChanges:{...stable,household_head:{mode:'known',date:'2026-10-04'}}})
+    expect(calculatePoints(housing(),p).parts[1].score).toBeNull()
+    expect(calculatePoints(housing(),{...p,factSnapshots:[{group:'household_head',date:'2026-10-02',values:{isHouseholdHead:false}}]}).parts[1].score).toBe(5)
+    const historical={...p,isHouseholdHead:false,pointsFamilyComplete:false,factChanges:{...p.factChanges,points:{mode:'unknown' as const,date:''}},factSnapshots:[{group:'household_head' as const,date:'2026-10-02',values:{isHouseholdHead:true}},{group:'points' as const,date:'2026-10-02',values:{pointsFamily:family,pointsFamilyComplete:true}}]}
+    expect(calculatePoints(housing(),historical).parts[1].score).toBe(10)
+  })
   it('adds half the spouse bank period up to 3 points without applying current status to the past', () => {
     const p=person({maritalStatus:'married',hasSpouse:true,marriageDate:'2020-01-01',spouseSameRegister:true,privateRankBaseDate:'2025-10-02',spouseAccountPresent:true,spouseAccountBaseDate:'2025-10-02'})
     expect(calculatePoints(housing(),p).parts[2]).toMatchObject({score:5})  // 3 + (12/2 months => 2).
     expect(calculatePoints(housing(),{...p,spouseAccountBaseDate:'2024-10-02'}).parts[2].score).toBe(6)
     expect(calculatePoints(housing(),{...p,spouseAccountPresent:false,factChanges:{...stable,points:{mode:'known',date:'2026-10-04'}}}).parts[2].score).toBeNull()
+  })
+  it('does not add spouse account credit before its official start date', () => {
+    const p=person({maritalStatus:'married',hasSpouse:true,marriageDate:'2020-01-01',privateRankBaseDate:'2022-01-01',spouseAccountPresent:true,spouseAccountBaseDate:'2010-01-01'})
+    expect(calculatePoints(housing({announcement_date:'2024-03-24'}),p).parts[2].score).toBe(4)
+    expect(calculatePoints(housing({announcement_date:'2024-03-25'}),p).parts[2].score).toBe(7)
   })
   it('does not award points to married or overseas-excluded children', () => {
     const p=person({pointsFamilyComplete:true,householdMembers:[{id:'child',relation:'applicant_child',register:'applicant',dateOfBirth:'2000-01-01',ownsHome:false,previouslyOwnedHome:false}],pointsFamily:{child:{...emptyPointsFamilyFact(),registeredSince:'2020-01-01',unmarried:false,overseasExcluded:false}}})
@@ -103,6 +131,15 @@ describe('opportunity is separate from admission', () => {
     expect(selectionOpportunity(housing({selection_methods:[{...selection,verification:'ai_unverified'}]}),person()).rows).toEqual([])
     expect(selectionOpportunity(housing({selection_methods:[{...selection,unit_types:['59A']}]}),person()).rows).toEqual([])
   })
+  it('keeps conflicting official ratios unresolved and visible as a source gap', () => {
+    const conflict={...selection,points_percent:40,lottery_percent:60}
+    expect(selectionOpportunity(housing({selection_methods:[selection,conflict]}),person())).toMatchObject({rows:[],points:null,unavailableMethod:true})
+  })
+  it('does not let a malformed public source URL crash every notice evaluation', () => {
+    const value=selectionOpportunity(housing({official_url:'unparseable source',selection_methods:[selection]}),person())
+    expect(value.rows[0].pointsPercent).toBe(100)
+    expect(value.rows[0].benchmark).toBeUndefined()
+  })
   const regions={kind:'applicant_regions',effect:'metadata',verification:'official',criterion_date:'2026-10-02',evidence_url:official,regions:[{region_code:'41',region_name:'경기도'},{region_code:'11',region_name:'서울특별시'}],priority_division:'regional',local_priority:{region_code:'41830',region_name:'경기도 양평군',min_months:0},other_priority:{region_code:'41',region_name:'경기도'}}
   const other=person({region:'경기도',regionCode:'41',district:'화성시',districtCode:'41590',movedInDate:'2010-01-01',cityMovedInDate:'2010-01-01',districtMovedInDate:'2010-01-01'})
   const allocation={kind:'regional_allocation',effect:'metadata',verification:'official',evidence_url:official,allocation_method:'region_priority'}
@@ -117,7 +154,7 @@ describe('opportunity is separate from admission', () => {
     const score={unit_type:'84A',residence_area:'other' as const,house_manage_no:'2026000468',notice_no:'2026000468',supply_type:'일반공급',rank:1,selection_path:'points' as const,min_score:37,max_score:60,average_score:42.79,verification:'official' as const,criterion_date:'2026-10-02',evidence_url:official,collection_status:'success'}
     const n=housing({rules:[regions],selection_methods:[selection],winning_scores:[score]})
     expect(selectionOpportunity(n,other).rows.find(r=>r.pointsPercent!=null)?.benchmark).toMatchObject({minimum:37,label:'과거 최저가점 미만',difference:-7})
-    for (const change of [{residence_area:'local' as const},{house_manage_no:'unrelated'},{unit_type:'59A'},{criterion_date:'2026-09-01'},{selection_path:'lottery'},{collection_status:'error'}]) {
+    for (const change of [{residence_area:'local' as const},{house_manage_no:'unrelated'},{unit_type:'59A'},{criterion_date:'2026-09-01'},{selection_path:'lottery'},{collection_status:'error'},{evidence_url:undefined}]) {
       expect(selectionOpportunity({...n,winning_scores:[{...score,...change}]},other).rows.find(r=>r.pointsPercent!=null)?.benchmark).toBeUndefined()
     }
   })

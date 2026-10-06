@@ -264,7 +264,7 @@ export function householdHomeless(profile: LocalProfile, notice?: Notice, supply
 function conditionChildren(rule: NoticeRule): NoticeRule[] {
   return Array.isArray(rule.conditions) ? rule.conditions.filter((child): child is NoticeRule => !!child && typeof child === 'object' && typeof child.kind === 'string') : []
 }
-function inheritedCondition(parent: NoticeRule, child: NoticeRule): NoticeRule {
+export function inheritedCondition(parent: NoticeRule, child: NoticeRule): NoticeRule {
   const inherited: Partial<NoticeRule> = {}
   for (const key of ['verification', 'evidence_url', 'evidence_text', 'document_hash', 'criterion_date', 'reference_date', 'criterion_basis', 'supply_type', 'unit_type', 'housing_kind']) if (parent[key] !== undefined && child[key] === undefined) inherited[key] = parent[key]
   return { ...inherited, ...child }

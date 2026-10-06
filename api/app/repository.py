@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, text
+from sqlalchemy import and_, func, select, text
 from sqlalchemy.orm import Session
 
 from app.models import CompetitionRevision, CompetitionState, Notice, NoticeEvent, NoticeRevision, SourceStatus, UnitCompetition, UnitPrice, utc_now
@@ -22,6 +22,8 @@ PRICE_KINDS = {"sale", "sale_max", "sale_total", "deposit", "rent", "deposit_mon
 VERIFICATIONS = {"official", "ai_unverified", "unknown"}
 SOURCE_IDS = ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh", "cheongyak_competition")
 NON_APPLICATION_KINDS = {"announcement", "contract", "result", "winner"}
+OPEN_RECEPTION_PATTERN = r"상시|마감\s*시|소진\s*시|종료일\s*미공개"
+NON_APPLICATION_LABEL_PATTERN = r"당첨자 발표|계약일|계약 체결"
 
 
 def _date(value: date | str | None) -> date | None:
@@ -547,14 +549,31 @@ def related_notices(session: Session, notice: Notice) -> list[Notice]:
     return [canonical, *duplicates]
 
 
+def is_open_ended_application(event: EventPublic) -> bool:
+    """A missing end alone does not turn a single-day event into ongoing intake."""
+    return (event.kind.lower() not in NON_APPLICATION_KINDS and event.end_date is None and
+            not re.search(NON_APPLICATION_LABEL_PATTERN, event.label) and
+            bool(re.search(OPEN_RECEPTION_PATTERN, event.label)))
+
+
+def open_ended_application_clause():
+    """Equivalent SQL predicate for API and active document-reprocessing queries."""
+    return and_(NoticeEvent.end_date.is_(None), func.lower(NoticeEvent.kind).not_in(NON_APPLICATION_KINDS),
+                NoticeEvent.label.regexp_match(OPEN_RECEPTION_PATTERN),
+                ~NoticeEvent.label.regexp_match(NON_APPLICATION_LABEL_PATTERN))
+
+
 def application_sort_date(notice: NoticePublic, start: date | None = None, end: date | None = None) -> date | None:
     applications = [event for event in notice.events if event.kind not in NON_APPLICATION_KINDS]
     matching = [
         max(event.start_date, start) if start is not None else event.start_date for event in applications
-        if (end is None or event.start_date <= end) and (start is None or (event.end_date or event.start_date) >= start)
+        if not is_open_ended_application(event) and
+        (end is None or event.start_date <= end) and (start is None or (event.end_date or event.start_date) >= start)
     ]
     if matching:
         return min(matching)
+    if any(is_open_ended_application(event) and (end is None or event.start_date <= end) for event in applications):
+        return None
     if applications:
         return min(event.start_date for event in applications)
     return notice.announcement_date
@@ -562,6 +581,8 @@ def application_sort_date(notice: NoticePublic, start: date | None = None, end: 
 
 def application_end_date(notice: NoticePublic) -> date | None:
     """Latest official reception end, excluding results and contract dates."""
+    if any(is_open_ended_application(event) for event in notice.events):
+        return None
     return max(
         (event.end_date or event.start_date for event in notice.events if event.kind not in NON_APPLICATION_KINDS),
         default=None,
@@ -574,7 +595,8 @@ def notice_matches_window(
     applications = [event for event in notice.events if event.kind not in NON_APPLICATION_KINDS]
     if applications:
         return any(
-            (end is None or event.start_date <= end) and (start is None or (event.end_date or event.start_date) >= start)
+            (end is None or event.start_date <= end) and
+            (start is None or is_open_ended_application(event) or (event.end_date or event.start_date) >= start)
             for event in applications
         )
     if application_only:

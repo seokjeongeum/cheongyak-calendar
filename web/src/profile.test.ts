@@ -182,6 +182,17 @@ describe('family fact changes invalidate composition snapshots centrally', () =>
   it('keeps unchanged answers and unrelated edits from wiping valid snapshots', () => {
     for (const part of [{ hasSpouse: false }, { annualIncomeKrw: '60000000' }]) expect(updateProfileFacts(current, part, '2026-10-04')).toMatchObject({ householdMembersComplete: true, householdSnapshotDate: '2026-09-30', householdHistoryConfirmations: current.householdHistoryConfirmations })
   })
+  it('preserves an independent saved spouse answer when the dialog submits an unrelated full draft', () => {
+    const previous = { ...current, maritalStatus: 'unknown' as const }
+    const next = updateProfileFacts(previous, { ...previous, hasChildren: false }, '2026-10-05')
+    expect(next).toMatchObject({ maritalStatus: 'unknown', hasSpouse: false, hasChildren: false, householdMembersComplete: true, householdSnapshotDate: previous.householdSnapshotDate })
+    expect(next.householdHistoryConfirmations).toEqual(previous.householdHistoryConfirmations)
+    expect(next.factChanges.household).toBeUndefined()
+  })
+  it('still synchronizes actual spouse edits submitted as a full dialog draft', () => {
+    const previous = { ...current, maritalStatus: 'unknown' as const, hasSpouse: null }
+    expect(updateProfileFacts(previous, { ...previous, hasSpouse: true }, '2026-10-05')).toMatchObject({ hasSpouse: true, maritalStatus: 'married', householdMembersComplete: null })
+  })
   it('rechecks family-wide query records after composition changes while preserving applicant-only facts', () => {
     const query = { ineligibleRestrictionActive: false, resaleRestrictionActive: false, rewinningRestrictionActive: false, asOfDate: '2026-09-30', historyConfirmations: [{ criterionDate: '2026-09-23', unchanged: true }] }
     const next = updateProfileFacts({ ...current, applicationRestrictionFacts: { applicant: query, household: query, applicant_spouse: query } }, { hasSpouse: true }, '2026-10-04')
@@ -216,5 +227,13 @@ describe('v5 facts and common application history', () => {
     expect(current.factChanges.military).toEqual({ mode: 'unknown', date: '' })
     expect(current.factSnapshots).toContainEqual({ group: 'military', date: '2026-09-28', values: { militaryCurrentlyServing: true, militaryServiceYears: '10' } })
     expect(current.militaryFactsAsOfDate).toBe('2026-10-05')
+  })
+  it('migrates combined pregnancy history only once and keeps an independent historical correction', () => {
+    const legacy = { group: 'children', date: '2026-09-01', values: { hasChildren: false, children: [], pregnant: true, expectedChildren: '2' } }
+    const migrated = migrateProfile({ ...EMPTY_PROFILE, factSnapshots: [legacy] })
+    expect(migrateProfile(migrated).factSnapshots).toEqual(migrated.factSnapshots)
+    expect(migrated.factSnapshots?.filter(({ group }) => group === 'pregnancy')).toHaveLength(1)
+    const corrected = { group: 'pregnancy', date: '2026-09-01', values: { pregnant: false, expectedChildren: '' } }
+    expect(migrateProfile({ ...EMPTY_PROFILE, factSnapshots: [legacy, corrected] }).factSnapshots).toEqual([legacy, corrected])
   })
 })

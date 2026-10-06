@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.models import Notice
 from app.repository import lock_notice
-from .common import FeedError, get_json
+from .common import FeedError, get_json, integer
 from .competition import API_BASE, AREA_BY_CODE, AREA_BY_LABEL, CompetitionTableParser, unit_key
 
 
@@ -32,12 +32,19 @@ def parse_score_popup(html: str, *, url: str, house_no: str, notice_no: str, obs
     rows = []
     for row in parser.rows:
         attrs, cells = row["attrs"], row["cells"]
-        if not attrs.get("data-ty") or len(cells) != 11 or "cpRank1" not in cells[2]["class"].split():
+        if (not attrs.get("data-ty") or len(cells) != 11
+                or "cpHouseTy" not in cells[0]["class"].split()
+                or "cpRank1" not in cells[2]["class"].split()
+                or re.sub(r"\s+", "", cells[2]["text"]) != "1순위"
+                or "cpSubscrptRt" not in cells[6]["class"].split()):
             continue
         area = AREA_BY_LABEL.get(re.sub(r"\s+", "", cells[3]["text"]), "unknown")
         # Header positions are verified against the actual first-rank table;
         # placeholder colspan cells have fewer columns and cannot become 0.
-        if unit_key(cells[0]["text"]) != unit_key(attrs["data-ty"]) or area == "unknown" or "cpResideSenm" not in cells[7]["class"].split() or cells[7]["text"] != cells[3]["text"]:
+        if (unit_key(cells[0]["text"]) != unit_key(attrs["data-ty"]) or area == "unknown"
+                or re.sub(r"\s+", "", attrs.get("data-sem") or "") != re.sub(r"\s+", "", cells[3]["text"])
+                or "cpResideSenm" not in cells[7]["class"].split()
+                or re.sub(r"\s+", "", cells[7]["text"]) != re.sub(r"\s+", "", cells[3]["text"])):
             continue
         minimum, maximum, average = [score(cell["text"]) for cell in cells[8:11]]
         if minimum is None or maximum is None or average is None or not minimum <= average <= maximum:
@@ -58,8 +65,10 @@ async def collect_winning_scores(client: httpx.AsyncClient, key: str, house_no: 
                 if not isinstance(body, dict) or not isinstance(body.get("data"), list):
                     raise FeedError("공식 당첨가점 API 응답 형식 오류")
                 for raw in body["data"]:
+                    if not isinstance(raw, dict):
+                        raise FeedError("공식 당첨가점 API 응답 형식 오류")
                     if str(raw.get("HOUSE_MANAGE_NO")) != house_no or str(raw.get("PBLANC_NO")) != notice_no:
-                        continue
+                        raise FeedError("공식 당첨가점 API 공고 식별이 일치하지 않습니다.")
                     area = AREA_BY_CODE.get(str(raw.get("RESIDE_SECD", "")).zfill(2), "unknown")
                     low, high, avg = (score(raw.get(k)) for k in ("LWET_SCORE", "TOP_SCORE", "AVRG_SCORE"))
                     if not raw.get("HOUSE_TY") or area == "unknown" or low is None or high is None or avg is None or not low <= avg <= high:
@@ -67,7 +76,8 @@ async def collect_winning_scores(client: httpx.AsyncClient, key: str, house_no: 
                     evidence = {k: raw.get(k) for k in ("HOUSE_MANAGE_NO", "PBLANC_NO", "HOUSE_TY", "RESIDE_SECD", "LWET_SCORE", "TOP_SCORE", "AVRG_SCORE")}
                     document = json.dumps(evidence, sort_keys=True, ensure_ascii=False)
                     rows.append(dict(unit_type=raw["HOUSE_TY"], residence_area=area, min_score=low, max_score=high, average_score=avg, house_manage_no=house_no, notice_no=notice_no, supply_type="일반공급", rank=1, selection_path="points", verification="official", source="cheongyak_competition", evidence_url=url, evidence_text=document, document_hash=hashlib.sha256(document.encode()).hexdigest(), evidence_location="getAptLttotPblancScore · HOUSE_TY / RESIDE_SECD", observed_at=observed))
-                if len(body["data"]) < 100:
+                matched = integer(body.get("matchCount"))
+                if len(body["data"]) < 100 or (matched is not None and page * 100 >= matched):
                     return rows, "success" if rows else "unpublished"
             raise FeedError("당첨가점 API 페이지 수가 한도를 초과했습니다.")
         except FeedError:

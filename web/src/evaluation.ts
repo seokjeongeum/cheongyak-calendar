@@ -6,6 +6,7 @@ import { setEvaluationToday } from './factTimeline'
 import { selectionOpportunity, type OpportunityResult } from './opportunity'
 import { contractComparisonNote } from './contractPresentation'
 import { eventCandidate, candidateLabel, candidateExplanation } from './candidates'
+import { receptionOverlaps } from './deadlines'
 
 export interface NoticeEvaluation {
   opportunity: OpportunityResult
@@ -96,5 +97,5 @@ export function evaluateCatalog(catalog: Notice[], request: Omit<EvaluationReque
 }
 
 export function candidateInRange(notice: Notice, evaluation: NoticeEvaluation | undefined, start: string, end: string): boolean {
-  return !!evaluation && notice.events.some((event, i) => evaluation.candidateEvents[i] && (event.end_date || event.start_date) >= start && event.start_date <= end)
+  return !!evaluation && notice.events.some((event, i) => evaluation.candidateEvents[i] && receptionOverlaps(event, start, end))
 }

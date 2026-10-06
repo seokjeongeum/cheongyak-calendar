@@ -1,7 +1,7 @@
-import { criterionDate } from './qualification'
-import { factGroupForRule, setEvaluationToday } from './factTimeline'
+import { criterionDate, inheritedCondition } from './qualification'
+import { FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, setEvaluationToday } from './factTimeline'
 import { parentCityCode } from './regions'
-import type { FactChangeGroup, Notice, NoticeRule } from './types'
+import type { FactChangeGroup, LocalProfile, Notice, NoticeRule } from './types'
 
 export interface ProfileRuleContext { rule: NoticeRule; notice: Notice; date: string | null }
 export interface ProfileQuestionModel {
@@ -29,7 +29,7 @@ const noticeContexts = new WeakMap<Notice, { today: string; rules: NoticeRule[];
 const models = new WeakMap<Notice[], { today: string; model: ProfileQuestionModel }>()
 function flatten(rule: NoticeRule, into: NoticeRule[]): void {
   if (rule.verification === 'official') into.push(rule)
-  for (const list of [rule.conditions, rule.exceptions]) if (Array.isArray(list)) for (const entry of list) if (entry && typeof entry === 'object' && typeof entry.kind === 'string') flatten(entry, into)
+  for (const list of [rule.conditions, rule.exceptions]) if (Array.isArray(list)) for (const entry of list) if (entry && typeof entry === 'object' && typeof entry.kind === 'string') flatten(inheritedCondition(rule, entry), into)
 }
 function contexts(notice: Notice, today: string): ProfileRuleContext[] {
   const cached = noticeContexts.get(notice)
@@ -76,3 +76,10 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
   return model
 }
 export function warmProfileQuestionModel(notices: Notice[], today: string): void { getProfileQuestionModel(notices, today) }
+
+/** A history question shares a field anchor with today's value, but needs its dated input. */
+export function getProfileHistoryTarget(field: keyof LocalProfile, profile: LocalProfile, model: ProfileQuestionModel): FactChangeGroup | undefined {
+  return (Object.entries(FACT_GROUP_ANCHORS) as [FactChangeGroup, keyof LocalProfile][]).find(([group, anchor]) => anchor === field && model.scopedRules.some(({ rule, date }) =>
+    (factGroupForRule(rule) === group || group === 'pregnancy' && ['children_min', 'newborn_children_min'].includes(rule.kind) && rule.include_pregnancy === true) && date && !factsAtDate(profile, group, date).known,
+  ))?.[0]
+}

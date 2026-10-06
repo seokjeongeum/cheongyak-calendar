@@ -124,7 +124,7 @@ export function migrateProfile(value: unknown): LocalProfile {
   }
   if (stored.pointsFamily && typeof stored.pointsFamily === 'object' && !Array.isArray(stored.pointsFamily)) next.pointsFamily = Object.fromEntries(Object.entries(stored.pointsFamily).filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value)).map(([id, value]) => { const row = value as Record<string, unknown>; return [id, { registeredSince: typeof row.registeredSince === 'string' && parseDate(row.registeredSince) ? row.registeredSince : '', unmarried: bool(row.unmarried), spouseOwnsHome: bool(row.spouseOwnsHome), overseasExcluded: bool(row.overseasExcluded), grandchildrenParentsAbsent: bool(row.grandchildrenParentsAbsent) }] }))
   if (next.factChanges.children && !next.factChanges.pregnancy) next.factChanges.pregnancy = { ...next.factChanges.children }
-  next.factSnapshots = [...(next.factSnapshots || []), ...(next.factSnapshots || []).filter((snapshot) => snapshot.group === 'children' && Object.hasOwn(snapshot.values, 'pregnant')).map((snapshot) => ({ ...snapshot, group: 'pregnancy' as const, values: Object.fromEntries(['pregnant', 'expectedChildren'].filter((key) => Object.hasOwn(snapshot.values, key)).map((key) => [key, snapshot.values[key]])) }))]
+  next.factSnapshots = [...(next.factSnapshots || []), ...(next.factSnapshots || []).filter((snapshot) => snapshot.group === 'children' && Object.hasOwn(snapshot.values, 'pregnant') && !next.factSnapshots?.some((existing) => existing.group === 'pregnancy' && existing.date === snapshot.date)).map((snapshot) => ({ ...snapshot, group: 'pregnancy' as const, values: Object.fromEntries(['pregnant', 'expectedChildren'].filter((key) => Object.hasOwn(snapshot.values, key)).map((key) => [key, snapshot.values[key]])) }))]
   for (const key of MONEY_FIELDS) next[key] = normalizeMoney(next[key] ?? '') ?? ''
   next.ownershipException = null
   const resolved = resolveLegacyRegion(next.region, next.district)
@@ -167,9 +167,11 @@ const SNAPSHOT_FIELDS: Partial<Record<FactChangeGroup, keyof LocalProfile>> = { 
 /** Preserve known old facts; an edit alone does not invent when the status changed. */
 export function updateProfileFacts(profile: LocalProfile, part: Partial<LocalProfile>, today: string): LocalProfile {
   const changed = { ...part }
-  if (part.maritalStatus !== undefined) changed.hasSpouse = part.maritalStatus === 'unknown' ? null : part.maritalStatus === 'married'
-  else if (part.hasSpouse === true) changed.maritalStatus = 'married'
-  else if (part.hasSpouse === false && profile.maritalStatus === 'married') changed.maritalStatus = 'unknown'
+  if (part.maritalStatus !== undefined && part.maritalStatus !== profile.maritalStatus) changed.hasSpouse = part.maritalStatus === 'unknown' ? null : part.maritalStatus === 'married'
+  else if (part.hasSpouse !== profile.hasSpouse) {
+    if (part.hasSpouse === true) changed.maritalStatus = 'married'
+    else if (part.hasSpouse === false && profile.maritalStatus === 'married') changed.maritalStatus = 'unknown'
+  }
   const changedKeys = Object.keys(changed).filter((key) => changed[key as keyof LocalProfile] !== profile[key as keyof LocalProfile]) as (keyof LocalProfile)[]
   const factChanges = { ...(part.factChanges || profile.factChanges) }
   const factSnapshots = [...(part.factSnapshots || profile.factSnapshots || [])]

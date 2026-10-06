@@ -25,7 +25,7 @@ from sqlalchemy import func, select
 
 from app.db import SessionLocal, init_db
 from app.models import Notice, NoticeEvent
-from app.repository import NON_APPLICATION_KINDS, record_competition_result, record_source_status
+from app.repository import NON_APPLICATION_KINDS, is_open_ended_application, record_competition_result, record_source_status
 
 from .common import FeedError, get_json, integer, value
 
@@ -270,7 +270,7 @@ def _is_published_window(notice: Notice, today: date, operation: str) -> bool:
     # Final figures often arrive after reception ends. Even an incomplete
     # imported APT schedule without a distinct local first-priority date must
     # be checked once all its known reception dates have elapsed.
-    if applications and max(event.end_date or event.start_date for event in applications) < today:
+    if applications and not any(is_open_ended_application(event) for event in applications) and max(event.end_date or event.start_date for event in applications) < today:
         return True
     if operation == "getAPTLttotPblancCmpet":
         local = [event for event in notice.events if event.kind == "first_priority" and event.audience == "해당지역"]
@@ -391,9 +391,29 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     rows_score = result.winning_scores if result else []
                     if key and not api_auth_failed:
                         try:
-                            rows_score, status_score = await collect_winning_scores(client, key, house_no, notice_no)
+                            api_scores, api_score_status = await collect_winning_scores(client, key, house_no, notice_no)
+                            if api_scores:
+                                # Keep independently published popup rows when
+                                # the API has only part of the score inventory.
+                                # Conflicting official values remain separate
+                                # so the browser can decline a comparison.
+                                merged_scores = []
+                                seen_scores = set()
+                                for row in [*api_scores, *rows_score]:
+                                    score_identity = (unit_key(row["unit_type"]), row["residence_area"],
+                                        row["house_manage_no"], row["notice_no"], row["supply_type"], row["rank"],
+                                        row["selection_path"], row["min_score"], row["max_score"], row["average_score"])
+                                    if score_identity not in seen_scores:
+                                        seen_scores.add(score_identity)
+                                        merged_scores.append(row)
+                                rows_score, status_score = merged_scores, api_score_status
+                            elif not rows_score:
+                                status_score = api_score_status
                         except Exception:
-                            status_score = "error"
+                            # Current official popup evidence remains useful
+                            # even if the additional score API cannot respond.
+                            if not rows_score:
+                                status_score = "error"
                     record_winning_scores(session, notice.id, rows_score, status_score, expected_version=fetched_version, criterion_date=notice.announcement_date.isoformat() if notice.announcement_date else None)
                     session.commit()
             status = "error" if counts["failed"] and not counts["count"] else "partial" if counts["failed"] or counts["pending"] or counts["fallback"] or counts["complete"] < counts["count"] else "ok"

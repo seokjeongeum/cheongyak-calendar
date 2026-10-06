@@ -22,7 +22,7 @@ export function PointsFields({ profile, onChange, today }: { profile: LocalProfi
     })}
     {members.length > 0 && <div data-profile-field="pointsFamilyComplete">{choice('위 가점용 가족 사실에 빠진 내용이 없나요?', profile.pointsFamilyComplete, (v) => patch({ pointsFamilyComplete: v }))}</div>}
     {profile.hasSpouse === true && <div data-profile-field="spouseAccountBaseDate">{choice('배우자가 청약통장에 가입했나요?', profile.spouseAccountPresent, (v) => patch({ spouseAccountPresent: v }))}{profile.spouseAccountPresent === true && <label>배우자 통장 은행 인정 가입일<input type="date" max={today} value={profile.spouseAccountBaseDate} onChange={(event) => patch({ spouseAccountBaseDate: event.target.value })} /></label>}<p className="field-help">배우자의 인정 가입기간 50%, 최대 3점을 더하며 통장 점수 합계는 17점까지입니다.</p></div>}
-    {(members.length > 0 || profile.hasSpouse === true) && <FactChangeFields profile={profile} onChange={onChange} today={today} group="points" label="가점용 가족·배우자 통장 사실" />}
+    {(members.length > 0 || profile.hasSpouse === true || !!profile.pointsHomelessSince) && <FactChangeFields profile={profile} onChange={onChange} today={today} group="points" label="가점 산정 사실" />}
     <a href={POINTS_SOURCE} target="_blank" rel="noopener noreferrer">청약홈 공식 가점 산정 기준</a>
   </details>
 }

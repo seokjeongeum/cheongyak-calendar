@@ -18,7 +18,7 @@ import { districtOptions, provinceOptions } from './regions'
 export { eventCandidate, hasResidenceCandidate, candidateLabel, candidateExplanation } from './candidates'
 import { EligibilityBrief, EligibilityDetails, NoticeRegionDecision } from './EligibilityDetails'
 import { OpportunityPanel } from './OpportunityPanel'
-import { nextDeadline } from './deadlines'
+import { isOpenEndedReception, nextDeadline, receptionEndDate, receptionOverlaps } from './deadlines'
 import { useEvaluations } from './useEvaluations'
 import { reuseUnchangedNotices } from './publicNoticeCache'
 import { candidateInRange, evaluateNotice, type NoticeEvaluation } from './evaluation'
@@ -84,6 +84,7 @@ function formatFullShortDate(date: string | null | undefined): string {
 }
 
 function formatEventRange(event: NoticeEvent, today: string): string {
+  if (isOpenEndedReception(event)) return `${event.start_date <= today ? '접수 중' : formatFullShortDate(event.start_date)} · 종료일 미공개`
   const end = event.end_date || event.start_date
   if (event.start_date <= today && end >= today) return `접수 중 · 종료 ${formatFullShortDate(end)}`
   if (end === event.start_date) return formatFullShortDate(event.start_date)
@@ -155,14 +156,12 @@ function isPublicRental(notice: Notice): boolean {
   return notice.category.toLowerCase() === 'public_rental' || /공공임대/.test(notice.category)
 }
 
-function activeApplicationEvents(notice: Notice, today: string): NoticeEvent[] {
-  return (notice.events || []).filter((event) => isApplicationEvent(event) &&
-    event.start_date <= today && (event.end_date || event.start_date) >= today)
+export function activeApplicationEvents(notice: Notice, today: string): NoticeEvent[] {
+  return (notice.events || []).filter((event) => receptionOverlaps(event, today, today))
 }
 
-function hasVisibleApplication(notice: Notice, start: string, end: string): boolean {
-  return (notice.events || []).some((event) => isApplicationEvent(event) &&
-    (event.end_date || event.start_date) >= start && event.start_date <= end)
+export function hasVisibleApplication(notice: Notice, start: string, end: string): boolean {
+  return (notice.events || []).some((event) => receptionOverlaps(event, start, end))
 }
 
 function categoryGroup(category: string): 'private' | 'public' | 'rent' | 'other' {
@@ -193,7 +192,7 @@ function primaryDate(notice: Notice, start?: string, end?: string): string {
 
 export 
 function dateIsInEvent(event: NoticeEvent, date: string): boolean {
-  return isApplicationEvent(event) && event.start_date <= date && (event.end_date || event.start_date) >= date
+  return receptionOverlaps(event, date, date)
 }
 
 function readResidenceOverrides(): Record<string, ResidenceArea> {
@@ -579,7 +578,7 @@ export function applicationDatesInMonth(notices: Notice[], month: string, today?
     if (isPublicRental(notice)) continue
     if (!isApplicationEvent(event)) continue
     let date = event.start_date < first ? first : event.start_date
-    const eventEnd = event.end_date || event.start_date
+    const eventEnd = receptionEndDate(event) || last
     const end = eventEnd > last ? last : eventEnd
     while (date <= end) {
       eventDays.add(date)
@@ -600,7 +599,8 @@ export function applicationAvailabilityInMonth(notices: Notice[], month: string,
       if (!isApplicationEvent(event)) continue
       const unavailable = applicationEventAvailability(event, notice, profile, decision).unavailable
       let date = maxDate(event.start_date, first)
-      const end = (event.end_date || event.start_date) < last ? event.end_date || event.start_date : last
+      const deadline = receptionEndDate(event) || last
+      const end = deadline < last ? deadline : last
       while (date <= end) {
         const previous = states.get(date)
         states.set(date, { unavailable: unavailable && (previous?.unavailable ?? true), events: (previous?.events || 0) + 1 })
@@ -623,7 +623,8 @@ export function MiniCalendar({ month, today, selectedDate, notices, profile = EM
       if (!isApplicationEvent(event)) continue
       const unavailable = evaluations[notice.id]?.events[i]?.unavailable || false
       let date = maxDate(event.start_date, maxDate(`${month}-01`, today))
-      const end = (event.end_date || event.start_date) < monthEnd(month) ? event.end_date || event.start_date : monthEnd(month)
+      const deadline = receptionEndDate(event) || monthEnd(month)
+      const end = deadline < monthEnd(month) ? deadline : monthEnd(month)
       while (date <= end) { const previous = states.get(date); states.set(date, { unavailable: unavailable && (previous?.unavailable ?? true), events: (previous?.events || 0) + 1 }); date = addDays(date, 1) }
     }
     return states
@@ -644,9 +645,8 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
   const officialLink = demoMode ? undefined : safeHref(notice.official_url)
   const categoryLabel = categoryDisplay(notice.category)
   const methodLabel = officialApplicationMethodLabel(notice)
-  const visibleEvents = (notice.events || []).filter((event) => isApplicationEvent(event) &&
-    (event.end_date || event.start_date) >= viewStart && event.start_date <= viewEnd &&
-    (resultsMode || (event.end_date || event.start_date) >= today))
+  const visibleEvents = (notice.events || []).filter((event) =>
+    receptionOverlaps(event, resultsMode ? viewStart : maxDate(viewStart, today), viewEnd))
 
   const sources = [...new Set(notice.sources?.length ? notice.sources : [notice.source])].map((source) => sourceName(source)).join(' · ')
   const unitCount = new Set(notice.prices.map((price) => price.unit_type)).size

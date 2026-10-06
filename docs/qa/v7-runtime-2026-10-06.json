@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-06",
+  "observed_at": "2026-10-06T11:38:46.719006+00:00",
+  "mode": "current_cloud_runtime",
+  "profileValuesIncluded": false,
+  "initialNoticeCounts": {
+    "notices": 0,
+    "unit_prices": 0,
+    "notice_revisions": 0,
+    "unit_competitions": 0,
+    "competition_revisions": 0
+  },
+  "currentNoticeCounts": {
+    "notices": 82,
+    "unit_prices": 0,
+    "notice_revisions": 82,
+    "unit_competitions": 0,
+    "competition_revisions": 0
+  },
+  "sources": [
+    {
+      "source": "cheongyak_home",
+      "status": "disabled",
+      "message": "공공데이터포털 API 키 미설정",
+      "record_count": null,
+      "last_success_at": null
+    },
+    {
+      "source": "myhome",
+      "status": "disabled",
+      "message": "공공데이터포털 API 키 미설정",
+      "record_count": null,
+      "last_success_at": null
+    },
+    {
+      "source": "lh",
+      "status": "disabled",
+      "message": "공공데이터포털 API 키 미설정",
+      "record_count": null,
+      "last_success_at": null
+    },
+    {
+      "source": "ih",
+      "status": "disabled",
+      "message": "공공데이터포털 API 키 미설정",
+      "record_count": null,
+      "last_success_at": null
+    },
+    {
+      "source": "sh",
+      "status": "partial",
+      "message": "43건 저장, 주택형 가격 미확인 43건, 접수일 미확인 43건",
+      "record_count": 43,
+      "last_success_at": "2026-10-06T11:30:59.557881+00:00"
+    },
+    {
+      "source": "gh",
+      "status": "partial",
+      "message": "39건 저장, 주택형 가격 미확인 39건, 접수일 미확인 39건",
+      "record_count": 39,
+      "last_success_at": "2026-10-06T11:34:29.953086+00:00"
+    },
+    {
+      "source": "cheongyak_competition",
+      "status": "ok",
+      "message": "공고 0건 · 경쟁률 0행 · 전체 주택형 확인 0건",
+      "record_count": 0,
+      "last_success_at": "2026-10-06T11:34:29.977614+00:00"
+    }
+  ],
+  "apiHealth": {
+    "status": "ok"
+  },
+  "schedule_total": 0
+}

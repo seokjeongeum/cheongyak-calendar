@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getProfileQuestionModel, warmProfileQuestionModel } from './profileQuestionModel'
-import type { Notice, NoticeRule } from './types'
+import { getProfileHistoryTarget, getProfileQuestionModel, warmProfileQuestionModel } from './profileQuestionModel'
+import { EMPTY_PROFILE, type Notice, type NoticeRule } from './types'
 const rule = (kind: string): NoticeRule => ({ kind, value: true, verification: 'official', criterion_date: '2026-10-02' })
 const notice = (rules: NoticeRule[]): Notice => ({ id: 'same-notice', title: '공공분양', category: 'public_sale', source: 'lh', provider: 'LH', address: null, region_code: null, region_name: null, announcement_date: '2026-10-02', official_url: null, price_cap_status: 'unknown', events: [], prices: [], rules, updated_at: null, version: 1 })
 describe('public profile question precomputation', () => {
@@ -26,6 +26,36 @@ describe('public profile question precomputation', () => {
     const rows = [notice([rule('citizenship')])]
     expect(getProfileQuestionModel(rows, '2026-10-02').pastGroups.has('citizenship')).toBe(false)
     expect(getProfileQuestionModel(rows, '2026-10-03').pastGroups.has('citizenship')).toBe(true)
+  })
+  it('renders past-history inputs for nested conditions that inherit official evidence and dates', () => {
+    const child: NoticeRule = { kind: 'children_min', value: 2, include_pregnancy: true }
+    const rows = [notice([{ ...rule('all'), criterion_date: '2026-09-01', conditions: [{ kind: 'any', conditions: [child] }] }])]
+    const model = getProfileQuestionModel(rows, '2026-10-05')
+    expect(model.scopedRules.find(({ rule }) => rule.kind === 'children_min')).toMatchObject({ date: '2026-09-01', rule: { verification: 'official', include_pregnancy: true } })
+    expect(model.pastGroups.has('children')).toBe(true)
+    expect(model.pastGroups.has('pregnancy')).toBe(true)
+  })
+  it('uses an inherited application-day criterion without inventing past-history questions', () => {
+    const rows = [notice([{ ...rule('all'), criterion_date: undefined, criterion_basis: 'application_date', conditions: [{ kind: 'children_min', value: 2, include_pregnancy: true }] }])]
+    const model = getProfileQuestionModel(rows, '2026-10-05')
+    expect(model.scopedRules.find(({ rule }) => rule.kind === 'children_min')?.date).toBe('2026-10-05')
+    expect(model.pastGroups.has('children')).toBe(false)
+    expect(model.pastGroups.has('pregnancy')).toBe(false)
+  })
+  it('keeps a nested condition’s explicit verification and criterion overrides', () => {
+    const rows = [notice([{ ...rule('all'), criterion_date: '2026-09-01', conditions: [{ kind: 'children_min', value: 2, verification: 'unknown' }, { kind: 'pregnant', verification: 'official', criterion_date: '2026-10-05' }] }])]
+    const model = getProfileQuestionModel(rows, '2026-10-05')
+    expect(model.scopedRules.some(({ rule }) => rule.kind === 'children_min')).toBe(false)
+    expect(model.pastGroups.has('pregnancy')).toBe(false)
+  })
+  it('targets the actual independent child or pregnancy change input for past-history questions', () => {
+    const model = getProfileQuestionModel([notice([{ ...rule('children_min'), include_pregnancy: true }])], '2026-10-05')
+    const current = { ...EMPTY_PROFILE, hasChildren: false, pregnant: false }
+    expect(getProfileHistoryTarget('children', current, model)).toBe('children')
+    expect(getProfileHistoryTarget('pregnant', current, model)).toBe('pregnancy')
+    const known = { ...current, factChanges: { children: { mode: 'never_changed' as const, date: '' } } }
+    expect(getProfileHistoryTarget('children', known, model)).toBeUndefined()
+    expect(getProfileHistoryTarget('pregnant', known, model)).toBe('pregnancy')
   })
   it('keeps source evidence on cards while avoiding repeated full PDF quotations in the form', () => {
     const rows = Array.from({ length: 10 }, () => notice([{ ...rule('provider_employee_restriction'), evidence_text: '공식 임직원 범위 '.repeat(500) }]))

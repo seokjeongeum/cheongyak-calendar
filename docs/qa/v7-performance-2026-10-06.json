@@ -1,0 +1,217 @@
+{
+  "date": "2026-10-06",
+  "base": "http://localhost:8080",
+  "publicFixtureCount": 40,
+  "passed": 11,
+  "cohorts": [
+    {
+      "width": 375,
+      "cpuSlowdown": 4,
+      "checks": [
+        "Every public active notice remains visible, including gray mismatches",
+        "All public price rows remain available without opening notices",
+        "Reception calendar dots are present",
+        "No horizontal overflow",
+        "Opening and closing unchanged conditions does not recalculate notices",
+        "Step changes do not recalculate notices",
+        "Money values show commas",
+        "Input/click paint p95 is at most 100ms",
+        "Latest full result follows final typing within 1 second",
+        "API gets only public GET parameters and no profile",
+        "No JavaScript runtime errors"
+      ],
+      "passed": 11,
+      "measurements": {
+        "openClose": {
+          "samples": 16,
+          "medianMs": 49.7,
+          "p95Ms": 81.1,
+          "maximumMs": 81.1
+        },
+        "step": {
+          "samples": 7,
+          "medianMs": 32.8,
+          "p95Ms": 45.4,
+          "maximumMs": 45.4
+        },
+        "input": {
+          "samples": 10,
+          "medianMs": 25.4,
+          "p95Ms": 49.9,
+          "maximumMs": 49.9
+        },
+        "overall": {
+          "samples": 33,
+          "medianMs": 36.5,
+          "p95Ms": 72.4,
+          "maximumMs": 81.1
+        },
+        "latestResultAfterTypingMs": 642.5,
+        "workerExecutionMs": [
+          0.1,
+          394.8,
+          280.4,
+          296.7
+        ],
+        "mainThreadLongTasks": []
+      },
+      "publicNoticeSnapshot": {
+        "cards": 40,
+        "prices": 16,
+        "competitionRows": 16,
+        "grayCards": 12,
+        "calendarDays": 26
+      },
+      "resultsSnapshot": null,
+      "profileValuesInReport": false
+    }
+  ],
+  "profileValuesInReport": false,
+  "strictPerformance": true,
+  "dataProvenance": {
+    "date": "2026-10-06",
+    "mode": "isolated_recorded_fixture_replay",
+    "freshLiveCollection": false,
+    "productionDatabaseTouched": false,
+    "fictionalDisplayVariants": true,
+    "notices": [
+      {
+        "id": "qa-recorded-2026000468",
+        "fixture": "current-private-v5.json",
+        "documentHash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000463",
+        "fixture": "current-private-v5.json",
+        "documentHash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026910253",
+        "fixture": "current-private-v5.json",
+        "documentHash": "ec488adf1e0259c2b9e705abcbea025e06ffdc9158b95e5cef2e5c3d8adfdac3",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000386",
+        "fixture": "current-private-v5.json",
+        "documentHash": "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061154",
+        "fixture": "public-v5.json",
+        "documentHash": "4be040db7f7562135ed57584edede4b9c497eee536fbd686ac20642c13301855",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2015122300020823",
+        "fixture": "public-v5.json",
+        "documentHash": "d33f83bc20f2fd5caeea78007e948a9becd46e51426f27f82e5b984d4f531f00",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061180",
+        "fixture": "public-v5.json",
+        "documentHash": "91eb4846a866e763b87e0c00b640e9f13dfe78442cda5d69cdac45c8c5a01492",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061179",
+        "fixture": "public-v5.json",
+        "documentHash": "f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061181",
+        "fixture": "public-v5.json",
+        "documentHash": "ff527af4d8c895c64d6e0d2f81a226610c6f5617463b414f52ed7585107c69c0",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026930038",
+        "fixture": "regional-v5.json",
+        "documentHash": "6b5b9d90c9a111e276ce85c19ce6ac021c4a9b5ce222b37fa49698e48a1330f7",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000498",
+        "fixture": "regional-v5.json",
+        "documentHash": "dd62febed115a2ed2c457820e9aa9fcb10df93b4c017764f36b6d1273f23400d",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026910251",
+        "fixture": "regional-v5.json",
+        "documentHash": "8fa5641c86777a48b65638f8036fc3bf6b53f0a4969b6c494fff88deb2ae7cd6",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000444",
+        "fixture": "regional-v5.json",
+        "documentHash": "834e6d70710e7bbfc03d420600fa88d9ee11b79933dd47dd72797255342822bd",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026930039",
+        "fixture": "regional-v5.json",
+        "documentHash": "b2d655bace2f889a1905488fdd2f7900f525d781961797f0e2480746ba1d100a",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-jamsil",
+        "fixture": "jamsil-detail.json + jamsil-models.json",
+        "fictionalReceptionDates": false,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-open-reception",
+        "fixture": "jamsil-models.json",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalEndDate": false,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-manual-benchmark",
+        "fixture": "winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-region-mismatch-result",
+        "fixture": "regional-v5.json + winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-current-competition",
+        "fixture": "regional-v5.json + winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      }
+    ],
+    "fictionalLoadTestNoticeCount": 40
+  }
+}

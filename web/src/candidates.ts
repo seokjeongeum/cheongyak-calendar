@@ -3,6 +3,7 @@ import { matchesRegionScope, provinceAliases, scopeIsDistrict } from './regions'
 import { applicantRegionEligibility } from './qualification'
 import { residenceArea, RESIDENCE_AREA_LABEL, type CompetitionDecision } from './competition'
 import { noticeEligibilitySummary, applicationEventAvailability, evaluateRule } from './eligibility'
+import { receptionOverlaps } from './deadlines'
 export function isApplicationEvent(event: NoticeEvent): boolean {
   return !/^(announcement|contract|result|winner)$/i.test(event.kind) && !/당첨자 발표|계약일|계약 체결/i.test(event.label)
 }
@@ -62,7 +63,7 @@ export function eventCandidate(event: NoticeEvent, notice: Notice, profile: Loca
 export function hasResidenceCandidate(notice: Notice, profile: LocalProfile, start: string, end: string, decision?: CompetitionDecision): boolean {
   if (noticeEligibilitySummary(notice, profile, decision).status === 'mismatch' || decision?.allApplicationsUnavailable) return false
   return (notice.events || []).some((event) =>
-    isApplicationEvent(event) && (event.end_date || event.start_date) >= start && event.start_date <= end &&
+    receptionOverlaps(event, start, end) &&
     eventCandidate(event, notice, profile) && !applicationEventAvailability(event, notice, profile, decision).unavailable,
   )
 }
@@ -95,4 +96,3 @@ export function candidateExplanation(notice: Notice, profile: LocalProfile): str
   if (priority === true || period === true) return `${location}와 공식 거주 범위가 일치하고, 입력한 연속 거주일이 공개된 기간 조건을 충족합니다. 나머지 신청 자격은 별도로 비교합니다.`
   return `${location}와 공고의 거주 범위가 일치합니다. 공식 거주기간 조건 또는 해당 범위의 연속 거주 시작일이 없어 기간은 확인이 필요합니다.`
 }
-

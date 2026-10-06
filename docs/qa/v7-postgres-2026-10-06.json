@@ -1,0 +1,1 @@
+{"passed": 3, "database": "PostgreSQL", "production_tables_touched": false, "checks": ["cached versions/children refresh under two writers", "first insert serialization", "exact open reception regexp"]}
