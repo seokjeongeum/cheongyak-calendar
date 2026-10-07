@@ -1,0 +1,29 @@
+{
+  "webApiHealth": {
+    "status": 200,
+    "body": {
+      "status": "ok"
+    }
+  },
+  "databaseNoticePresent": false,
+  "reportedOriginalDatabaseAttached": false,
+  "noFixtureInserted": true,
+  "date": "2026-10-07",
+  "parserVersionVerified": "official-sections-2026-10-07-v8",
+  "deployedWebAssetsMatchProductionBuild": true,
+  "webAssets": [
+    "/assets/index-mIz9xAu0.js",
+    "/assets/index-Bt3ntXIo.css"
+  ],
+  "storedCountsBySource": {
+    "sh": 43,
+    "gh": 39
+  },
+  "databaseCountsPreserved": true,
+  "servicesRunning": [
+    "api",
+    "worker",
+    "web"
+  ],
+  "databaseContainerHealthy": true
+}

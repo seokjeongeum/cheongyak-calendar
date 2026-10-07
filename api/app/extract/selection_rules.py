@@ -1,4 +1,4 @@
-"""Explicit general-supply allocation tables; no region/area legal-rate guesses."""
+"""Explicit supply-scoped allocation tables; no region/area legal-rate guesses."""
 from __future__ import annotations
 
 import hashlib
@@ -7,6 +7,9 @@ from .supply_inventory import canonical_unit
 
 
 def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: list[dict], parser_version: str) -> list[dict]:
+    from .official_rules import _sections
+    from .special_selection import special_selection_rules
+
     rank_applies = not any(r.get("kind") == "rank_applicability" and r.get("status") == "not_applicable" for r in rules)
     kinds = {r["housing_kind"] for r in rules if r.get("housing_kind") in {"private", "national", "not_applicable"}
              and r.get("verification") == "official"}
@@ -26,6 +29,13 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
     if not cutoff or not all_inventory:
         return []
     result = []
+    sections = _sections(pages, shinhee=False)
+    general_pages = {}
+    for section in sections:
+        if section["supply_type"] == "일반공급":
+            for line in section["lines"]:
+                general_pages.setdefault(line["page"], []).append(line["text"])
+    inventory_types = {s["supply_type"] for s in all_inventory}
 
     def make(kind, page, quote, **fields):
         identity = f"{digest}:{kind}:{page}:{fields}:{quote}"
@@ -37,6 +47,14 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
         # or newborn priority percentage must never become a regional quota.
         quota = re.search(r"(?:동일순위\s*내|우선공급\s*단계별)\s*지역우선\s*공급기준(.{0,1800})", text)
         if quota and re.search(r"지역구분\s+우선공급\s*비율", quota[1]):
+            # A mixed-supply document needs a target section. The unified
+            # 신혼희망타운 table is explicitly shared by its family categories.
+            quota_anchor = quota.group(0).split("※", 1)[0].strip()
+            quota_types = {s["supply_type"] for s in sections if quota_anchor in re.sub(r"\s+", " ",
+                " ".join(line["text"] for line in s["lines"] if line["page"] == page["page"]))}
+            if not quota_types and (inventory_types == {"일반공급"} or all("신혼희망타운" in supply for supply in inventory_types)):
+                quota_types = inventory_types
+            quota_types &= inventory_types
             table_text = quota[1].split("※", 1)[0]
             shares = []
             patterns = [("local", r"해당\s*(?:주택건설)?지역"), ("other_gyeonggi", r"기타\s*경기(?:지역)?"), ("other", r"기타지역(?!\s*경기)")]
@@ -44,14 +62,20 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
                 match = re.search(name + r"[^%]{0,100}?(\d{1,3})\s*%", table_text)
                 if match:
                     shares.append({"residence_area": area, "percent": int(match[1])})
-            if len(shares) >= 2 and any(s["residence_area"] == "local" for s in shares) and sum(s["percent"] for s in shares) == 100 and all(0 <= s["percent"] <= 100 for s in shares):
+            if quota_types and len(shares) >= 2 and any(s["residence_area"] == "local" for s in shares) and sum(s["percent"] for s in shares) == 100 and all(0 <= s["percent"] <= 100 for s in shares):
                 result.append(make("regional_allocation", page["page"], quota.group(0)[:1500], supply_type=None,
-                    supply_types=sorted({s["supply_type"] for s in all_inventory}),
-                    unit_types=sorted({s["unit_type"] for s in all_inventory if s.get("unit_type")}) or None,
+                    supply_types=sorted(quota_types),
+                    unit_types=sorted({s["unit_type"] for s in all_inventory if s.get("unit_type") and s["supply_type"] in quota_types}) or None,
                     allocation_method="regional_quota", regional_shares=shares, local_share_percent=next(s["percent"] for s in shares if s["residence_area"] == "local")))
         # Require the actual selection order, not an admission/overseas example.
-        order = re.search(r"(?:■\s*)?①\s*지역\s*[:：]\s*(해당지역\s*거주자.{0,260}?(?:→|⇒|->)\s*기타지역\s*거주자[^■]{0,150})", text)
-        if rank_applies and inventory and order and "regional_allocation" not in {r.get("kind") for r in rules + result}:
+        general_text = " ".join(general_pages.get(page["page"], []))
+        if not sections and inventory_types == {"일반공급"}:
+            general_text = text
+        order = re.search(r"(?:■\s*)?①\s*지역\s*[:：]\s*(해당지역\s*거주자.{0,260}?(?:→|⇒|->)\s*기타지역\s*거주자[^■]{0,150})", general_text)
+        general_allocated = any(r.get("kind") == "regional_allocation" and
+            (r.get("supply_type") == "일반공급" or not r.get("supply_type") and
+             (not r.get("supply_types") or "일반공급" in r["supply_types"])) for r in rules + result)
+        if rank_applies and inventory and order and not general_allocated:
             result.append(make("regional_allocation", page["page"], order.group(0), allocation_method="region_priority", local_share_percent=None))
         # Area-band tables must explicitly name the pair of percentage columns.
         # PDFs sometimes emit column numbers/units after the words. Normalize
@@ -85,4 +109,5 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
             anchor = text.find("전용면적별")
             quote = text[anchor:anchor + 1300] if anchor >= 0 else text[:1300]
             result.append(make("selection_method", page["page"], quote, unit_types=units, rank=1, points_percent=points, lottery_percent=lottery, min_area_exclusive=low, max_area_inclusive=high, tie_break="account_duration_then_lottery" if re.search(r"가점\s*→\s*[^■]{0,40}가입기간\s*→\s*[④➃]?\s*추첨", text) else "unknown"))
+    result.extend(special_selection_rules(sections, inventory=all_inventory, rules=rules, make=make))
     return result

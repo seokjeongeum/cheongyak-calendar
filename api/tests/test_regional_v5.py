@@ -115,7 +115,7 @@ def test_official_lh_download_uses_api_file_id_and_ignores_forms():
 @pytest.mark.parametrize('row',CURRENT_PRIVATE,ids=lambda r:r['external_id'])
 def test_remaining_current_private_documents_have_actual_regions_and_stock(row):
     result=parse(row)
-    region=rules_of(result,'applicant_regions')
+    region=[rule for rule in rules_of(result,'applicant_regions') if not rule.get('supply_type')]
     assert len(region)==1
     inventory=public_offered_supplies(result['rules'])
     assert inventory and all(r.supply_count > 0 for r in inventory)
