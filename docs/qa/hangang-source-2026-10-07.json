@@ -1,0 +1,664 @@
+{
+  "date": "2026-10-07",
+  "noticeNumber": "2026000468",
+  "title": "쌍용 더 플래티넘 한강",
+  "officialAttachment": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+  "downloadValidation": {
+    "status": 200,
+    "sizeBytes": 1050066,
+    "sha256": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+    "cachedSourceHashMatches": true,
+    "pages": 62,
+    "livePdfAndRecordedAllocationMetadataAgree": true
+  },
+  "parserVersion": "official-sections-2026-10-07-v8",
+  "allocationRules": [
+    {
+      "id": "6734546a04eefa1c",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "일반공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 22,
+      "evidence_text": "■ ①지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자) ",
+      "allocation_method": "region_priority",
+      "local_share_percent": null
+    },
+    {
+      "id": "43dffa5978abff04",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "기관추천 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 13,
+      "evidence_text": "관계기관의 장이 정하는 우선순위에 따라 공급하므로 사업주체 및 주택청약업무수행기관은 대상자 선정에 관여하지 않습니다. 당첨자",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A"
+      ],
+      "allocation_method": "institution_recommendation",
+      "local_share_percent": null,
+      "selection_order": [
+        "추천기관의 우선순위"
+      ],
+      "recommendation_evidence_page": 13,
+      "recommendation_evidence_text": "기관추천 특별공급 확정대상자 및 예비대상자는 해당기관에서 선정하여 사업주체에 통보한 분만 신청가능하며, 해당 기관에서 특별공급 대상자로 선정되었다 하더라도 반드시 특별 선정방법 공급 청약접수일에 청약신청 완료해야 합니다. (미신청 시 당첨자 선정에서 제외되며 계약 불가)"
+    },
+    {
+      "id": "3181485b8bd1857b",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "다자녀가구 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 13,
+      "evidence_text": "①지역 : 해당시·도 거주자 50%(경기도 양평군 및 경기도 거주자) → 기타지역 거주자 50%(서울특별시 및 인천광역시 거주자) 경기도 거주자가 50% 우선공급에서 낙첨될 경우, 나머지 50% 물량에서 수도권(서울특별시, 인천광역시) 거주자와 우선공급에서 입주자로 선정되지 아니한 양평군 및 경기도 거주자가 다시 경쟁하며 이 경우, 해당지역 거주 신청자 우선공급 요건은 적용되지 않습니다",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A",
+        "123.7781"
+      ],
+      "allocation_method": "regional_quota",
+      "local_share_percent": null,
+      "regional_shares": [
+        {
+          "residence_area": "local_and_other_gyeonggi",
+          "percent": 50,
+          "label": "경기도 양평군 및 경기도",
+          "region_codes": [
+            "41"
+          ]
+        },
+        {
+          "residence_area": "other",
+          "percent": 50,
+          "label": "서울특별시 및 인천광역시",
+          "region_codes": [
+            "11",
+            "28"
+          ]
+        }
+      ],
+      "selection_order": [
+        "지역",
+        "배점",
+        "미성년 자녀수",
+        "청약신청자의 연령(연월일 계산)이 많은 분",
+        "추첨"
+      ],
+      "selection_order_evidence_page": 13,
+      "selection_order_evidence_text": "당첨자 선정 순서 : ①지역 → ②배점 → ③미성년 자녀수 → ④청약신청자의 연령(연월일 계산)이 많은 분 → ⑤추첨",
+      "local_priority_within_first_quota": true,
+      "local_region": {
+        "region_code": "41830",
+        "region_name": "경기도 양평군",
+        "min_months": 0,
+        "criterion_date": "2026-10-02"
+      },
+      "first_quota_priority_evidence_text": "경쟁이 있는 경우 양평군 거주자 우선",
+      "first_quota_priority_evidence_page": 13,
+      "unsuccessful_applicants_advance": true,
+      "local_priority_in_remaining_quota": false,
+      "remaining_quota_evidence_text": "경기도 거주자가 50% 우선공급에서 낙첨될 경우, 나머지 50% 물량에서 수도권(서울특별시, 인천광역시) 거주자와 우선공급에서 입주자로 선정되지 아니한 양평군 및 경기도 거주자가 다시 경쟁하며 이 경우, 해당지역 거주 신청자 우선공급 요건은 적용되지 않습니다",
+      "remaining_quota_evidence_page": 13
+    },
+    {
+      "id": "f84113318dec3236",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "신혼부부 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 15,
+      "evidence_text": "③지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자)",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A"
+      ],
+      "allocation_method": "region_priority",
+      "local_share_percent": null,
+      "local_region": {
+        "region_code": "41830",
+        "region_name": "경기도 양평군",
+        "min_months": 0,
+        "criterion_date": "2026-10-02"
+      },
+      "selection_order": [
+        "소득구분",
+        "순위",
+        "지역",
+        "미성년 자녀수",
+        "추첨"
+      ],
+      "selection_order_evidence_page": 14,
+      "selection_order_evidence_text": "당첨자 선정 순서 : ①소득구분 → ②순위 → ③지역 → ④미성년 자녀수 → ⑤추첨",
+      "selection_stage_exceptions": [
+        {
+          "stage_number": 3,
+          "selection_order": [
+            "지역",
+            "추첨"
+          ],
+          "rank_applies": false,
+          "evidence_page": 15,
+          "evidence_text": "3단계에서 경쟁이 있는 경우 순위와 관계없이 해당지역 거주자(양평군 거주자)에게 우선공급하고, 경쟁이 있는 경우 추첨으로 선정"
+        }
+      ],
+      "income_stage_unsuccessful_applicants_advance": true,
+      "income_stage_carry_forward_evidence_page": 15,
+      "income_stage_carry_forward_evidence_text": "각 단계별 낙첨자는 다음 단계 공급대상에 포함됨"
+    },
+    {
+      "id": "e4ed4269901ba5e1",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "노부모부양 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 16,
+      "evidence_text": "①지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자)",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A",
+        "123.7781"
+      ],
+      "allocation_method": "region_priority",
+      "local_share_percent": null,
+      "local_region": {
+        "region_code": "41830",
+        "region_name": "경기도 양평군",
+        "min_months": 0,
+        "criterion_date": "2026-10-02"
+      },
+      "selection_order": [
+        "지역",
+        "가점",
+        "청약통장 가입기간",
+        "추첨"
+      ],
+      "selection_order_evidence_page": 16,
+      "selection_order_evidence_text": "당첨자 선정 순서 : ①지역 → ②가점 → ③청약통장 가입기간 → ④추첨"
+    },
+    {
+      "id": "2207a959441aafd1",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "생애최초 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 18,
+      "evidence_text": "②지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자)",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A"
+      ],
+      "allocation_method": "region_priority",
+      "local_share_percent": null,
+      "local_region": {
+        "region_code": "41830",
+        "region_name": "경기도 양평군",
+        "min_months": 0,
+        "criterion_date": "2026-10-02"
+      },
+      "selection_order": [
+        "소득구분",
+        "지역",
+        "추첨"
+      ],
+      "selection_order_evidence_page": 18,
+      "selection_order_evidence_text": "당첨자 선정 순서 : ①소득구분 → ②지역 → ③추첨",
+      "income_stage_unsuccessful_applicants_advance": true,
+      "income_stage_carry_forward_evidence_page": 18,
+      "income_stage_carry_forward_evidence_text": "각 단계별 낙첨자는 다음 단계 공급대상에 포함됨"
+    },
+    {
+      "id": "0d4d839b5af38816",
+      "kind": "regional_allocation",
+      "effect": "metadata",
+      "supply_type": "신생아 특별공급",
+      "verification": "official",
+      "source": "official_document_parser",
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "parser_version": "official-sections-2026-10-07-v8",
+      "criterion_date": "2026-10-02",
+      "housing_kind": "private",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_page": 20,
+      "evidence_text": "②지역 : 해당지역 거주자(양평군 거주자) → 기타지역 거주자(경기도 및 서울특별시, 인천광역시 거주자)",
+      "unit_types": [
+        "074.9845",
+        "084.8542B",
+        "084.8894C",
+        "084.9947A"
+      ],
+      "allocation_method": "region_priority",
+      "local_share_percent": null,
+      "local_region": {
+        "region_code": "41830",
+        "region_name": "경기도 양평군",
+        "min_months": 0,
+        "criterion_date": "2026-10-02"
+      },
+      "selection_order": [
+        "소득구분",
+        "지역",
+        "추첨"
+      ],
+      "selection_order_evidence_page": 19,
+      "selection_order_evidence_text": "당첨자 선정 순서 : ①소득구분 → ②지역 → ③추첨",
+      "income_stage_unsuccessful_applicants_advance": true,
+      "income_stage_carry_forward_evidence_page": 20,
+      "income_stage_carry_forward_evidence_text": "각 단계별 낙첨자는 다음 단계 공급대상에 포함됨"
+    }
+  ],
+  "positiveSupplyInventory": [
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 7,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 7,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 10,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 2,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 5,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신생아 특별공급",
+      "unit_type": "074.9845",
+      "supply_count": 7,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "074.9845",
+      "supply_count": 32,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "74.9845 74 74.9845 25.3216 100.3061 55.8877 156.1938 45.8792 70 7 7 10 2 5 7 38 32 4 02 084.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 1",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 15,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 14,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 22,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 10,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신생아 특별공급",
+      "unit_type": "084.9947A",
+      "supply_count": 15,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "084.9947A",
+      "supply_count": 69,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.9947A 84A 84.9947 28.9701 113.9648 63.3486 177.3134 52.0039 149 15 14 22 4 10 15 80 69 10 03 084.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신생아 특별공급",
+      "unit_type": "084.8542B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "084.8542B",
+      "supply_count": 18,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8542B 84B 84.8542 29.6912 114.5454 63.2438 177.7892 51.9180 40 4 4 6 1 3 4 22 18 3 2026000468 04 084.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 2,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "신생아 특별공급",
+      "unit_type": "084.8894C",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "084.8894C",
+      "supply_count": 18,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "84.8894C 84C 84.8894 28.7283 113.6177 63.2701 176.8878 51.9395 37 3 4 6 1 2 3 19 18 2 05 123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "123.7781",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "123.7781",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "123.7781",
+      "supply_count": 30,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "123.7781 123 123.7781 40.8221 164.6002 92.2548 256.8550 75.7335 35 - 4 - 1 - - 5 30 2 06 146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "146.8598P",
+      "supply_count": 2,
+      "verification": "official",
+      "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000468&pblancNo=2026000468&atchmnflSeqNo=1990183&atchmnflSn=2",
+      "evidence_text": "146.8598P 146P 146.8598 50.4458 197.3056 109.4582 306.7638 89.8561 2 - - - - - - - 2 - 합 계 333 29 33 44 9 20 29 164 169 21 - 5 -",
+      "evidence_page": 5,
+      "document_hash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+      "criterion_date": "2026-10-02"
+    }
+  ],
+  "currentDatabase": {
+    "noticePresent": false,
+    "storedCountsBySource": {
+      "sh": 43,
+      "gh": 39
+    },
+    "reportedOriginalDatabaseAttached": false,
+    "noFixtureInserted": true
+  },
+  "validation": {
+    "apiTestsPassed": 222,
+    "webTestsPassed": 336,
+    "webProductionBuildPassed": true
+  }
+}

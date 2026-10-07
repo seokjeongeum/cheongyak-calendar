@@ -1,0 +1,264 @@
+{
+  "date": "2026-10-07",
+  "base": "http://127.0.0.1:8080",
+  "passed": 72,
+  "cohorts": [
+    {
+      "width": 1280,
+      "passed": 30,
+      "checks": [
+        "Every active public notice remains in deadline order",
+        "No separate ongoing group changes the deadline order",
+        "Date headings are reception deadlines",
+        "Reception calendar dots are present",
+        "Current reception is identified on the cards",
+        "Explicit open-ended reception remains visible at the unknown-deadline end",
+        "Open-ended reception keeps recorded price rows and no invented deadline",
+        "Official opportunities are expanded without opening a notice",
+        "Other-region limitation is separate from admission",
+        "Unit-specific mixed and 100-percent lottery routes are displayed",
+        "Confirmed own points and part scores are visible",
+        "Separate regional quota is displayed without blanket disadvantage",
+        "Present-only child answer still requires past proof",
+        "Child add and birth controls are hidden for current no",
+        "Fetus count is hidden for current no",
+        "Explicit common no is selected",
+        "Both independent timelines are stored only after explicit selection",
+        "No repeated child or pregnancy change-date question remains",
+        "Zero children produces multi-child mismatch",
+        "No profile input reaches the public API",
+        "All gray and non-gray cards remain visible",
+        "Prices, competition rows and calendar dates are preserved",
+        "Open-ended reception keeps future calendar dates marked",
+        "Selecting a later calendar date retains open reception and prices",
+        "Open reception remains included in the displayed notice count",
+        "Expanded evidence remains open after profile dialog",
+        "No horizontal overflow",
+        "Focus return alone does not fetch",
+        "Every public request is a GET with public filters only",
+        "No runtime errors"
+      ],
+      "cards": 17,
+      "priceRows": 8,
+      "competitionRows": 8,
+      "calendarDays": 25,
+      "grayCards": 6,
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "passed": 30,
+      "checks": [
+        "Every active public notice remains in deadline order",
+        "No separate ongoing group changes the deadline order",
+        "Date headings are reception deadlines",
+        "Reception calendar dots are present",
+        "Current reception is identified on the cards",
+        "Explicit open-ended reception remains visible at the unknown-deadline end",
+        "Open-ended reception keeps recorded price rows and no invented deadline",
+        "Official opportunities are expanded without opening a notice",
+        "Other-region limitation is separate from admission",
+        "Unit-specific mixed and 100-percent lottery routes are displayed",
+        "Confirmed own points and part scores are visible",
+        "Separate regional quota is displayed without blanket disadvantage",
+        "Present-only child answer still requires past proof",
+        "Child add and birth controls are hidden for current no",
+        "Fetus count is hidden for current no",
+        "Explicit common no is selected",
+        "Both independent timelines are stored only after explicit selection",
+        "No repeated child or pregnancy change-date question remains",
+        "Zero children produces multi-child mismatch",
+        "No profile input reaches the public API",
+        "All gray and non-gray cards remain visible",
+        "Prices, competition rows and calendar dates are preserved",
+        "Open-ended reception keeps future calendar dates marked",
+        "Selecting a later calendar date retains open reception and prices",
+        "Open reception remains included in the displayed notice count",
+        "Expanded evidence remains open after profile dialog",
+        "No horizontal overflow",
+        "Focus return alone does not fetch",
+        "Every public request is a GET with public filters only",
+        "No runtime errors"
+      ],
+      "cards": 17,
+      "priceRows": 8,
+      "competitionRows": 8,
+      "calendarDays": 25,
+      "grayCards": 6,
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "passed": 7,
+      "checks": [
+        "Unknown automatic region does not guess a comparison",
+        "Explicit region selection is identified separately from admission",
+        "Matching notice, unit and local area fields are compared in the isolated replay",
+        "36 fictional points is below the recorded 37-point minimum",
+        "No future probability is inferred",
+        "Prices and competitions remain visible",
+        "No overflow or runtime error"
+      ],
+      "sourceNoticeId": "qa-fictional-manual-benchmark",
+      "profileValuesInReport": false
+    },
+    {
+      "width": 375,
+      "passed": 5,
+      "checks": [
+        "Missing child history action focuses the actual child change control",
+        "Missing pregnancy history action focuses the actual pregnancy change control",
+        "Current pregnancy disables lifetime child-and-pregnancy no shortcut",
+        "Unrelated draft edit preserves unknown marital state with explicitly no spouse",
+        "Retained expected-child history disables lifetime no even when current pregnancy is no"
+      ],
+      "profileValuesInReport": false
+    }
+  ],
+  "profileValuesInReport": false,
+  "dataProvenance": {
+    "date": "2026-10-07",
+    "mode": "isolated_recorded_fixture_replay",
+    "freshLiveCollection": false,
+    "productionDatabaseTouched": false,
+    "fictionalDisplayVariants": true,
+    "notices": [
+      {
+        "id": "qa-recorded-2026000468",
+        "fixture": "current-private-v5.json",
+        "documentHash": "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000463",
+        "fixture": "current-private-v5.json",
+        "documentHash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026910253",
+        "fixture": "current-private-v5.json",
+        "documentHash": "ec488adf1e0259c2b9e705abcbea025e06ffdc9158b95e5cef2e5c3d8adfdac3",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000386",
+        "fixture": "current-private-v5.json",
+        "documentHash": "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061154",
+        "fixture": "public-v5.json",
+        "documentHash": "4be040db7f7562135ed57584edede4b9c497eee536fbd686ac20642c13301855",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2015122300020823",
+        "fixture": "public-v5.json",
+        "documentHash": "d33f83bc20f2fd5caeea78007e948a9becd46e51426f27f82e5b984d4f531f00",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061180",
+        "fixture": "public-v5.json",
+        "documentHash": "91eb4846a866e763b87e0c00b640e9f13dfe78442cda5d69cdac45c8c5a01492",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061179",
+        "fixture": "public-v5.json",
+        "documentHash": "f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-0000061181",
+        "fixture": "public-v5.json",
+        "documentHash": "ff527af4d8c895c64d6e0d2f81a226610c6f5617463b414f52ed7585107c69c0",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026930038",
+        "fixture": "regional-v5.json",
+        "documentHash": "6b5b9d90c9a111e276ce85c19ce6ac021c4a9b5ce222b37fa49698e48a1330f7",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000498",
+        "fixture": "regional-v5.json",
+        "documentHash": "dd62febed115a2ed2c457820e9aa9fcb10df93b4c017764f36b6d1273f23400d",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026910251",
+        "fixture": "regional-v5.json",
+        "documentHash": "8fa5641c86777a48b65638f8036fc3bf6b53f0a4969b6c494fff88deb2ae7cd6",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026000444",
+        "fixture": "regional-v5.json",
+        "documentHash": "834e6d70710e7bbfc03d420600fa88d9ee11b79933dd47dd72797255342822bd",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-2026930039",
+        "fixture": "regional-v5.json",
+        "documentHash": "b2d655bace2f889a1905488fdd2f7900f525d781961797f0e2480746ba1d100a",
+        "fictionalReceptionDates": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-recorded-jamsil",
+        "fixture": "jamsil-detail.json + jamsil-models.json",
+        "fictionalReceptionDates": false,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-open-reception",
+        "fixture": "jamsil-models.json",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalEndDate": false,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-manual-benchmark",
+        "fixture": "winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-region-mismatch-result",
+        "fixture": "regional-v5.json + winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      },
+      {
+        "id": "qa-fictional-current-competition",
+        "fixture": "regional-v5.json + winning-score-public.html",
+        "fictionalProjectAssociation": true,
+        "fictionalReceptionDates": true,
+        "fictionalSelectionMethod": true,
+        "freshCollection": false
+      }
+    ]
+  }
+}

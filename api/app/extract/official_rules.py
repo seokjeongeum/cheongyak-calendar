@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlparse
 from .reviewed_sources import REVIEWED_SOURCES
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-05-v7"
+PARSER_VERSION = "official-sections-2026-10-07-v8"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -33,9 +33,9 @@ PROVINCES = {
 def parser_version_usable(rule: dict, *, category: str = "", title: str = "", rules: list[dict] | None = None) -> bool:
     if rule.get("source") != "official_document_parser" or rule.get("parser_version") == PARSER_VERSION:
         return True
-    # v7 adds verified selection metadata. Prior admission interpretations
+    # v8 adds supply-scoped special selection metadata. Prior admission facts
     # remain valid until their document is reparsed/corrected.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
