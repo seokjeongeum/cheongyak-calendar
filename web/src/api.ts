@@ -52,6 +52,7 @@ export function getIntegrationSettings(): Promise<IntegrationSettingsResponse> {
 export async function saveIntegrationSettings(token: string, keys: Record<string, string>, confirmed: boolean): Promise<IntegrationSettingsResponse> {
   const response = await fetch(`${API_BASE}/api/integrations`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    cache: 'no-store', referrerPolicy: 'no-referrer',
     body: JSON.stringify({ keys, gemini_unbilled_confirmed: confirmed }),
   })
   if (!response.ok) throw new Error(response.status === 401 ? '관리자 인증키를 확인하세요.' : '저장하지 못했습니다. 키 형식과 서버 연결을 확인하세요.')

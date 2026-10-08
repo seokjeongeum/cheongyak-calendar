@@ -100,3 +100,23 @@ def test_database_error_diagnostics_hide_secret_parameters(tmp_path):
             connection.execute(text('INSERT INTO absent_table(value) VALUES (:key)'), {'key': KEY})
         assert KEY not in str(error.value)
     engine.dispose()
+
+
+def test_hosted_bootstrap_needs_valid_hash_and_preserves_existing_owner(tmp_path, monkeypatch):
+    engine = make_engine(f"sqlite:///{tmp_path / 'bootstrap.db'}")
+    init_db(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with factory() as session:
+        monkeypatch.delenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', raising=False)
+        assert not settings.initialize_hosted_admin(session)
+        monkeypatch.setenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', 'not-a-hash')
+        with pytest.raises(RuntimeError):
+            settings.initialize_hosted_admin(session)
+        digest = hashlib.sha256(TOKEN.encode()).hexdigest()
+        monkeypatch.setenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', digest)
+        assert settings.initialize_hosted_admin(session)
+        session.commit()
+        monkeypatch.setenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', hashlib.sha256(b'replacement').hexdigest())
+        assert not settings.initialize_hosted_admin(session)
+        assert settings.setting_value(settings.ADMIN_HASH, session) == digest
+    engine.dispose()

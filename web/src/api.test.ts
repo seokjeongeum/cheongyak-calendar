@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getCalendarNotices, getNotices } from './api'
+import { getCalendarNotices, getNotices, saveIntegrationSettings } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -58,5 +58,25 @@ describe('public notice requests', () => {
       expect([...params.keys()].sort()).toEqual(['application_only', 'end', 'exclude_public_rental', 'page', 'page_size', 'start', 'view'])
       expect(init).toEqual({ headers: { Accept: 'application/json' }, signal: undefined })
     }
+  })
+})
+
+describe('hosted integration credentials', () => {
+  it('sends administrator authentication only in the authorization header with no URL or body credential', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ admin_initialized: true, services: [], gemini_unbilled_confirmed: false }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await saveIntegrationSettings('fictional-admin', { LH_API_KEY: 'fictional-api-key' }, false)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/integrations')
+    expect(init.headers.Authorization).toBe('Bearer fictional-admin')
+    expect(init.referrerPolicy).toBe('no-referrer')
+    expect(init.cache).toBe('no-store')
+    expect(JSON.parse(init.body)).toEqual({ keys: { LH_API_KEY: 'fictional-api-key' }, gemini_unbilled_confirmed: false })
+    expect(String(url) + init.body).not.toContain('fictional-admin')
+  })
+
+  it('does not expose the submitted credentials in authentication errors', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    await expect(saveIntegrationSettings('fictional-admin', { LH_API_KEY: 'fictional-api-key' }, false)).rejects.toThrow('관리자 인증키를 확인하세요.')
   })
 })

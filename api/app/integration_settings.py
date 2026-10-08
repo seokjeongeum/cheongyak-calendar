@@ -4,12 +4,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import re
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.db import SessionLocal, get_session, init_db
 from app.models import IntegrationSetting
@@ -26,6 +29,29 @@ KEY_NAMES = {item[0] for item in CATALOG}
 CONFIRMATION = "GEMINI_UNBILLED_PROJECT_CONFIRMED"
 ADMIN_HASH = "_admin_token_hash"
 router = APIRouter(prefix="/api/integrations", tags=["API 연결 설정"])
+
+
+def initialize_hosted_admin(session: Session | None = None) -> bool:
+    """Bootstrap a fresh hosted database from a hash, preserving existing owners.
+
+    The raw administrator credential stays in the owner's private connection
+    link. Neither the image nor Railway variables contain that credential.
+    """
+    digest = os.getenv("INTEGRATIONS_ADMIN_TOKEN_SHA256", "").strip().lower()
+    if not digest:
+        return False
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise RuntimeError("Invalid hosted administrator hash configuration")
+    if session is None:
+        with SessionLocal() as selected:
+            created = initialize_hosted_admin(selected)
+            selected.commit()
+            return created
+    if session.get(IntegrationSetting, ADMIN_HASH) is not None:
+        return False
+    insert = pg_insert if session.bind.dialect.name == "postgresql" else sqlite_insert
+    result = session.execute(insert(IntegrationSetting).values(name=ADMIN_HASH, value=digest).on_conflict_do_nothing(index_elements=[IntegrationSetting.name]))
+    return result.rowcount == 1
 
 
 def setting_value(name: str, session: Session | None = None) -> str:

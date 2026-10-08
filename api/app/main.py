@@ -15,15 +15,17 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import get_session, init_db
-from app.integration_settings import router as integrations_router
+from app.integration_settings import initialize_hosted_admin, router as integrations_router
 from app.models import Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
 from app.schemas import CoveragePublic, HealthPublic, NoticeDetail, NoticePage, NoticePublic, SourceStatusPublic
+from app.static_web import mount_static_web
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    initialize_hosted_admin()
     yield
 
 
@@ -143,3 +145,8 @@ def get_notice(notice_id: str, session: Session = Depends(get_session)) -> Notic
 @app.get("/api/coverage", response_model=CoveragePublic)
 def get_coverage(session: Session = Depends(get_session)) -> CoveragePublic:
     return CoveragePublic(sources=[SourceStatusPublic.model_validate(item, from_attributes=True) for item in source_coverage(session)])
+
+
+# Hosted deployments serve the built app at the API's origin. Local Compose
+# leaves STATIC_WEB_DIR unset and continues serving the web app through nginx.
+mount_static_web(app)
