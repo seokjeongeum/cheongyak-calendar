@@ -114,6 +114,14 @@ class NoticeRevision(Base):
     notice: Mapped[Notice] = relationship(back_populates="revisions")
 
 
+class IntegrationSetting(Base):
+    """Server-only credentials; never included in public notice serializers."""
+
+    __tablename__ = "integration_settings"
+    name: Mapped[str] = mapped_column(String(80), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class SourceStatus(Base):
     __tablename__ = "source_status"
 

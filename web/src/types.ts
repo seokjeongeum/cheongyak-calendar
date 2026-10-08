@@ -194,6 +194,8 @@ export type PropertyKind = 'apartment' | 'detached' | 'multi_family' | 'row_hous
 /** One record per dwelling/right. Shares of the same dwelling are one record. */
 export interface OwnershipFact {
   id: string
+  /** Factual association to an original winning-and-contract project, when relevant. */
+  projectId?: string
   ownerMemberId: string
   ownerRelation: OwnerRelation
   ownerDateOfBirth: string
@@ -235,7 +237,7 @@ export interface OwnershipFact {
   tenantResidenceStartDate: string
 }
 export function createOwnershipFact(id = ''): OwnershipFact {
-  return { id, ownerMemberId: '', ownerRelation: 'unknown', ownerDateOfBirth: '', propertyKind: 'unknown', underlyingPropertyKind: 'unknown', areaSqm: '', officialValueKrw: '', valueBasis: 'unknown', valueAsOfDate: '', acquisitionPriceKrw: '', propertyRegionCode: '', acquiredDate: '', disposedDate: '', acquisitionMethod: 'unknown', inheritedShare: null, ownedShare: null, notificationDate: '', buildingApprovalDate: '', outsideUrbanArea: null, inMyeon: null, ownerPreviouslyResided: null, movedToOtherConstructionArea: null, firstRegisteredDomicile: null, fromAscendantOrSpouse: null, builderForSale: null, saleCompleted: null, individualBusinessRegistered: null, employeeDormitoryUnderHousingAct: null, governmentEmployeeHousingPolicy: null, standardResidentialBuilding: null, abandonedOrDestroyedOrNonResidential: null, registerCorrectedDate: '', oldLawUnauthorized: null, lawfulAtConstructionEvidence: null, originalResidualFirstCome: null, unpaidRentalDeposit: null, auctionAcquisition: null, firstEverAcquisition: null, tenantResidenceStartDate: '' }
+  return { id, projectId: '', ownerMemberId: '', ownerRelation: 'unknown', ownerDateOfBirth: '', propertyKind: 'unknown', underlyingPropertyKind: 'unknown', areaSqm: '', officialValueKrw: '', valueBasis: 'unknown', valueAsOfDate: '', acquisitionPriceKrw: '', propertyRegionCode: '', acquiredDate: '', disposedDate: '', acquisitionMethod: 'unknown', inheritedShare: null, ownedShare: null, notificationDate: '', buildingApprovalDate: '', outsideUrbanArea: null, inMyeon: null, ownerPreviouslyResided: null, movedToOtherConstructionArea: null, firstRegisteredDomicile: null, fromAscendantOrSpouse: null, builderForSale: null, saleCompleted: null, individualBusinessRegistered: null, employeeDormitoryUnderHousingAct: null, governmentEmployeeHousingPolicy: null, standardResidentialBuilding: null, abandonedOrDestroyedOrNonResidential: null, registerCorrectedDate: '', oldLawUnauthorized: null, lawfulAtConstructionEvidence: null, originalResidualFirstCome: null, unpaidRentalDeposit: null, auctionAcquisition: null, firstEverAcquisition: null, tenantResidenceStartDate: '' }
 }
 
 export type FactChangeGroup = 'household' | 'household_head' | 'domestic_residence' | 'restrictions' | 'overseas' | 'military' | 'income_tax' | 'income' | 'assets' | 'bank_private' | 'bank_national' | 'citizenship' | 'employment' | 'parent_support' | 'marital' | 'children' | 'pregnancy' | 'points' | 'provider_employee' | 'ownership'

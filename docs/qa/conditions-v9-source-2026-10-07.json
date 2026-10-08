@@ -1,0 +1,1544 @@
+{
+  "mode": "recorded_current_official_source_reparse",
+  "parser_version": "official-sections-2026-10-07-v9",
+  "personal_profile_included": false,
+  "production_database_touched": false,
+  "notices": [
+    {
+      "external_id": "0000061183",
+      "announcement_date": "2026-09-23",
+      "document_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+      "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+      "page_count": 19,
+      "parse_status": "complete",
+      "verified_condition_count": 7,
+      "metadata": [
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-09-23",
+          "criterion_basis": "announcement",
+          "unrestricted": true,
+          "priority_applicable": false,
+          "scope_complete": true,
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_page": 1,
+          "evidence_text": "거주지역, 청약저축 가입여부, 과거당첨 사실여부, 소득 및 자산 요건을 불문"
+        },
+        {
+          "kind": "supply_inventory_summary",
+          "criterion_date": "2026-09-23",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_page": 1,
+          "evidence_text": "공급대상 : 공공분양주택 308세대 중 잔여 252세대 (전용면적 74㎡ 18세대, 84㎡ 234세대)",
+          "total_households": 308,
+          "current_supply_count": 252
+        },
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-09-23",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_page": 1,
+          "evidence_text": "이 주택의 입주자모집공고일은 2026.09.23",
+          "scopes": [
+            {
+              "supply_type": "일반공급",
+              "complete": true,
+              "verified_rule_count": 7,
+              "missing_topics": [],
+              "topics": [
+                {
+                  "topic": "age",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ff9ac0a60fb15521"
+                  ]
+                },
+                {
+                  "topic": "application_restrictions",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-1c5de8b286bab4eb"
+                  ]
+                },
+                {
+                  "topic": "citizenship",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-a34950e54226af7f"
+                  ]
+                },
+                {
+                  "topic": "domestic_residence",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-c642faf918d2c755"
+                  ]
+                },
+                {
+                  "topic": "home_ownership",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-37652263aac00004"
+                  ]
+                },
+                {
+                  "topic": "original_contract_ownership",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-f4b8a57ce093a1be"
+                  ]
+                },
+                {
+                  "topic": "overseas_residence",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-8195fa359d79107f"
+                  ]
+                },
+                {
+                  "topic": "account",
+                  "status": "not_applicable",
+                  "required": false,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "income",
+                  "status": "not_applicable",
+                  "required": false,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "assets",
+                  "status": "not_applicable",
+                  "required": false,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "prior_win",
+                  "status": "not_applicable",
+                  "required": false,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "rewinning_restriction",
+                  "status": "not_applicable",
+                  "required": false,
+                  "rule_ids": []
+                }
+              ],
+              "source_gaps": [],
+              "reviewed_document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+              "reviewed_section_pages": [
+                1,
+                2,
+                8,
+                9,
+                10,
+                13
+              ],
+              "branches": [
+                {
+                  "branch_id": "adult",
+                  "label": "성년 신청자",
+                  "requirements": [
+                    "age",
+                    "domestic_residence",
+                    "citizenship",
+                    "home_ownership",
+                    "overseas_residence",
+                    "original_contract_ownership",
+                    "application_restrictions"
+                  ]
+                },
+                {
+                  "branch_id": "minor_household_head",
+                  "label": "미성년 세대주 예외",
+                  "requirements": [
+                    "미성년 세대주·동일 등본의 부양 자녀 또는 형제자매",
+                    "domestic_residence",
+                    "citizenship",
+                    "home_ownership",
+                    "overseas_residence",
+                    "original_contract_ownership",
+                    "application_restrictions"
+                  ]
+                },
+                {
+                  "branch_id": "overseas_livelihood",
+                  "label": "생업 목적 해외 체류 예외",
+                  "requirements": [
+                    "본인만 생업 목적 해외 체류",
+                    "단독세대주·동거인의 세대원 제외",
+                    "나머지 확인 대상 세대원 국내 거주"
+                  ]
+                },
+                {
+                  "branch_id": "ownership_exceptions",
+                  "label": "공식 주택 소유 예외",
+                  "requirements": [
+                    "제53조 12개 예외의 실제 취득·처분·세대·가격·면적 사실"
+                  ]
+                }
+              ],
+              "completion_basis": "document_hash_review"
+            }
+          ]
+        }
+      ],
+      "offered_supplies": [
+        {
+          "supply_type": "일반공급",
+          "unit_type": "74.9500A",
+          "supply_count": 18,
+          "verification": "official",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_text": "74.9500A 74A 74.9500 23.7486 9.7791 41.4895 149.9672 확장 35.71 52.8548 41 23 18 23 0",
+          "evidence_page": 3,
+          "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+          "criterion_date": "2026-09-23"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "84.0000A",
+          "supply_count": 154,
+          "verification": "official",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_text": "B2 84.0000A 84A1 84.9900 26.9298 11.0891 47.0473 170.0562 확장 37.54 59.9350 187 33 154 22 1’28.07",
+          "evidence_page": 3,
+          "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+          "criterion_date": "2026-09-23"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "84.0000B",
+          "supply_count": 58,
+          "verification": "official",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_text": "84.0000B 84B 84.5900 26.8031 11.0369 46.8259 169.2559 확장 31.18 59.6530 58 - 58 10 2",
+          "evidence_page": 3,
+          "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+          "criterion_date": "2026-09-23"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "84.9800C",
+          "supply_count": 22,
+          "verification": "official",
+          "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+          "evidence_text": "84.9800C 84C 84.9800 26.9267 11.0878 47.0418 170.0363 확장 31.29 59.9280 22 - 22 23 -",
+          "evidence_page": 3,
+          "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+          "criterion_date": "2026-09-23"
+        }
+      ]
+    },
+    {
+      "external_id": "2026000463",
+      "announcement_date": "2026-10-02",
+      "document_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+      "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+      "page_count": 95,
+      "parse_status": "partial",
+      "verified_condition_count": 33,
+      "metadata": [
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-10-02",
+          "criterion_basis": "announcement",
+          "regions": [
+            {
+              "region_code": "41",
+              "region_name": "경기도"
+            },
+            {
+              "region_code": "11",
+              "region_name": "서울특별시"
+            },
+            {
+              "region_code": "28",
+              "region_name": "인천광역시"
+            }
+          ],
+          "local_priority": {
+            "region_code": "41590",
+            "region_name": "경기도 화성시",
+            "min_months": 0,
+            "criterion_date": "2026-10-02"
+          },
+          "priority_applicable": true,
+          "scope_complete": true,
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 5,
+          "evidence_text": "입주자모집공고일 현재 화성특례시에 거주하거나 수도권(경기도, 서울특별시, 인천광역시)에 거주(주민등록표등본 기준)하는 만19세 이상인 분 또는 세대주인 미성년자(자녀양 육, 형제자매부양)[국내에서 거주하는 재외동포(재외국민, 외국국적 동포) 및 외국인 포함]의 경우 청약이 가능합니다. 다만 청약신청자 중 경쟁이 있을 경우 해당 주택건설지역인 화성특 례시 거주자가 우선합니다."
+        },
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-10-02",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 5,
+          "evidence_text": "본 주택의 최초 입주자모집공고일은 2026.10.02",
+          "scopes": [
+            {
+              "supply_type": "기관추천 특별공급",
+              "complete": false,
+              "verified_rule_count": 4,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-5c296dd15bea5611"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-4ce587e58b0016e5"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-72e6fca57dfd56e0"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "다자녀가구 특별공급",
+              "complete": false,
+              "verified_rule_count": 5,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-d4c77e0442234373"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-38c5207d2814b8ed"
+                  ]
+                },
+                {
+                  "topic": "children_min",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-b7979f96fde03f57"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-5294dab03fdf09ca"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "신혼부부 특별공급",
+              "complete": false,
+              "verified_rule_count": 6,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-31ea0bfdcb769868"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-bb11d1a25800199f"
+                  ]
+                },
+                {
+                  "topic": "marriage_months_max",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-d2b4cf6c4308549f"
+                  ]
+                },
+                {
+                  "topic": "marital_status",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-c347ae32c43c2b3c"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-7d9995ac9def6fec"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "노부모부양 특별공급",
+              "complete": false,
+              "verified_rule_count": 8,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-a1ca4c1967d23649"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-a579b3b70c41c136"
+                  ]
+                },
+                {
+                  "topic": "parent_age_min",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-c69985b074bc2262"
+                  ]
+                },
+                {
+                  "topic": "parent_support_months_min",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-c87b18fb3a30c20f"
+                  ]
+                },
+                {
+                  "topic": "parent_same_register",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-d1eb3f3176651811"
+                  ]
+                },
+                {
+                  "topic": "household_head",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-8c9ac25fe3672df0"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-352b3afe69c1f76d"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "생애최초 특별공급",
+              "complete": false,
+              "verified_rule_count": 6,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-45ca2a54132b3a1e"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-bfb8dfeee2ec6074"
+                  ]
+                },
+                {
+                  "topic": "never_owned_home",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-98f3829c93563d6e"
+                  ]
+                },
+                {
+                  "topic": "tax_years_min",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-b11042e378ec70f5"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ce9b0ffa477f4fd0"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "신생아 특별공급",
+              "complete": false,
+              "verified_rule_count": 5,
+              "topics": [
+                {
+                  "topic": "homeless",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-9871427cf83ce54f"
+                  ]
+                },
+                {
+                  "topic": "private_rank_months",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-6d8e1408c279e0b1"
+                  ]
+                },
+                {
+                  "topic": "newborn_children_min",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-a7c8c2f012daa362"
+                  ]
+                },
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-a20c7f7fc6020b65"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "소득·자산 분기",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "소득·자산 분기"
+              ]
+            },
+            {
+              "supply_type": "일반공급",
+              "complete": false,
+              "verified_rule_count": 2,
+              "topics": [
+                {
+                  "topic": "성년 또는 공고의 미성년 세대주",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-ac2df997ed6c5dd9"
+                  ]
+                },
+                {
+                  "topic": "신청 가능한 지역",
+                  "status": "verified",
+                  "required": true,
+                  "rule_ids": [
+                    "official-77e05d998d0287a9"
+                  ]
+                },
+                {
+                  "topic": "재당첨·청약 제한 및 법령 예외",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                },
+                {
+                  "topic": "신청 제한·연령 예외의 전체 검토",
+                  "status": "missing",
+                  "required": true,
+                  "rule_ids": []
+                }
+              ],
+              "missing_topics": [
+                "재당첨·청약 제한 및 법령 예외",
+                "신청 제한·연령 예외의 전체 검토"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "일반공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 26,
+          "evidence_text": "■ ①지역 : 해당지역 거주자(화성특례시 거주자) → 기타지역 거주자(경기도, 서울특별시. 인천광역시 거주자) "
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "다자녀가구 특별공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 15,
+          "evidence_text": "①지역 : 해당시도 거주자 50%(화성시 및 경기도 거주자) → 기타지역 거주자 50%(서울특별시, 인천광역시 거주자) 경기도 거주자가 50% 우선공급에서 낙첨될 경우, 나머지 50% 물량에서 서울특별시, 인천광역시 거주자와 우선공급에서 입주자로 선정되지 아니한 경기도 거주자가 다시 경쟁하며 이 경우 해당지역 거주 신청자 우선공급 요건은 적용되지 않습니다"
+        },
+        {
+          "kind": "applicant_regions",
+          "supply_type": "다자녀가구 특별공급",
+          "criterion_date": "2026-10-02",
+          "regions": [
+            {
+              "region_code": "41",
+              "region_name": "경기도"
+            },
+            {
+              "region_code": "11",
+              "region_name": "서울특별시"
+            },
+            {
+              "region_code": "28",
+              "region_name": "인천광역시"
+            }
+          ],
+          "local_priority": {
+            "region_code": "41590",
+            "region_name": "경기도 화성시",
+            "min_months": 0,
+            "criterion_date": "2026-10-02"
+          },
+          "priority_applicable": true,
+          "scope_complete": true,
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 15,
+          "evidence_text": "①지역 : 해당시도 거주자 50%(화성시 및 경기도 거주자) → 기타지역 거주자 50%(서울특별시, 인천광역시 거주자)"
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "신혼부부 특별공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 17,
+          "evidence_text": "③지역 : 해당지역 거주자(화성시 거주자) → 기타지역 거주자(경기도, 서울특별시, 인천광역시 거주자)"
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "노부모부양 특별공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 19,
+          "evidence_text": "①지역 : 해당지역 거주자(화성시 거주자) → 기타지역 거주자(경기도, 서울특별시, 인천광역시 거주자)"
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "생애최초 특별공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 21,
+          "evidence_text": "②지역 : 해당지역 거주자(화성시 거주자) → 기타지역 거주자(경기도, 서울특별시, 인천광역시 거주자)"
+        },
+        {
+          "kind": "regional_allocation",
+          "supply_type": "신생아 특별공급",
+          "criterion_date": "2026-10-02",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_page": 24,
+          "evidence_text": "②지역 : 해당지역 거주자(화성시 거주자) → 기타지역 거주자(경기도, 서울특별시, 인천광역시 거주자)"
+        }
+      ],
+      "offered_supplies": [
+        {
+          "supply_type": "기관추천 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 5,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 5,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신혼부부 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 8,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 1,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "생애최초 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 4,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신생아 특별공급",
+          "unit_type": "071.8178",
+          "supply_count": 5,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "071.8178",
+          "supply_count": 21,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "71.8178 71 71.8178 21.6315 93.4493 49.5138 142.963146.7137 49 5 5 8 1 4 5 28 21 2 02 084.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.479613",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "기관추천 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 38,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 38,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신혼부부 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 56,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 11,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "생애최초 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 26,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신생아 특별공급",
+          "unit_type": "084.9592A",
+          "supply_count": 38,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9592A",
+          "supply_count": 164,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9592A 84A 84.9592 24.8285109.7877 58.5739 168.361655.2615 371 38 38 56 11 26 38 207 164 14 03 084.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "기관추천 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신혼부부 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 21,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 4,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "생애최초 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 10,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신생아 특별공급",
+          "unit_type": "084.9767B",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9767B",
+          "supply_count": 61,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9767B 84B 84.9767 25.1551110.1318 58.5860 168.717855.2729 138 14 14 21 4 10 14 77 61 5 04 084.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "기관추천 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신혼부부 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 21,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 4,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "생애최초 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 10,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신생아 특별공급",
+          "unit_type": "084.9221C",
+          "supply_count": 14,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9221C",
+          "supply_count": 61,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9221C 84C 84.9221 25.8919110.8140 58.5483 169.362355.2374 138 14 14 21 4 10 14 77 61 5 202600046305 084.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "기관추천 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 13,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 13,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신혼부부 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 19,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 4,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "생애최초 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 9,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "신생아 특별공급",
+          "unit_type": "084.9140D",
+          "supply_count": 13,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9140D",
+          "supply_count": 54,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "84.9140D 84D 84.9140 24.8758109.7898 58.5427 168.332555.2321 125 13 13 19 4 9 13 71 54 5 06 107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "107.9722A",
+          "supply_count": 6,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "107.9722A",
+          "supply_count": 2,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "107.9722A",
+          "supply_count": 50,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.9722A 107A 107.9722 31.4796139.4518 74.4400 213.891870.2303 58 - 6 - 2 - - 8 50 2 07 107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "다자녀가구 특별공급",
+          "unit_type": "107.8263B",
+          "supply_count": 5,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용면적은 주거의 용도로만 쓰이는 면적이며, 주거공용면적은 계단, 복도, 현관 등 공동주택의 지상층에 있는 공용면적이며, 기타공용면적은 주거공용면적을 제외한 지하층",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "107.8263B",
+          "supply_count": 2,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용면적은 주거의 용도로만 쓰이는 면적이며, 주거공용면적은 계단, 복도, 현관 등 공동주택의 지상층에 있는 공용면적이며, 기타공용면적은 주거공용면적을 제외한 지하층",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "107.8263B",
+          "supply_count": 45,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "107.8263B 107B 107.8263 30.4250138.2513 74.3394 212.590770.1354 52 - 5 - 2 - - 7 45 2 08 147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용면적은 주거의 용도로만 쓰이는 면적이며, 주거공용면적은 계단, 복도, 현관 등 공동주택의 지상층에 있는 공용면적이며, 기타공용면적은 주거공용면적을 제외한 지하층",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "147.9931P",
+          "supply_count": 2,
+          "verification": "official",
+          "evidence_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+          "evidence_text": "147.9931P 147P 147.9931 45.4216193.4147 102.0320 295.446796.2618 2 - - - - - - - 2 - 합 계 933 84 95 125 28 59 84 475 458 35 ※ 주택공급신청서의 [주택형] 또는 [형]란은 입주자모집공고상 주택형(㎡)으로 기재하니 평형으로 오해하여 불이익이 발생되지 않도록 하시기 바라며, 주택규모 표시방법을 종전의 평형 대신 넓이 표시 법정 단위인 제곱미터(㎡)로 표기하였으니 청약 신청에 착오 없으시기 바랍니다. [평형 환산방법 : 공급면적(㎡) × 0.3025 또는 공급면적(㎡) ÷ 3.3058] ※ 주거전용면적은 주거의 용도로만 쓰이는 면적이며, 주거공용면적은 계단, 복도, 현관 등 공동주택의 지상층에 있는 공용면적이며, 기타공용면적은 주거공용면적을 제외한 지하층, 부대복리시설 등의 공용면적입니다. ※ 아파트와 근린생활시설의 대지지분은 용도별 연면적 비율에 따라 배분하였고, 해당 용도의 연면적 변경이 있을 경우 대지지분",
+          "evidence_page": 8,
+          "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+          "criterion_date": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "external_id": "2026950085",
+      "announcement_date": "2026-09-30",
+      "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+      "document_hash": "89c9ed1aac831abe2b7e2958eb00a780ecb5387672603c8a118c4e2d34eb9436",
+      "page_count": 15,
+      "parse_status": "complete",
+      "verified_condition_count": 2,
+      "metadata": [
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-09-30",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+          "evidence_page": 1,
+          "evidence_text": "구글플레이스토어 애플앱스토어 잠실에떼르넬비욘드 오피스텔 분양광고 청약Home 앱 설치 바로가기 ■ 한국부동산원 청약콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미숙지, 착오신청 등에 대해서는 청약자 본인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 오피스텔은 2025.04.04. 사용승인을 완료하였으므로 「건축물의 분양에 관한 법률」이 적용되지 않습니다. 본 분양광고를 숙지하시어 착오 없으시기 바라며 계약 시 계약금(10%), 잔금(90%) 기간 협의 후 완납 시 바로 입주가 가능하오니 이점 유념하여 주시기 바랍니다. ■ 본 오피스텔 분양광고의 내용을 숙지한 후 청약 및 계약에 응하시기 바라며, 내용 미숙지로 인한 착오 등에 대해서는 청약자 본인에게 책임이 있음을 알려드립니다. ■ 본 오피스텔의 경우 청약자 ‘만 나이’ 요건 기준일은 분양광고일(2026.09.30.) 기준입니다. ■ 인터넷 청약접수 및 전산추첨 : 청약접수 및 분양받을 자의 선정에 관한 업무를 한국부동산원에 의뢰하여 인터넷 청약을 원칙으로 하여 전산추첨의 방법으로 입주자를 선정합니다. ■ 본 오피스텔의 건설지역인 서울특별시 송파구는 투기과열지구 및 청약과열지역으로서 대출이 제한될 수 있습니다. ■ 청약자격 : 본 오피스텔은 거주지역 및 청약통장 가입여부와 무관하게",
+          "scopes": [
+            {
+              "supply_type": "일반공급",
+              "complete": true,
+              "verified_rule_count": 2,
+              "missing_topics": []
+            }
+          ]
+        },
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-09-30",
+          "criterion_basis": "announcement",
+          "unrestricted": true,
+          "priority_applicable": false,
+          "scope_complete": true,
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950085&pblancNo=2026950085&atchmnflSeqNo=1977178&atchmnflSn=3",
+          "evidence_page": 4,
+          "evidence_text": "분양광고일(2026.09.30.) 현재 대한민국에 거주하는 만 19세 이상인 자[국내에 거주하고 있는 재외동포(재외국민, 외국국적 동포) 및 외국인 포함] 또는 법인의 경우 신청 가능함. 단, 재외동포(재외국민, 외국국적 동포) 및 외국인과 법인은 대출에 제한이 있을 수 있습니다. "
+        }
+      ],
+      "offered_supplies": []
+    },
+    {
+      "external_id": "2026930033",
+      "announcement_date": "2026-10-06",
+      "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+      "document_hash": "c6e98d471653081d934654fbfa5f0094356822659e626517e7a5991a1df705c6",
+      "page_count": 20,
+      "parse_status": "partial",
+      "verified_condition_count": 22,
+      "metadata": [
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "regions": [
+            {
+              "region_code": "30",
+              "region_name": "대전광역시"
+            }
+          ],
+          "priority_applicable": false,
+          "scope_complete": true,
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+          "evidence_page": 4,
+          "evidence_text": "입주자모집공고일 현재 대전광역시에 거주(주민등록표등본 기준)하는 만19세 이상인 분 또는 세대주인 미성년자(자녀양육, 형제자매부양)의 경우 청약이 가능합니다. (외국인 제외)"
+        },
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+          "evidence_page": 2,
+          "evidence_text": "사전당첨자 및 그 세대원이 다른 주택(APT, 불법행위재공급, 규제지역 무순위)에 청약하여 당첨된 경우 사전당첨자로서의 지위를 상실하여 사전청약 주택의 입주자로 선정될 수 없습니다. ■ 본 입주자모집공고는 「주택공급에 관한 규칙」 제47조의3에 따라 불법전매나 공급질서 교란 등으로 계약 취소된 주택(이하 “불법행위재공급 주택”이라 함)을 사업주체가 취득하여 재공급하기 위한 공고입니다. ■ 본 입주자모집공고는 청약통장 가입여부와 관계없이 청약신청 가능합니다. ■ 본 입주자모집공고의 특별공급은 해당 주택건설지역 거주자 중 각 특별공급 유형별 자격요건을 갖춘 무주택세대주(무주택세대의 세대주)을 대상으로 추첨의 방법으로 공급합니다. ■ 본 입주자모집공고의 일반공급은 해당 주택건설지역 거주자 중 무주택세대주(무주택세대의 세대주)를 대상으로 추첨의 방법으로 공급합니다. ■ 2018.12.11. 시행된 「주택공급에 관한 규칙」 제2조제2호의3, 제2조제4호에 의거 ‘세대’ 및 ‘무주택세대구성원’의 정의가 변경되었습니다. - “세대”란, 다음 각 목의 사람(이하 “세대원”)으로 구성된 집단(주택공급신청자가 세대별 주민등록표에 등재되어 있지 않은 경우는 제외) 가. 주택공급신청자 나. 주택공급신청자의 배우자 다. 주택공급신청자의 직계존속(배우자의 직계존속 포함) : 주택공급신청자 또는 주택공급신청자의 배우자와 세대별 주민등록표에 함께 등재되어야 함 (예) 부·모, 장인·장모, 시부· 시모, 조부·조모, 외조부·외조모 등 라. 주택공급신청자의 직계비속(직계비속의 배우자 포함, 이하 같음) : 주택공급신청자 또는 주택공급신청자의 배우자와 세대별 주민등록표에 함께 등재되어야 함 (예) 아들·딸, 사위· 며느리, 손자·",
+          "scopes": [
+            {
+              "supply_type": "노부모부양 특별공급",
+              "complete": false,
+              "verified_rule_count": 11,
+              "missing_topics": [
+                "노부모부양 출산특례의 1회 사용·기존주택 처분 조건",
+                "공급질서 교란·부적격 당첨의 적용 대상과 제한기간"
+              ]
+            },
+            {
+              "supply_type": "일반공급",
+              "complete": false,
+              "verified_rule_count": 12,
+              "missing_topics": [
+                "공급질서 교란·부적격 당첨의 적용 대상과 제한기간"
+              ]
+            }
+          ]
+        }
+      ],
+      "offered_supplies": [
+        {
+          "supply_type": "노부모부양 특별공급",
+          "unit_type": "106.9500A",
+          "supply_count": 1,
+          "verification": "official",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+          "evidence_text": "106.9500A 106A 106.9500 30.0246 136.9746 79.7165 216.6911 62.3009 1 1 1 - 2026930033 02 124.0000 124A 124.9800 32.4660 157.4460 93.1554 250.6014 72.8039 2 - - 2 합 계 3 1 1 2 ※ 불법행위로 인한 재공급 3세대의 공급유형은 특별공급 1세대(노부모부양), 일반공급 2세대입니다. ※ 주택규모 표시방법은 법정계량단위인 제곱미터(㎡)로 표기하였으며, 제곱미터(㎡)를 평으로 환산하는 방법 : (㎡ x 0.3025 또는 ㎡ ÷ 3.3058) ※ 상기 면적은 소수점 넷째자리까지 표기하여 합계에 다소 차이가 있을 수 있으며 이는 분양가에 영향을 미치지 않으며, 이에 대해 이의를 제기할 수 없습니다. ※ 상기 세대별 계약면적에는 주거전용면적 및 계단, 복도, 벽체 등 주거공용면적과 주차장 및 관리사무소, 경비실, 주민공동시설, 기계·전기실 등 기타공용면적이 포함되어 있습니다. ※ 주택",
+          "evidence_page": 5,
+          "document_hash": "c6e98d471653081d934654fbfa5f0094356822659e626517e7a5991a1df705c6",
+          "criterion_date": "2026-10-06"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "124.0000",
+          "supply_count": 2,
+          "verification": "official",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+          "evidence_text": "124.0000 124A 124.9800 32.4660 157.4460 93.1554 250.6014 72.8039 2 - - 2 합 계 3 1 1 2 ※ 불법행위로 인한 재공급 3세대의 공급유형은 특별공급 1세대(노부모부양), 일반공급 2세대입니다. ※ 주택규모 표시방법은 법정계량단위인 제곱미터(㎡)로 표기하였으며, 제곱미터(㎡)를 평으로 환산하는 방법 : (㎡ x 0.3025 또는 ㎡ ÷ 3.3058) ※ 상기 면적은 소수점 넷째자리까지 표기하여 합계에 다소 차이가 있을 수 있으며 이는 분양가에 영향을 미치지 않으며, 이에 대해 이의를 제기할 수 없습니다. ※ 상기 세대별 계약면적에는 주거전용면적 및 계단, 복도, 벽체 등 주거공용면적과 주차장 및 관리사무소, 경비실, 주민공동시설, 기계·전기실 등 기타공용면적이 포함되어 있습니다. ※ 주택형의 구분은 공고상의 표기이며, 홈페이지에는 약식으로 표현되었으니, 청약 및 계약 시 주택형에 대한 혼돈 방지에 특히 유의하시기 바랍니다. ■ 공급금액 표",
+          "evidence_page": 5,
+          "document_hash": "c6e98d471653081d934654fbfa5f0094356822659e626517e7a5991a1df705c6",
+          "criterion_date": "2026-10-06"
+        }
+      ]
+    },
+    {
+      "external_id": "2026910256",
+      "announcement_date": "2026-10-06",
+      "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+      "document_hash": "8c4d8a5c9f46e7ec5c73439ffc4f008d592f60c12f6a99242f477ee1063387bc",
+      "page_count": 12,
+      "parse_status": "complete",
+      "verified_condition_count": 9,
+      "metadata": [
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "regions": [
+            {
+              "region_code": "11",
+              "region_name": "서울특별시"
+            },
+            {
+              "region_code": "28",
+              "region_name": "인천광역시"
+            },
+            {
+              "region_code": "41",
+              "region_name": "경기도"
+            }
+          ],
+          "priority_applicable": false,
+          "scope_complete": true,
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+          "evidence_page": 1,
+          "evidence_text": "무순위(사후) 입주자모집공고일 현재 수도권(경기도, 인천광역시, 서울특별시)에 거주하는 무주택세대구성원"
+        },
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+          "evidence_page": 1,
+          "evidence_text": "구글플레이스토어 애플앱스토어 상동역 롯데캐슬 시그니처 무순위(사후) 입주자모집공고 청약Home 앱 설치 바로가기 ※ 단지 주요정보 (분양문의) 1551-3555 주택유형 규제지역여부 무순위(사후) 자격요건 민영 비규제지역 무순위(사후) 입주자모집공고일 현재 수도권(경기도, 인천광역시, 서울특별시)에 거주하는 무주택세대구성원 재당첨제한 전매제한 거주의무기간 분양가상한제 없음 최초 당첨자발표일(2026.09.01.)로부터 1년 없음 미적용 구분 최초 무순위(사후) 무순위(사후) 접수일 당첨자발표일 서류접수 계약체결 입주자모집공고일 입주자모집공고일 일정 2026.08.14.(금) 2026.10.06.(화) 2026.10.12.(월) 2026.10.15.(목) 2026.10.16.(금) 2026.10.17.(토) 1 공통 유의사항 ■ 한국부동산원 청약홈 콜센터는 청약홈 홈페이지(www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대한 정확하지 않 은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약홈 콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미숙지, 착오신청 등에 대해서는 청약자 본 인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 본 입주자모집공고는 2026.06.15. 시행된 「주택공급에 관한 규칙」이 적용됩니다. 이 공고문에 명시되지 않은 사항은 「주택법」, 「주택공급에 관한 규칙」 등 관계법령에 따릅니다. ■ 본 주택을 공급받으려는 경우에는 「주택공급에 관한 규칙」 제4조제5",
+          "scopes": [
+            {
+              "supply_type": "일반공급",
+              "complete": true,
+              "verified_rule_count": 9,
+              "missing_topics": []
+            }
+          ]
+        }
+      ],
+      "offered_supplies": [
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9199A",
+          "supply_count": 112,
+          "verification": "official",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+          "evidence_text": "공급대상 및 공급금액 ■ 공급위치 : 경기도 부천시 원미구 상동 540-1번지 ■ 공급규모 : 아파트 지하 8층 ~ 지상 49층 7개동 총 1,859세대의 잔여 785세대 ■ 입주시기 : 2032년 03월 예정(정확한 입주일자는 추후 통보함) ■ 공급대상 (단위: ㎡, 세대) 주택관리번호 모델 주택형 약식표기 잔여세대수 잔여세대 동·호 내역 (전용면적기준) (타입) 동 호 102동 406, 506, 606, 706, 806, 906, 1106, 1206, 1406, 1506, 1706, 1806, 1906, 2106, 2406, 3006, 3206, 3306, 3606, 3806, 3906, 4206 103동 406, 506, 606, 706, 806, 906, 1306, 1706, 1906, 2106, 2206, 2306, 2406, 2806, 3006, 3206, 3306, 3606, 3706, 4006, 4106, 4206, 4306, 4406 01 084.9199A 84A 112세대 104동 401, 501, 601, 701, 801, 901, 1201, 1501, 1601, 2101, 2501, 2701, 3201, 3301, 3801 105동 401, 501, 601, 701, 901, 1101, 1201, 1301, 1401, 1801, 2001, 2201, 2401, 2701, 2901, 3001, 3101, 3201, 3301, 3401, 4101, 4201, 4401, 4701 2026910256 106동 401, 501, 601, 701, 801, 901, 1101, 1201, 1501, ",
+          "evidence_page": 3,
+          "document_hash": "8c4d8a5c9f46e7ec5c73439ffc4f008d592f60c12f6a99242f477ee1063387bc",
+          "criterion_date": "2026-10-06"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.7123B",
+          "supply_count": 45,
+          "verification": "official",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+          "evidence_text": "공급대상 및 공급금액 ■ 공급위치 : 경기도 부천시 원미구 상동 540-1번지 ■ 공급규모 : 아파트 지하 8층 ~ 지상 49층 7개동 총 1,859세대의 잔여 785세대 ■ 입주시기 : 2032년 03월 예정(정확한 입주일자는 추후 통보함) ■ 공급대상 (단위: ㎡, 세대) 주택관리번호 모델 주택형 약식표기 잔여세대수 잔여세대 동·호 내역 (전용면적기준) (타입) 동 호 102동 406, 506, 606, 706, 806, 906, 1106, 1206, 1406, 1506, 1706, 1806, 1906, 2106, 2406, 3006, 3206, 3306, 3606, 3806, 3906, 4206 103동 406, 506, 606, 706, 806, 906, 1306, 1706, 1906, 2106, 2206, 2306, 2406, 2806, 3006, 3206, 3306, 3606, 3706, 4006, 4106, 4206, 4306, 4406 01 084.9199A 84A 112세대 104동 401, 501, 601, 701, 801, 901, 1201, 1501, 1601, 2101, 2501, 2701, 3201, 3301, 3801 105동 401, 501, 601, 701, 901, 1101, 1201, 1301, 1401, 1801, 2001, 2201, 2401, 2701, 2901, 3001, 3101, 3201, 3301, 3401, 4101, 4201, 4401, 4701 2026910256 106동 401, 501, 601, 701, 801, 901, 1101, 1201, 1501, ",
+          "evidence_page": 3,
+          "document_hash": "8c4d8a5c9f46e7ec5c73439ffc4f008d592f60c12f6a99242f477ee1063387bc",
+          "criterion_date": "2026-10-06"
+        },
+        {
+          "supply_type": "일반공급",
+          "unit_type": "084.9874C",
+          "supply_count": 267,
+          "verification": "official",
+          "evidence_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+          "evidence_text": "공급대상 및 공급금액 ■ 공급위치 : 경기도 부천시 원미구 상동 540-1번지 ■ 공급규모 : 아파트 지하 8층 ~ 지상 49층 7개동 총 1,859세대의 잔여 785세대 ■ 입주시기 : 2032년 03월 예정(정확한 입주일자는 추후 통보함) ■ 공급대상 (단위: ㎡, 세대) 주택관리번호 모델 주택형 약식표기 잔여세대수 잔여세대 동·호 내역 (전용면적기준) (타입) 동 호 102동 406, 506, 606, 706, 806, 906, 1106, 1206, 1406, 1506, 1706, 1806, 1906, 2106, 2406, 3006, 3206, 3306, 3606, 3806, 3906, 4206 103동 406, 506, 606, 706, 806, 906, 1306, 1706, 1906, 2106, 2206, 2306, 2406, 2806, 3006, 3206, 3306, 3606, 3706, 4006, 4106, 4206, 4306, 4406 01 084.9199A 84A 112세대 104동 401, 501, 601, 701, 801, 901, 1201, 1501, 1601, 2101, 2501, 2701, 3201, 3301, 3801 105동 401, 501, 601, 701, 901, 1101, 1201, 1301, 1401, 1801, 2001, 2201, 2401, 2701, 2901, 3001, 3101, 3201, 3301, 3401, 4101, 4201, 4401, 4701 2026910256 106동 401, 501, 601, 701, 801, 901, 1101, 1201, 1501, ",
+          "evidence_page": 3,
+          "document_hash": "8c4d8a5c9f46e7ec5c73439ffc4f008d592f60c12f6a99242f477ee1063387bc",
+          "criterion_date": "2026-10-06"
+        }
+      ]
+    },
+    {
+      "external_id": "2026950087",
+      "announcement_date": "2026-10-06",
+      "document_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
+      "document_hash": "99df9ab26e35d6af38b68c4d39f3d2d9b830460c232d77d725868a31dfda9804",
+      "page_count": 11,
+      "parse_status": "complete",
+      "verified_condition_count": 2,
+      "metadata": [
+        {
+          "kind": "applicant_regions",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "unrestricted": true,
+          "priority_applicable": false,
+          "scope_complete": true,
+          "evidence_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
+          "evidence_page": 4,
+          "evidence_text": "2 청약신청 자격 및 공급일정 ■ 청약자격 및 유의사항 • 신청자의 착오로 인해 부적격자로 판명되는 경우 계약체결이 불가하고 계약체결 이후에는 계약이 취소될 수 있으며 이에 대한 책임은 청약 신청자 본인에게 있습니다, . • 모집광고일 현재 대한민국에 거주하는 만 세 이상인 자 국내에 거주하고 있는 재외동포 재외국민 외국국적 동포 및 외국인 포함 또는 법인의 경우 신청 가능합니다 단 재(2026.10.06.) 19 [ ( , ) ] . , 외동포 재외국민( , 외국국적 동포 및 외국인과 법인은 중도금 대출에 제한이 있을 수 있습니다 ) . 1 1 , 2 . • 청약신청은 인당 개실 청약 가능하며 동일인이 개실 이상 중복 신청하는 경우 청약신청 모두를 무효처리 합니다 • 한국부동산원은 무작위 전산추첨으로 당첨자를 선정하며 신청 타입 내 의 예비당첨자를 무작위 전산추첨으로 선정합니다 예비당첨자 소진 이후 미계약, 900% . 물량 발생 시에는 건축물 분 「 양에 관한 법률 시행령 제 조제 항에 따라 당사에서 」 수의계약으로 분양할 예정입니다.9 2"
+        },
+        {
+          "kind": "condition_coverage",
+          "criterion_date": "2026-10-06",
+          "criterion_basis": "announcement",
+          "evidence_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
+          "evidence_page": 1,
+          "evidence_text": "구글플레이스토어 애플앱스토어 당산역 더클래스 한강 오피스텔 분양광고 청약 앱 설치 바로가기Home ■ ☎ 당산역 더클래스 한강 내 분양 상담전화(1668-5468) , 등을 통해 분양광고의 내용과 관련하여 자세한 안내가 이루어질 수 있도록 상담을 실시하고 있으나 간혹 폭주하는 상담전화와 신청자 개인의 다양하고 복잡한 상황에 대하여 정확하지 않은 정보 제공으로 청약관련 사항에 대한 착오 안내가 이루어지는 경우가 있습니다 고객 여러분께서는 청약과 관련한 상담은 . 청약의 참고 자료로만 활용해 주시기 바라며 신청자 본인이 분양광고를 통해 청약자격등을 숙지하시여 관련 서류 등을 발급받아 직접 확인하신 후 신청하시기 바라며 청약자격 미숙, , 지 착오 신청 등에 대해서는 신청자 본인에게 책임이 있으니 불이익을 당하는 일이 없도록 유의하여 주시기 바랍니다, . ■ 한국부동산원 청약콜센터는 청약홈 홈페이지 (www.applyhome.co.kr) 이용안내 및 기본적인 청약자격 상담을 하고 있으며 고객 상담 과정에서 청약자 개인의 다양하고 복잡한 상황에 대 한 정확하지 않은 정보의 제공으로 일부 착오 안내가 이루어지는 경우가 있습니다. 청약콜센터 상담내용은 법적 효력이 없으므로 참고자료로만 활용해 주시기 바라며 청약자격 미숙지, 착오신청 등에 대해서는 청약자 본인에게 책임이 있으니 자세한 문의사항은 사업주체를 통해 확인하시어 불이익을 받는 일이 없도록 유의하여 주시기 바랍니다. ■ 「 」 본 분양광고를 숙지하시어 착오 없으시기 바랍니다. 본 오피스텔은 년 월 일 사용승인 된 단지로 건축물의 분양에 관한 법률 이 적용 되지 않으니2023 12 08 , ■ 본 오피스텔 분양광고의 내용을 숙지한 후 청약 및 계약에 응",
+          "scopes": [
+            {
+              "supply_type": "일반공급",
+              "complete": true,
+              "verified_rule_count": 2,
+              "missing_topics": []
+            }
+          ]
+        }
+      ],
+      "offered_supplies": []
+    }
+  ],
+  "gyeongsan_contract": {
+    "status": "range",
+    "start_date": "2026-10-27",
+    "end_date": "2027-08-31",
+    "verification": "official",
+    "source": "lh_official_detail",
+    "evidence_url": "https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do?panId=2015122300020823&ccrCnntSysDsCd=03&uppAisTpCd=05&aisTpCd=05&mi=1027",
+    "evidence_text": "LH 공식 공급정보 계약기간: 2026.10.27 ~ 2027.08.31",
+    "evidence_page": null,
+    "document_hash": null,
+    "source_hash": "1bb21f8a76aae254e18468a54abc3922d57c27bcd9bd329ebbd4ebbc9c4c9bd2",
+    "evidence_location": "#sta_ctrtDt"
+  },
+  "recorded_full_html_source_hash": "1bb21f8a76aae254e18468a54abc3922d57c27bcd9bd329ebbd4ebbc9c4c9bd2",
+  "full_html_hash_verified": true
+}

@@ -8,7 +8,7 @@ import { getCalendarNotices, getCoverage } from './api'
 import { competitionDecision, competitionFresh, competitionRateLabel, competitionRowLabel, competitionUnitKey, resultCompetitionRows, RESIDENCE_AREA_LABEL, type CompetitionDecision } from './competition'
 import { demoNotices } from './demo'
 import { ELIGIBILITY_LABEL, applicationEventAvailability, type EligibilityStatus } from './eligibility'
-import { EMPTY_PROFILE, type CoverageResponse, type LocalProfile, type Notice, type NoticeEvent, type NoticePrice, type ResidenceArea } from './types'
+import { EMPTY_PROFILE, type CoverageResponse, type FactChangeGroup, type LocalProfile, type Notice, type NoticeEvent, type NoticePrice, type ResidenceArea } from './types'
 
 import { ProfileDialogController, type ProfileDialogHandle } from './ProfileDialogController'
 import { warmProfileQuestionModel } from './profileQuestionModel'
@@ -18,6 +18,7 @@ import { districtOptions, provinceOptions } from './regions'
 export { eventCandidate, hasResidenceCandidate, candidateLabel, candidateExplanation } from './candidates'
 import { EligibilityBrief, EligibilityDetails, NoticeRegionDecision } from './EligibilityDetails'
 import { OpportunityPanel } from './OpportunityPanel'
+import { IntegrationSettings } from './IntegrationSettings'
 import { isOpenEndedReception, nextDeadline, receptionEndDate, receptionOverlaps } from './deadlines'
 import { useEvaluations } from './useEvaluations'
 import { reuseUnchangedNotices } from './publicNoticeCache'
@@ -242,8 +243,8 @@ function App() {
   const start = effectiveSelectedDate || (windowMode === 'upcoming' ? today : maxDate(today, `${effectiveMonth}-01`))
   const end = effectiveSelectedDate || (windowMode === 'upcoming' ? monthEnd(monthShift(today.slice(0, 7), 2)) : monthEnd(effectiveMonth))
 
-  const openProfile = useCallback((field?: keyof LocalProfile) => {
-    profileDialog.current?.open(field)
+  const openProfile = useCallback((field?: keyof LocalProfile, historyGroup?: FactChangeGroup) => {
+    profileDialog.current?.open(field, historyGroup)
   }, [])
 
   const refreshAll = useCallback(() => {
@@ -561,7 +562,7 @@ function App() {
           <ResultsPane active={view === 'results'} today={today} refreshVersion={refreshVersion} capOnly={capOnly} category={category} categoryGroup={categoryGroup} profile={profile} residenceOverrides={residenceOverrides} now={competitionNow} onSummary={setResultsSummary} onRefresh={refreshAll} renderCard={renderResultCard} />
         </section>
 
-        <section className="coverage-section" id="coverage"><div className="coverage-heading"><div><span className="section-kicker">DATA TRANSPARENCY</span><h2>어디에서 가져온 공고인가요?</h2><p>기관별 마지막 수집 상태를 공개합니다. 일정과 가격은 반드시 공식 공고문에서 다시 확인하세요.</p></div><Database size={26} /></div><CoveragePanel coverage={coverage} error={coverageError} /></section>
+        <section className="coverage-section" id="coverage"><div className="coverage-heading"><div><span className="section-kicker">DATA TRANSPARENCY</span><h2>어디에서 가져온 공고인가요?</h2><p>기관별 마지막 수집 상태를 공개합니다. 일정과 가격은 반드시 공식 공고문에서 다시 확인하세요.</p></div><Database size={26} /></div><IntegrationSettings /><CoveragePanel coverage={coverage} error={coverageError} /></section>
       </main>
 
       <footer className="site-footer"><div className="page-width footer-inner"><div className="footer-brand"><span className="brand-symbol"><CalendarDays size={15} /></span><strong>청약한눈</strong></div><p>정보 안내용 서비스입니다. 청약 자격·금액·일정의 최종 기준은 각 기관의 공식 모집공고입니다.</p><span>대한민국 표준시 KST</span></div></footer>
@@ -633,7 +634,7 @@ export function MiniCalendar({ month, today, selectedDate, notices, profile = EM
   return <div className="mini-calendar"><div className="calendar-month"><strong>{year}년 {mm}월</strong><div><button type="button" aria-label="이전 달" disabled={month <= today.slice(0, 7)} onClick={() => onMonth(-1)}><ChevronLeft size={17} /></button><button type="button" aria-label="다음 달" onClick={() => onMonth(1)}><ChevronRight size={17} /></button></div></div><div className="calendar-grid">{WEEKDAYS.map((day) => <span className="weekday" key={day}>{day}</span>)}{cells.map((day, index) => day < 1 || day > days ? <span className="calendar-empty" key={`blank-${index}`} /> : (() => { const date = `${month}-${String(day).padStart(2, '0')}`; if (date < today) return <span key={date} className="calendar-empty past" aria-hidden="true" />; return <button key={date} className={`calendar-day${date === today ? ' today' : ''}${selectedDate === date ? ' selected' : ''}${availability.get(date)?.unavailable ? ' unavailable-dot' : ''}`} type="button" aria-pressed={selectedDate === date} aria-label={`${formatDate(date)}, ${eventDays.has(date) ? availability.get(date)?.unavailable ? '접수 일정 있음 · 내 조건으로 모든 접수 신청 불가' : '접수 일정 있음' : '접수 일정 없음'}`} onClick={() => onSelect(date)}><span>{day}</span>{eventDays.has(date) && <i aria-hidden="true" />}</button> })())}</div></div>
 }
 
-export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, today, viewStart, viewEnd, decision, override, onOverride, onOverrideId, now, onProfile, evaluation: prepared, deferEvaluation = false, resultsMode = false }: { notice: Notice; profile: LocalProfile; demoMode: boolean; today: string; viewStart: string; viewEnd: string; decision: CompetitionDecision; override?: ResidenceArea; onOverride?: (area: ResidenceArea | 'automatic') => void; onOverrideId?: (id: string, area: ResidenceArea | 'automatic') => void; now: number; onProfile: (field?: keyof LocalProfile) => void; evaluation?: NoticeEvaluation; deferEvaluation?: boolean; resultsMode?: boolean }) {
+export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, today, viewStart, viewEnd, decision, override, onOverride, onOverrideId, now, onProfile, evaluation: prepared, deferEvaluation = false, resultsMode = false }: { notice: Notice; profile: LocalProfile; demoMode: boolean; today: string; viewStart: string; viewEnd: string; decision: CompetitionDecision; override?: ResidenceArea; onOverride?: (area: ResidenceArea | 'automatic') => void; onOverrideId?: (id: string, area: ResidenceArea | 'automatic') => void; now: number; onProfile: (field?: keyof LocalProfile, historyGroup?: FactChangeGroup) => void; evaluation?: NoticeEvaluation; deferEvaluation?: boolean; resultsMode?: boolean }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
   const evaluation = useMemo(() => prepared || (deferEvaluation ? undefined : evaluateNotice(notice, profile, today, now, override, resultsMode ? 'results' : 'schedule', decision)), [prepared, deferEvaluation, notice, profile, today, now, override, resultsMode, decision])
   const effectiveDecision = evaluation?.decision || decision || { area: 'unknown', closedUnits: [], reason: null } as CompetitionDecision
@@ -676,7 +677,7 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
 
     {evaluation?.opportunity && <OpportunityPanel value={evaluation.opportunity} onProfile={onProfile} />}
     {!resultsMode && <><div className="notice-foot"><div className="eligibility-summary"><ShieldCheck size={17} /><span>자격 진단</span><span className={`eligibility-badge ${statusTone(mainResult.status)}`}>{unavailable ? '내 조건으로 신청 불가' : mainResult.status === 'unpublished' ? '조건 비교 자료 확인' : ELIGIBILITY_LABEL[mainResult.status]}</span></div><div className="notice-actions"><button type="button" onClick={() => onProfile()}>내 조건 입력</button><button className="details-button" type="button" aria-expanded={detailsOpen} onClick={() => setDetailsOpen(!detailsOpen)}>{detailsOpen ? '근거 접기' : '유형별 근거'} {detailsOpen ? <ChevronDown className="chevron-up" size={15} /> : <ChevronDown size={15} />}</button></div></div>
-    {evaluation && <EligibilityBrief snapshot={evaluation} result={mainResult} notice={notice} profile={profile} decision={decision} onProfile={onProfile} onDetails={() => setDetailsOpen(true)} candidateReason={isLocal ? evaluation?.candidateReason : undefined} />}
+    {evaluation && <EligibilityBrief sourceDetailsOpen={detailsOpen} snapshot={evaluation} result={mainResult} notice={notice} profile={profile} decision={decision} onProfile={onProfile} onDetails={() => setDetailsOpen(true)} candidateReason={isLocal ? evaluation?.candidateReason : undefined} />}
     {detailsOpen && evaluation && <EligibilityDetails snapshot={evaluation} notice={notice} profile={profile} decision={decision} demoMode={demoMode} onProfile={onProfile}><div className="official-schedule"><strong>원문 일정 · 지난 일정 포함</strong>{notice.events.length ? <ul>{notice.events.map((event, index) => <li key={`${event.kind}-${event.start_date}-${index}`}><span>{event.label || event.kind}</span><time>{formatFullShortDate(event.start_date)}{event.end_date && event.end_date !== event.start_date ? ` – ${formatFullShortDate(event.end_date)}` : ''}</time>{event.audience && <small>{event.audience}</small>}</li>)}</ul> : <p>원문 일정 미공개</p>}{officialLink && <a href={officialLink} target="_blank" rel="noopener noreferrer">공식 공고문 <ExternalLink size={12} /></a>}</div></EligibilityDetails>}
     </>}
   </article>

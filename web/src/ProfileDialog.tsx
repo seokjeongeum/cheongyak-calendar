@@ -11,7 +11,7 @@ import type { FactChangeGroup, LocalProfile, Notice } from './types'
 import { PointsFields } from './PointsFields'
 import { ChildFactsFields } from './ChildFactsFields'
 import { FactChangeFields } from './FactChangeFields'
-import { getProfileHistoryTarget, getProfileQuestionModel } from './profileQuestionModel'
+import { getElderParentQuestionState, getProfileHistoryTarget, getProfileQuestionModel } from './profileQuestionModel'
 
 const LAW = 'https://www.law.go.kr/법령/주택공급에관한규칙/'
 // Step navigation changes visibility, not the facts inside the five forms.
@@ -37,7 +37,7 @@ const FIELD_STEPS: Partial<Record<keyof LocalProfile, number>> = {
   specialWinning: 4, taxYears: 4, employed: 4, incomeTaxPaidWithinPastYear: 4, incomeTaxFactsAsOfDate: 4, incomeTaxFactsHistoryConfirmations: 4, spousePremarriageOwnershipDisposed: 1, parentSpouseOwnsHome: 4, parentDateOfBirth: 4, parentSupportSince: 4, parentSameRegister: 4,
   parentOwnsHome: 4, recommendationReason: 4, recommendationStatus: 4, relocatedWorker: 4,
 }
-export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft, profile: initialProfile, onChange: commitProfile, onClose: closeDialog, today, notices, initialField }: { open?: boolean; onDraft?: (profile: LocalProfile) => void; profile: LocalProfile; onChange: (value: LocalProfile) => void; onClose: () => void; today: string; notices: Notice[]; initialField?: keyof LocalProfile }) {
+export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft, profile: initialProfile, onChange: commitProfile, onClose: closeDialog, today, notices, initialField, initialHistoryGroup }: { open?: boolean; onDraft?: (profile: LocalProfile) => void; profile: LocalProfile; onChange: (value: LocalProfile) => void; onClose: () => void; today: string; notices: Notice[]; initialField?: keyof LocalProfile; initialHistoryGroup?: FactChangeGroup }) {
   const [profile, setDraft] = useState(initialProfile)
   const model = useMemo(() => getProfileQuestionModel(notices, today), [notices, today])
   const draftRef = useRef(profile)
@@ -80,15 +80,15 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
     if (!open || !initialField || step !== (FIELD_STEPS[initialField] || 0)) return
     const frame = requestAnimationFrame(() => {
       const dialog = document.querySelector('.profile-dialog')
-      const historyGroup = getProfileHistoryTarget(initialField, draftRef.current, model)
+      const historyGroup = initialHistoryGroup || getProfileHistoryTarget(initialField, draftRef.current, model)
       const container = historyGroup && dialog?.querySelector(`[data-fact-group="${historyGroup}"]`) || dialog?.querySelector(`[data-profile-field="${initialField}"]`)
       for (let parent = container; parent; parent = parent.parentElement) { if (parent instanceof HTMLDetailsElement) parent.open = true }
-      const input = container?.querySelector<HTMLElement>('input:not([disabled]),select:not([disabled]),button:not([disabled])')
+      const input = historyGroup && container?.querySelector<HTMLElement>('input[type="date"]:not([disabled])') || container?.querySelector<HTMLElement>('input:not([disabled]),select:not([disabled]),button:not([disabled])')
       input?.focus({ preventScroll: true })
       container?.scrollIntoView({ block: 'nearest' })
     })
     return () => cancelAnimationFrame(frame)
-  }, [initialField, open, model, step])
+  }, [initialField, initialHistoryGroup, open, model, step])
   useEffect(() => {
     if (!open) return
     const dialog = document.querySelector<HTMLElement>('.profile-dialog')
@@ -128,6 +128,7 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
   const needsPast = (kinds: string[]) => kinds.some((kind) => model.pastKinds.has(kind))
   const needsPastGroup = (group: FactChangeGroup) => model.pastGroups.has(group)
   const { needsDetailedDistrict, needsDomestic, needsProvider, elderParent, institution, relocation, needsMonthly, needsNetAssets, needsPlannedMarriage, needsSingleParent, needsProperty } = model
+  const parentQuestions = useMemo(() => getElderParentQuestionState(profile, model), [profile, model])
   const firstHome = model.firstHome || profile.applicantPreviouslyOwnedHome === false
   const household = useMemo(() => deriveHousehold(profile), [profile])
   const steps = ['거주지', '세대·주택', '청약통장', '소득·자산', '특별공급']
@@ -150,7 +151,7 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
       <HouseholdFields profile={profile} onChange={onChange} today={today} notices={notices} />
       {fact('applicantOwnsHome', '본인이 현재 주택·분양권·입주권·공유지분을 보유하나요?')}
       {profile.hasSpouse === true && fact('spouseOwnsHome', '배우자가 현재 주택·관련 권리를 보유하나요?')}
-      <FactChangeFields profile={profile} onChange={onChange} today={today} group="ownership" label="주택·권리 보유 상태" needed={needsPast(['homeless', 'ownership_count_max', 'never_owned_home']) && !profile.ownershipFacts.length} /><OwnershipFields profile={profile} onChange={onChange} today={today} />
+      <FactChangeFields profile={profile} onChange={onChange} today={today} group="ownership" label="주택·권리 보유 상태" needed={needsPast(['homeless', 'ownership_count_max', 'never_owned_home']) && !profile.ownershipFacts.length} /><OwnershipFields profile={profile} onChange={onChange} today={today} notices={notices} />
       {fact('applicantPreviouslyOwnedHome', '본인이 과거 주택·관련 권리를 소유한 적이 있나요?')}
       {profile.hasSpouse === true && fact('spousePreviouslyOwnedHome', '배우자가 과거 주택·관련 권리를 소유한 적이 있나요?', '혼인 전 소유 이력의 예외는 공고별로 확인합니다.')}
       {profile.hasSpouse === true && profile.spousePreviouslyOwnedHome === true && fact('spousePremarriageOwnershipDisposed', '배우자의 과거 소유는 모두 혼인 전에 취득·처분한 주택인가요?', '이 예외를 허용하는 공고에만 적용하며, 본인의 과거 소유 이력을 대신하지 않습니다.')}
@@ -174,7 +175,7 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
       <FactChangeFields profile={profile} onChange={onChange} today={today} group="marital" label="혼인 상태" needed={profile.maritalStatus !== 'unknown' && !profile.marriageDate && needsPast(['marital_status', 'married', 'marriage_months_max', 'single_parent_family', 'planned_marriage'])} />{profile.maritalStatus === 'married' && date('marriageDate', '혼인신고일')}{needsPlannedMarriage && fact('plannedMarriage', '입주 전에 혼인신고할 예정인 상대방이 있나요?', '예비신혼부부 공고는 예정 배우자와 구성할 세대의 소유·소득·자산 및 입주 전 혼인 증빙도 요구합니다.')}{needsSingleParent && <>{fact('raisesChildWithoutSpouse', '배우자 없이 본인이 자녀를 양육하나요?')}{fact('hasDeFactoPartner', '혼인신고 없이 부부로 생활하는 상대방이 있나요?', '사실혼 관계는 공고의 한부모 경로에 영향을 줍니다.')}</>}
       <ChildFactsFields profile={profile} onChange={onChange} today={today} needsPast={needsPastGroup('children') || needsPastGroup('pregnancy')} />
       <details className="additional-questions" open={firstHome || undefined}><summary>생애최초 관련 추가 사실</summary>{number('taxYears', '소득세 납부한 연수 (년)')}{fact('employed', '현재 근로자·자영업자인가요?')}{profile.employed !== true && fact('incomeTaxPaidWithinPastYear', '최근 12개월 안에 소득세를 납부한 사실이 있나요?')}<FactChangeFields profile={profile} onChange={onChange} today={today} group="income_tax" label="소득 활동·납세 상태" needed={needsPastGroup('income_tax')} /><p className="field-help">공고가 납부의무 면제 기간을 인정하면 해당 기간을 포함한 연수를 입력하세요.</p></details>
-      <details className="additional-questions" open={elderParent || undefined}><summary>부모 부양 관련 추가 사실</summary>{date('parentDateOfBirth', '부양 중인 부모·조부모 생년월일')}{fact('parentSameRegister', '부양 중인 부모·조부모가 같은 주민등록등본에 있나요?')}{date('parentSupportSince', '동일 등본에서 연속 부양 시작일')}{fact('parentOwnsHome', '부양 대상 부모·조부모가 주택·관련 권리를 보유하나요?', '노부모부양에는 일반 무주택 판단의 60세 이상 부모 소유 예외가 동일하게 적용되지 않을 수 있습니다.')}{fact('parentSpouseOwnsHome', '부양 대상 부모·조부모의 배우자가 주택·관련 권리를 보유하나요?', '배우자가 다른 등본에 있어도 공고가 정한 확인 대상이면 입력하세요. 배우자가 없거나 보유 주택이 없으면 아니요를 선택하세요.')}</details>
+      <details className="additional-questions" open={elderParent || undefined}><summary>부모 부양 관련 추가 사실</summary>{date('parentDateOfBirth', '부양 중인 부모·조부모 생년월일')}{parentQuestions.stopped ? <p className="field-help" role="status">{parentQuestions.detail}</p> : <>{fact('parentSameRegister', '부양 중인 부모·조부모가 같은 주민등록등본에 있나요?')}{date('parentSupportSince', '부양 시작일 · 동일 등본에서 연속 부양을 시작한 날짜')}{fact('parentOwnsHome', '부양 대상 부모·조부모가 주택·관련 권리를 보유하나요?', '노부모부양에는 일반 무주택 판단의 60세 이상 부모 소유 예외가 동일하게 적용되지 않을 수 있습니다.')}{fact('parentSpouseOwnsHome', '부양 대상 부모·조부모의 배우자가 주택·관련 권리를 보유하나요?', '배우자가 다른 등본에 있어도 공고가 정한 확인 대상이면 입력하세요. 배우자가 없거나 보유 주택이 없으면 아니요를 선택하세요.')}<FactChangeFields profile={profile} onChange={onChange} today={today} group="parent_support" label="부모 부양·소유 상태" needed={needsPastGroup('parent_support')} /></>}</details>
       <details className="additional-questions" open={institution || undefined}><summary>기관추천 관련 추가 사실</summary><label data-profile-field="recommendationReason">추천 대상 사유<select value={profile.recommendationReason} onChange={(event) => update({ recommendationReason: event.target.value })}><option value="">미확인</option>{['장애인', '국가유공자·보훈', '중소기업 장기근속', '장기복무 군인', '북한이탈주민', '기타 공고상 사유'].map((name) => <option key={name}>{name}</option>)}</select></label><label data-profile-field="recommendationStatus">추천 진행 상태<select value={profile.recommendationStatus} onChange={(event) => update({ recommendationStatus: event.target.value as LocalProfile['recommendationStatus'] })}><option value="unknown">미확인</option><option value="none">추천 없음</option><option value="pending">신청·심사 중</option><option value="confirmed">추천 기관에서 확정 통보 받음</option></select></label></details>
       <details className="additional-questions" open={relocation || undefined}><summary>이전기관 종사자 관련 추가 사실</summary>{fact('relocatedWorker', '공고에서 지정한 이전기관에 소속되어 근무하나요?')}</details>
       <div className="step-tip"><Info size={16} /> 현재·과거 소유와 세대 관계는 ‘세대·주택’, 소득·자산은 앞 단계의 사실을 함께 사용합니다. 공고 유형별 추가 증빙이 없으면 확인 필요로 남습니다.</div>

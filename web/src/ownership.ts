@@ -63,7 +63,7 @@ function officialPrice(fact: OwnershipFact, cutoff: string, clause: number): Cla
   return null
 }
 /** All twelve Article 53 paths compare factual evidence; no self-certified exception switch. */
-export function evaluatePropertyOwnership(fact: OwnershipFact, context: OwnershipContext, ownedCount: number): PropertyOwnershipDecision {
+export function evaluatePropertyOwnership(fact: OwnershipFact, context: OwnershipContext, ownedCount: number | null): PropertyOwnershipDecision {
   const cutoff = context.criterionDate, today = context.assessmentDate || koreanToday()
   if (!cutoff || !date(cutoff) || cutoff < OWNERSHIP_EFFECTIVE_DATE) return outcome(fact, null, null, '이 공고 기준일의 적용 법령·경과조치를 확인해야 합니다.')
   if (fact.propertyKind === 'officetel') return outcome(fact, false, null, '건축물 구분이 오피스텔인 보유 사실은 이 아파트 주택 소유 판정에 포함하지 않습니다.')
@@ -78,6 +78,9 @@ export function evaluatePropertyOwnership(fact: OwnershipFact, context: Ownershi
   const kind = ['presale_right', 'occupancy_right'].includes(fact.propertyKind) ? fact.underlyingPropertyKind : fact.propertyKind
   const area = n(fact.areaSqm), capital = ['11', '28', '41'].includes(fact.propertyRegionCode.slice(0, 2))
   const clauses: Clause[] = []
+  const oneHome = (number: number, detail: string): Clause => ownedCount === null
+    ? need(number, '공유지분 보유 항목들이 같은 한 주택인지 여러 주택인지 확인되지 않아 세대의 주택 수를 확정할 수 없습니다. 한 주택 보유 예외는 원문과 실제 소유 자료를 확인해야 합니다.')
+    : yes(number, detail)
   // 1: only inherited shared title, completed disposal after official notification.
   if (fact.acquisitionMethod === 'inheritance' && fact.ownedShare !== false) clauses.push(fact.inheritedShare === true && fact.ownedShare === true ? timedCompletion(fact, 'disposedDate', today, 1) : need(1, '상속으로 취득한 공유지분인지 입력하세요.', 'inheritedShare', 'ownedShare'))
   // 2: non-capital rural detached dwelling + residence/move and one statutory alternative.
@@ -97,7 +100,7 @@ export function evaluatePropertyOwnership(fact: OwnershipFact, context: Ownershi
   if (fact.governmentEmployeeHousingPolicy === true || fact.individualBusinessRegistered === true && fact.employeeDormitoryUnderHousingAct === true) clauses.push(yes(4, '법 제5조 제3항의 근로자 숙소 건설 또는 정부시책 근로자 공급 주택에 해당합니다.'))
   else if (fact.employeeDormitoryUnderHousingAct === true && fact.individualBusinessRegistered === null) clauses.push(need(4, '세무서 개인사업자 등록 사실을 입력하세요.', 'individualBusinessRegistered'))
   // 5: the entire household owns one dwelling/right only.
-  if (area !== null && area <= 20 && ownedCount === 1) clauses.push(yes(5, `세대가 보유한 유일한 주택·권리는 전용 ${area}㎡로 20㎡ 이하입니다.`))
+  if (area !== null && area <= 20 && (ownedCount === 1 || ownedCount === null)) clauses.push(oneHome(5, `세대가 보유한 유일한 주택·권리는 전용 ${area}㎡로 20㎡ 이하입니다.`))
   // 6: oldest ancestor carve-out excludes elder-parent and public-rental supply.
   if (['ascendant', 'spouse_ascendant'].includes(fact.ownerRelation) && !context.publicRental && !/노부모|elder.?parent/i.test(context.supplyType || '')) {
     const years = age(fact.ownerDateOfBirth, cutoff)
@@ -111,14 +114,14 @@ export function evaluatePropertyOwnership(fact: OwnershipFact, context: Ownershi
   if (!right && fact.oldLawUnauthorized === true) clauses.push(fact.lawfulAtConstructionEvidence === true ? yes(8, '종전 건축법 적용 무허가건물이며 건축 당시 적법성 증빙을 보유했습니다.') : fact.lawfulAtConstructionEvidence === false ? no(8) : need(8, '건축 당시 법령상 적법한 건물임을 증명하는 자료가 있는지 입력하세요.', 'lawfulAtConstructionEvidence'))
   else if (!right && fact.oldLawUnauthorized === null && fact.standardResidentialBuilding !== true) clauses.push(need(8, '일반 허가·신고 주택이 아니라면 종전 건축법 무허가 여부를 입력하세요.', 'oldLawUnauthorized'))
   // 9: official appraisal basis, underlying legal type and household-wide count.
-  if (!context.publicRental && ownedCount === 1 && area !== null && area <= 85) {
+  if (!context.publicRental && (ownedCount === 1 || ownedCount === null) && area !== null && area <= 85) {
     const limit = kind === 'apartment' ? capital ? 160_000_000 : 100_000_000 : capital ? 500_000_000 : 300_000_000
     if (kind === 'unknown') clauses.push(need(9, '분양권·입주권의 실제 주택 종류를 입력하세요.', 'underlyingPropertyKind'))
     else if ((kind !== 'apartment' || area <= 60) && ['apartment', 'detached', 'multi_family', 'row_house', 'urban_small'].includes(kind)) {
       if (!fact.propertyRegionCode) clauses.push(need(9, '보유 주택 소재 시도를 선택하세요. 수도권 가격 기준이 다릅니다.', 'propertyRegionCode'))
       else {
         const priceGap = officialPrice(fact, cutoff, 9)
-        clauses.push(priceGap || (n(fact.officialValueKrw)! <= limit ? yes(9, `세대의 유일한 주택·권리 전용 ${area}㎡, 별표 1 가격 ${Number(fact.officialValueKrw).toLocaleString('ko-KR')}원이 ${capital ? '수도권' : '비수도권'} 법정 한도 ${limit.toLocaleString('ko-KR')}원 이내입니다.`) : no(9)))
+        clauses.push(priceGap || (n(fact.officialValueKrw)! <= limit ? oneHome(9, `세대의 유일한 주택·권리 전용 ${area}㎡, 별표 1 가격 ${Number(fact.officialValueKrw).toLocaleString('ko-KR')}원이 ${capital ? '수도권' : '비수도권'} 법정 한도 ${limit.toLocaleString('ko-KR')}원 이내입니다.`) : no(9)))
       }
     }
   }
@@ -183,7 +186,11 @@ export function evaluateHouseholdOwnership(profile: LocalProfile, context: Owner
   if (missingOwner) return { value: null, countedHomes: null, properties: [], detail: `${missingOwner.label}의 주택·권리 보유를 입력했지만 연결된 소유 항목이 없습니다. 추가하거나 보유 사실을 바로잡으세요.`, profileField: 'ownershipFacts' }
   const unknownOwner = members.find((member) => member.ownsHome === null && !linkedFacts.some((fact) => fact.ownerMemberId === member.id))
   if (unknownOwner) return { value: null, countedHomes: null, properties: [], detail: `${unknownOwner.label}의 주택·권리 보유 사실을 입력하세요. 다른 가족의 소유 목록만으로 이 사람의 미보유를 확정하지 않습니다.`, profileField: unknownOwner.id === 'applicant' ? 'applicantOwnsHome' : unknownOwner.id === 'spouse' ? 'spouseOwnsHome' : 'householdMembers' }
-  const countAtCutoff = linkedFacts.filter((fact) => fact.propertyKind !== 'officetel' && (!context.criterionDate || !date(fact.acquiredDate) || fact.acquiredDate <= context.criterionDate) && !(context.criterionDate && date(fact.disposedDate) && fact.disposedDate <= context.criterionDate)).length
+  const activeFacts = linkedFacts.filter((fact) => fact.propertyKind !== 'officetel' && (!context.criterionDate || !date(fact.acquiredDate) || fact.acquiredDate <= context.criterionDate) && !(context.criterionDate && date(fact.disposedDate) && fact.disposedDate <= context.criterionDate))
+  // Separate owners' shares may describe one physical dwelling. Without a
+  // dwelling identity, neither collapse those records nor call them two homes.
+  // A sole-title dwelling alongside a shared dwelling already proves >1 home.
+  const countAtCutoff = activeFacts.length > 1 && activeFacts.every((fact) => fact.ownedShare === true) ? null : activeFacts.length
   const decisions = linkedFacts.map((fact) => evaluatePropertyOwnership(fact, context, countAtCutoff))
   const counted = decisions.filter((decision) => decision.counted === true).length, pending = decisions.some((decision) => decision.counted === null)
   return { value: counted > 0 ? false : pending ? null : true, countedHomes: pending ? null : counted, properties: decisions, detail: decisions.length ? decisions.map((decision) => decision.detail).join(' / ') : `계산된 확인 대상 ${members.length}명의 보유 주택·권리가 없습니다.`, profileField: pending ? 'ownershipFacts' : undefined }

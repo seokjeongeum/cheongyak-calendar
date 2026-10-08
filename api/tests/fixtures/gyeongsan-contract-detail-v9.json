@@ -1,0 +1,7 @@
+{
+  "official_url": "https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do?panId=2015122300020823&ccrCnntSysDsCd=03&uppAisTpCd=05&aisTpCd=05&mi=1027",
+  "external_id": "2015122300020823",
+  "source_hash": "1bb21f8a76aae254e18468a54abc3922d57c27bcd9bd329ebbd4ebbc9c4c9bd2",
+  "html_fragment": "\t\t\t\t\t\t\t\t<li><span class=\"pc_navy font_Fm\">계약기간</span> : <label id=\"sta_ctrtDt\"> 2026.10.27 ~ 2027.08.31</label></li>\n<script>sbdList.push({panId : '2015122300020823', ctrtStDt : '2026.10.27', ctrtEdDt : '2027.08.31'});</script>",
+  "retrieved_on": "2026-10-07"
+}

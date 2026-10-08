@@ -198,3 +198,50 @@ REVIEWED_SOURCES["2026910251"].update({
             {"restriction":"rewinning_restriction_active","scope":"household","label":"본인·확인 대상 세대원의 재당첨 제한",
              "pattern":r"과거\s*재당첨\s*제한\s*대상\s*주택에\s*당첨되어\s*현재\s*그\s*기간\s*중에\s*있는\s*분\s*및\s*그\s*세대원"}]},
 })
+
+# The project publishes this exact corrected file separately from 청약홈.
+# Both identities retain their own hash; a correction never borrows a review
+# from the old PDF merely because its project number is the same.
+REVIEWED_SOURCES["2026000463-project-pdf"] = {
+    **REVIEWED_SOURCES["2026000463"],
+    "document_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
+    "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+    "inventory_page": 8,
+    "military_page": 6,
+}
+
+REVIEWED_SOURCES.update({
+    "2026950087": {
+        "title": "당산역 더클래스 한강", "announcement_date": "2026-10-06",
+        "document_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
+        "document_hash": "99df9ab26e35d6af38b68c4d39f3d2d9b830460c232d77d725868a31dfda9804",
+        "reviewed_pages": list(range(1, 12)),
+        "office_review": {"qualification_page": 4, "adult_age": 19, "domestic_only": True},
+    },
+    "2026930033": {
+        "title": "도안 푸르지오 디아델 29블록", "announcement_date": "2026-10-06", "housing_kind": "private",
+        "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026930033&pblancNo=2026930033&atchmnflSeqNo=1988251&atchmnflSn=2",
+        "document_hash": "c6e98d471653081d934654fbfa5f0094356822659e626517e7a5991a1df705c6",
+        "regional_review": True, "region_page": 4, "regions": [{"region_code": "30", "region_name": "대전광역시"}],
+        "priority_applicable": False, "military_page": 4,
+        "military_exception": {"min_years": 10, "currently_serving": True, "residence_area": "local"},
+        "inventory_page": 5, "inventory_columns": ["노부모부양 특별공급", "일반공급"],
+        "inventory_units": {"106.9500A": [1, 0], "124.0000": [0, 2]},
+        "exclusive_areas": {"106.9500A": 106.95, "124.0000": 124.98}, "adult_or_minor_page": 4,
+        "remaining_admission_topics": ["노부모부양 출산특례의 1회 사용·기존주택 처분 조건", "공급질서 교란·부적격 당첨의 적용 대상과 제한기간"],
+        "remaining_admission_topics_by_supply": {
+            "노부모부양 특별공급": ["노부모부양 출산특례의 1회 사용·기존주택 처분 조건", "공급질서 교란·부적격 당첨의 적용 대상과 제한기간"],
+            "일반공급": ["공급질서 교란·부적격 당첨의 적용 대상과 제한기간"],
+        },
+    },
+    "2026910256": {
+        "title": "상동역 롯데캐슬 시그니처", "announcement_date": "2026-10-06", "housing_kind": "private",
+        "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026910256&pblancNo=2026910256&atchmnflSeqNo=1991039&atchmnflSn=2",
+        "document_hash": "8c4d8a5c9f46e7ec5c73439ffc4f008d592f60c12f6a99242f477ee1063387bc",
+        "reviewed_pages": [1, 2, 3, 4, 5, 8],
+        "unranked_review": {"qualification_page": 8, "adult_law": True, "original_project_id": "2026000354",
+            "required_kinds": ["homeless", "citizenship", "any", "overseas_residence", "application_restriction"],
+            "restrictions": UNRANKED_RESTRICTIONS},
+        "unranked_inventory": {"page": 3, "units": {"084.9199A": 112, "084.7123B": 45, "084.9874C": 267}},
+    },
+})

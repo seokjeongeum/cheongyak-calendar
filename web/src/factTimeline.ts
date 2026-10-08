@@ -67,13 +67,5 @@ export function factsAtDate(profile: LocalProfile, group: FactChangeGroup, date:
   return { known: false, profile, source: 'unknown' }
 }
 
-export function contractEvaluationDate(notice: Notice): string | null {
-  const schedule = notice.contract_schedule
-  if (!schedule || schedule.verification !== 'official') return null
-  const start = schedule.start_date, end = schedule.end_date, today = getEvaluationToday()
-  if (!start || !validDate(start) || end && (!validDate(end) || end < start)) return null
-  if (schedule.status === 'fixed') return start === end || !end ? start : null
-  if (schedule.status === 'ongoing') return start <= today && (!end || today <= end) ? today : null
-  if (schedule.status === 'range') return today < start ? start : end && today <= end ? today : null
-  return null
-}
+/** Contract conditions are a preview of today's facts, never a future fact assertion. */
+export function contractEvaluationDate(_notice: Notice): string { return getEvaluationToday() }

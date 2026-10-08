@@ -16,7 +16,8 @@ describe('v5 profile questions', () => {
     const html = renderDialog('regionCode', [notice('contract', [rule('domestic_residence', { criterion_basis: 'contract_date' }), rule('military_currently_serving')])])
     for (const old of ['확인한 기준일', '예정 계약일', '공고 기준일에 다른 지역에 살았다면', '공고 기준일의 조회 사실 확인']) expect(html).not.toContain(old)
     expect(html).not.toContain('<option value="41597">')
-    expect(html).toContain('국내 거주 상태')
+    expect(html).toContain('현재 국내에 거주하나요?')
+    expect(html).not.toContain('data-fact-group="domestic_residence"')
     expect(html).toContain('마지막 변경일')
   })
   it('removes household snapshot confirmations and single-profile spouse questions', () => {

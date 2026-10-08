@@ -1,0 +1,63 @@
+{
+  "public_data_preserved": true,
+  "before": {
+    "notices": {
+      "count": 82,
+      "hash": "07795392c17cf91aee9e077f0cb43401"
+    },
+    "notice_events": {
+      "count": 41,
+      "hash": "61ea055b23a07cbaa06d8e9b61190ebd"
+    },
+    "notice_revisions": {
+      "count": 135,
+      "hash": "9aaa581501a0f07189099240c9e28949"
+    },
+    "unit_prices": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "unit_competitions": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "competition_revisions": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  },
+  "after": {
+    "notices": {
+      "count": 82,
+      "hash": "07795392c17cf91aee9e077f0cb43401"
+    },
+    "notice_events": {
+      "count": 41,
+      "hash": "61ea055b23a07cbaa06d8e9b61190ebd"
+    },
+    "notice_revisions": {
+      "count": 135,
+      "hash": "9aaa581501a0f07189099240c9e28949"
+    },
+    "unit_prices": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "unit_competitions": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "competition_revisions": {
+      "count": 0,
+      "hash": "d41d8cd98f00b204e9800998ecf8427e"
+    }
+  },
+  "backup_created": true,
+  "backup_bytes": 670260,
+  "settings_http": 200,
+  "services": 6,
+  "admin_initialized": false,
+  "api_tests": 263,
+  "web_tests": 382,
+  "browser_checks": 20
+}

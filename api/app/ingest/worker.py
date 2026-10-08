@@ -21,6 +21,7 @@ import httpx
 from sqlalchemy import select
 
 from app.db import SessionLocal, init_db
+from app.integration_settings import setting_value
 from app.extract.pipeline import enrich_notice, extraction_configured
 from app.models import DocumentExtractionState, Notice
 from app.qualification import is_metadata, merge_poll_rules
@@ -39,7 +40,7 @@ QUOTA_STATE_KEY = ("_gemini", "free_quota")
 
 def _api_key(source: str) -> str:
     specific = {"myhome": "MYHOME_API_KEY", "lh": "LH_API_KEY", "ih": "IH_API_KEY"}.get(source)
-    key = (os.getenv(specific, "") if specific else "") or os.getenv("DATA_GO_KR_API_KEY", "")
+    key = (setting_value(specific) if specific else "") or setting_value("DATA_GO_KR_API_KEY")
     # data.go.kr displays both encoded and decoded variants of the same key.
     # httpx encodes query parameters itself, so decode at most once here.
     return unquote(key.strip())

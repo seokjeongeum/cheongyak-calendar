@@ -1,19 +1,24 @@
 import { MoneyInput } from './MoneyInput'
 import { deriveHousehold } from './household'
 import { provinceOptions } from './regions'
-import { createOwnershipFact, type LocalProfile, type OwnershipFact, type PropertyKind } from './types'
+import { getProfileQuestionModel } from './profileQuestionModel'
+import { createOwnershipFact, type LocalProfile, type Notice, type OwnershipFact, type PropertyKind } from './types'
 
 const KINDS: [PropertyKind, string][] = [['unknown', '종류 선택'], ['apartment', '아파트'], ['detached', '단독주택'], ['multi_family', '다세대주택'], ['row_house', '연립주택'], ['urban_small', '도시형 생활주택'], ['presale_right', '분양권'], ['occupancy_right', '입주권'], ['officetel', '오피스텔']]
+const NO_NOTICES: Notice[] = []
 
 function Fact({ label, value, onChange }: { label: string; value: boolean | null; onChange: (value: boolean | null) => void }) {
   return <fieldset className="radio-field"><legend>{label}</legend><div>{([[true, '예'], [false, '아니요'], [null, '모름']] as const).map(([answer, text]) => <button type="button" key={text} aria-pressed={value === answer} className={value === answer ? 'chosen' : ''} onClick={() => onChange(answer)}>{text}</button>)}</div></fieldset>
 }
 
-export function OwnershipFields({ profile, onChange, today }: { profile: LocalProfile; onChange: (value: LocalProfile) => void; today: string }) {
+export function OwnershipFields({ profile, onChange, today, notices = NO_NOTICES }: { profile: LocalProfile; onChange: (value: LocalProfile) => void; today: string; notices?: Notice[] }) {
   const patch = (id: string, part: Partial<OwnershipFact>) => onChange({ ...profile, ownershipFacts: profile.ownershipFacts.map((fact) => fact.id === id ? { ...fact, ...part } : fact) })
   const household = deriveHousehold(profile)
+  const projectRules = getProfileQuestionModel(notices, today).restrictionRules.filter(({ rule }) => rule.kind === 'original_project_contract_ownership' && typeof rule.project_id === 'string')
+  const projects = [...new Map(projectRules.map(({ rule, notice }) => [String(rule.project_id), { id: String(rule.project_id), title: notice.title }])).values()]
+  const hasProjectContract = profile.applicationHistoryEvents.some((event) => ['contract', 'additional_resident_contract'].includes(event.eventKind) && projects.some((project) => project.id === event.projectId))
   const hasOwnership = household.members.some((member) => member.included !== false && member.ownsHome === true)
-  if (!hasOwnership && !profile.ownershipFacts.length) return null
+  if (!hasOwnership && !profile.ownershipFacts.length && !hasProjectContract) return null
   return <section className="question-group ownership-facts" data-profile-field="ownershipFacts">
     <h4>소유한 주택·권리의 사실</h4><p className="field-help">예외 인정 여부는 앱이 공고별로 비교합니다. 현재 보유하거나 공고 기준일 전후에 처분한 주택·권리를 각각 추가하세요. 같은 주택의 공유지분은 한 항목으로 입력합니다.</p>
     {profile.ownershipFacts.map((item, index) => {
@@ -30,7 +35,8 @@ export function OwnershipFields({ profile, onChange, today }: { profile: LocalPr
         {rights && <label>해당 권리의 주택 종류<select value={item.underlyingPropertyKind} onChange={(event) => patch(item.id, { underlyingPropertyKind: event.target.value as PropertyKind })}>{KINDS.filter(([value]) => !['presale_right', 'occupancy_right', 'officetel'].includes(value)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
         <label>주거 전용면적 (㎡)<input type="number" min="0" step="0.0001" inputMode="decimal" value={item.areaSqm} onChange={(event) => patch(item.id, { areaSqm: event.target.value })} /></label>
         <label>주택이 있는 시도<select value={item.propertyRegionCode} onChange={(event) => patch(item.id, { propertyRegionCode: event.target.value })}><option value="">지역 선택</option>{provinceOptions().map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}</select></label>
-        {date('acquiredDate', '취득일 (등기·신고 기준)')}{date('disposedDate', '처분 완료일 (현재 보유하면 비워두세요)')}
+        {date('acquiredDate', rights ? '권리 취득일 (분양권은 공급계약일)' : '취득일 (등기·신고 기준)')}{date('disposedDate', '처분 완료일 (현재 보유하면 비워두세요)')}
+        {!!projects.length && <><label>최초 공급 사업 · 이 주택·권리의 계약 사업<select value={item.projectId || ''} onChange={(event) => patch(item.id, { projectId: event.target.value })}><option value="">사업 선택 · 해당 없으면 비워두세요</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title} · {project.id}</option>)}{item.projectId && !projects.some((project) => project.id === item.projectId) && <option value={item.projectId}>기존 입력 · {item.projectId}</option>}</select></label><p className="field-help">이 항목이 해당 사업의 공급계약으로 취득한 주택·권리일 때 선택하세요. 계약일이 같아도 다른 주택은 선택하지 않습니다.</p></>}
         <label>취득 경위<select value={item.acquisitionMethod} onChange={(event) => patch(item.id, { acquisitionMethod: event.target.value as OwnershipFact['acquisitionMethod'] })}>{[['unknown', '경위 선택'], ['purchase', '매매'], ['inheritance', '상속'], ['gift', '증여'], ['construction', '직접 건설'], ['auction', '경매·공매'], ['first_come', '잔여주택 선착순 최초 공급']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         {fact('ownedShare', '전체 소유가 아니라 공유지분을 보유했나요?')}
         {item.acquisitionMethod === 'inheritance' && <>{fact('inheritedShare', '상속으로 공유지분을 취득했나요?')}{date('notificationDate', '사업주체의 부적격 통보를 받은 날 (통보 전이면 비워두세요)')}</>}

@@ -61,6 +61,12 @@ def _document_patch(current: dict, enriched: dict) -> dict:
              and not (changed and (r.get("source") == "official_document_parser"
                                   or r.get("verification") in {"ai_unverified", "auto_unverified"}))]
     rules.extend(local)
+    # The detail-page schedule has independent HTML provenance and no PDF
+    # hash. Carry this refreshed public fact through the document-only patch.
+    detail_schedules = [copy.deepcopy(r) for r in enriched.get("rules", []) if r.get("kind") == "contract_schedule"
+                        and r.get("source") == "lh_official_detail" and r.get("verification") == "official"]
+    if detail_schedules:
+        rules = [r for r in rules if not (r.get("kind") == "contract_schedule" and r.get("source") == "lh_official_detail")] + detail_schedules
     patch = {"source": current["source"], "external_id": current["external_id"],
              "document_hash": digest, "rules": rules, "replace_rules": True,
              "rules_complete": requirements_complete(rules, current.get("rules_complete", False))}
@@ -84,19 +90,26 @@ def _document_patch(current: dict, enriched: dict) -> dict:
 
 
 def _finish(summary: dict, *, failed: bool = False) -> None:
-    state = "error" if failed or (summary["failed"] and summary["failed"] == summary["attempted"]) else "partial" if summary["unsupported"] or summary["failed"] or summary["skipped"] else "ok"
+    state = "error" if failed or (summary["failed"] and summary["failed"] == summary["attempted"]) else "partial" if summary["unsupported"] or summary["failed"] or summary["skipped"] or summary.get("missing_external_ids") else "ok"
     message = (f"{summary['attempted']}개 공고 확인 · 검증된 조건 {summary['verified_conditions']}개"
                f" · 자동 판독 범위 밖 {summary['unsupported']}개 · 변경으로 재확인 대기 {summary['skipped']}개 · 처리 실패 {summary['failed']}개")
+    if summary.get("missing_external_ids"):
+        message += f" · 저장된 원본이 없는 지정 공고 {len(summary['missing_external_ids'])}개"
     with SessionLocal() as session:
         record_source_status(session, "official_conditions", state, message, record_count=summary["updated"])
         session.commit()
 
 
-async def reprocess(*, ids: list[str] | None = None, active: bool = False, limit: int = 50, dry_run: bool = False, sales_only: bool = False, all_targets: bool = False) -> dict:
+async def reprocess(*, ids: list[str] | None = None, external_ids: list[str] | None = None, active: bool = False, limit: int = 50, dry_run: bool = False, sales_only: bool = False, all_targets: bool = False) -> dict:
     today = datetime.now(ZoneInfo("Asia/Seoul")).date()
     statement = select(Notice.source, Notice.external_id).where(Notice.official_url.is_not(None))
     if ids:
         statement = statement.where(Notice.id.in_(ids))
+    requested_external_ids = list(dict.fromkeys(external_ids or []))
+    if any(not isinstance(value, str) or not value.strip() for value in requested_external_ids):
+        raise ValueError("external_ids must contain nonempty official notice numbers")
+    if requested_external_ids:
+        statement = statement.where(Notice.external_id.in_(requested_external_ids))
     if sales_only:
         statement = statement.where(Notice.category.in_(["apt", "private_sale", "public_sale", "unsold", "optional_supply"]))
     if active:
@@ -107,10 +120,13 @@ async def reprocess(*, ids: list[str] | None = None, active: bool = False, limit
     statement = statement.order_by(Notice.announcement_date.desc(), Notice.id)
     if not all_targets:
         statement = statement.limit(max(1, min(limit, 100)))
-    summary = {"attempted": 0, "updated": 0, "verified_conditions": 0, "unsupported": 0, "skipped": 0, "failed": 0}
+    summary = {"attempted": 0, "updated": 0, "verified_conditions": 0, "unsupported": 0, "skipped": 0, "failed": 0, "missing_external_ids": []}
     records = []
     logging.getLogger("httpx").setLevel(logging.WARNING)
     with SessionLocal() as session:
+        if requested_external_ids:
+            retained_ids = set(session.scalars(select(Notice.external_id).where(Notice.external_id.in_(requested_external_ids))))
+            summary["missing_external_ids"] = [value for value in requested_external_ids if value not in retained_ids]
         targets = list(session.execute(statement).all())
         if not dry_run:
             record_source_status(session, "official_conditions", "running", "공개 공고문 조건 정리 중")
@@ -182,6 +198,7 @@ async def reprocess(*, ids: list[str] | None = None, active: bool = False, limit
 def main() -> None:
     parser = argparse.ArgumentParser(description="Reprocess retained official public notice conditions without Gemini")
     parser.add_argument("--notice-id", action="append", default=[], help="Retained notice UUID; repeat for multiple notices")
+    parser.add_argument("--external-id", action="append", default=[], help="Official notice number; repeat for multiple notices. Missing retained originals are reported.")
     parser.add_argument("--active", action="store_true", help="Only notices with current/future application reception")
     parser.add_argument("--limit", type=int, default=50, help="Bounded notice count, at most 100")
     parser.add_argument("--dry-run", action="store_true", help="Download and compare without writing notices")
@@ -189,7 +206,7 @@ def main() -> None:
     parser.add_argument("--all", action="store_true", help="Process every matching retained notice")
     parser.add_argument("--report", help="Write the per-notice audit JSON to this path")
     args = parser.parse_args()
-    summary = asyncio.run(reprocess(ids=args.notice_id, active=args.active, limit=args.limit, dry_run=args.dry_run, sales_only=args.sales_only, all_targets=args.all))
+    summary = asyncio.run(reprocess(ids=args.notice_id, external_ids=args.external_id, active=args.active, limit=args.limit, dry_run=args.dry_run, sales_only=args.sales_only, all_targets=args.all))
     if args.report:
         from pathlib import Path
         Path(args.report).write_text(json.dumps(summary,ensure_ascii=False,indent=2))

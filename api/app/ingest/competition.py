@@ -283,7 +283,8 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     init_db()
     today = today or datetime.now(KST).date()
-    key = unquote((os.getenv("CHEONGYAK_COMPETITION_API_KEY", "") or os.getenv("DATA_GO_KR_API_KEY", "")).strip())
+    from app.integration_settings import setting_value
+    key = unquote((setting_value("CHEONGYAK_COMPETITION_API_KEY") or setting_value("DATA_GO_KR_API_KEY")).strip())
     own_client = client is None
     client = client or httpx.AsyncClient(headers={"User-Agent": "CheongyakCalendar/1.0 (+public housing notice index)"}, follow_redirects=True)
     counts = {"count": 0, "rows": 0, "pending": 0, "failed": 0, "complete": 0, "fallback": 0}

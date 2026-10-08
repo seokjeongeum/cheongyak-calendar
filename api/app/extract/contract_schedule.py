@@ -9,12 +9,42 @@ import hashlib
 import json
 import re
 from datetime import date
+from html import unescape
+from urllib.parse import parse_qs, urlparse
 
 
 DATE_TOKEN = r"(?:[‘’'`]?(?:20\d{2}|\d{2}))\s*[.년/-]\s*\d{1,2}\s*[.월/-]\s*\d{1,2}\s*(?:일|\.)?"
 DATE_RE = re.compile(DATE_TOKEN)
 END_TOKEN = r"(?:" + DATE_TOKEN + r"|\d{1,2}\s*[.월/-]\s*\d{1,2}\s*(?:일|\.)?)"
 CONTRACT_RE = re.compile(r"(?:정당\s*)?계약(?:\s*체결)?(?:\s*(?:기간|일정|일자|일))?")
+
+
+def parse_lh_detail_contract_schedule(html: str, *, url: str, external_id: str | None = None) -> dict | None:
+    """Read LH's visible contract-period field for the requested notice only."""
+    parsed = urlparse(url)
+    notice_id = (parse_qs(parsed.query).get("panId") or [None])[0]
+    if parsed.scheme != "https" or parsed.hostname != "apply.lh.or.kr" or parsed.path != "/lhapply/apply/wt/wrtanc/selectWrtancInfo.do" or not notice_id:
+        return None
+    if external_id is not None and str(external_id) != notice_id:
+        return None
+    if not re.search(r"panId\s*:\s*['\"]" + re.escape(notice_id) + r"['\"]", html):
+        return None
+    match = re.search(r"계약기간\s*</span>\s*:\s*<label\b[^>]*\bid=['\"]sta_ctrtDt['\"][^>]*>([^<]+)</label>", html)
+    if not match:
+        return None
+    period = unescape(match[1]).strip()
+    dates = DATE_RE.findall(period)
+    if len(dates) != 2 or not re.fullmatch(r"\s*" + DATE_TOKEN + r"\s*[~∼-]\s*" + DATE_TOKEN + r"\s*", period):
+        return None
+    start, end = map(_date_token, dates)
+    if not start or not end or end < start:
+        return None
+    digest = hashlib.sha256(html.encode()).hexdigest()
+    return {"id": "lh-contract-" + digest[:16], "kind": "contract_schedule", "effect": "metadata",
+        "status": "fixed" if start == end else "range", "start_date": start, "end_date": end,
+        "verification": "official", "source": "lh_official_detail", "source_hash": digest,
+        "evidence_url": url, "evidence_text": "LH 공식 공급정보 계약기간: " + period,
+        "evidence_location": "#sta_ctrtDt", "external_id": notice_id}
 
 
 def _date_token(raw: str) -> str | None:

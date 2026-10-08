@@ -111,7 +111,7 @@ describe('official residence scope at the announcement cutoff',()=>{
       expect(result?.detail).toContain('저장된 당시 주소가 없어')
       expect(result?.detail).toContain('2026-10-03')
       expect(result?.profileField).toBeUndefined()
-      expect(result?.category).toBe('condition')
+      expect(result?.category).toBe('past_fact')
     }
     expect(applicantRegionEligibility(item,{...daegu,movedInDate:'2026-10-02'})?.status).toBe('pass')
   })

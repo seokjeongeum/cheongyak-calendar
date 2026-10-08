@@ -56,16 +56,16 @@ describe('official contract dates without personal planned dates', () => {
     expect(criterionDate(rule('age_min', { criterion_basis: 'contract_date', criterion_date: null }), n)).toBe(today)
     expect(evaluateRule(rule('age_min', { value: 19, criterion_basis: 'contract_date', criterion_date: null }), profile({ intendedContractDate: '2020-01-01' }), n)).toMatchObject({ status: 'pass', criterionDate: today })
   })
-  it('uses the official fixed date and the start of a future range', () => {
-    expect(contractEvaluationDate(notice([], { contract_schedule: schedule('fixed', '2026-11-01', '2026-11-01') }))).toBe('2026-11-01')
-    expect(contractEvaluationDate(notice([], { contract_schedule: schedule('range', '2026-11-01', '2026-11-03') }))).toBe('2026-11-01')
+  it('previews today for fixed dates and future official periods', () => {
+    expect(contractEvaluationDate(notice([], { contract_schedule: schedule('fixed', '2026-11-01', '2026-11-01') }))).toBe(today)
+    expect(contractEvaluationDate(notice([], { contract_schedule: schedule('range', '2026-11-01', '2026-11-03') }))).toBe(today)
     expect(contractEvaluationDate(notice([], { contract_schedule: schedule('range', '2026-10-01', '2026-10-08') }))).toBe(today)
   })
-  it('keeps ended, unverified and not-yet-started ongoing schedules uncertain', () => {
+  it('compares today separately from ended, unverified and future official schedules', () => {
     for (const contract_schedule of [schedule('range', '2026-09-01', '2026-09-03'), schedule('ongoing', '2026-11-01'), { ...schedule('fixed', today), verification: 'unknown' }]) {
       const n = notice([], { contract_schedule })
-      expect(contractEvaluationDate(n)).toBeNull()
-      expect(evaluateRule(rule('age_min', { value: 19, criterion_basis: 'contract_date', criterion_date: null }), profile(), n)).toMatchObject({ status: 'review', category: 'source_gap' })
+      expect(contractEvaluationDate(n)).toBe(today)
+      expect(evaluateRule(rule('age_min', { value: 19, criterion_basis: 'contract_date', criterion_date: null }), profile(), n)).toMatchObject({ status: 'pass', contractPreview: true, criterionDate: today })
     }
   })
 })
@@ -125,12 +125,12 @@ describe('mandatory marriage and alternative routes', () => {
   it('asks for a historical status change instead of an impossible marriage period', () => {
     const result = evaluateRule({ ...period, criterion_date: past }, profile(), notice())
     expect(result).toMatchObject({ status: 'review', profileField: 'maritalStatus' })
-    expect(result.detail).toContain('마지막 변경')
+    expect(result).toMatchObject({ category: 'past_fact', historyGroup: 'marital', label: '혼인 상태 변경일' })
   })
   it('does not link an unavailable old-address form after a later move', () => {
     const r = rule('residence_region', { region_code: '11', criterion_date: past })
     const result = evaluateRule(r, profile({ regionCode: '11', region: '서울특별시', movedInDate: '2026-10-01' }), notice())
-    expect(result).toMatchObject({ status: 'review', category: 'condition' })
+    expect(result).toMatchObject({ status: 'review', category: 'past_fact' })
     expect(result.profileField).toBeUndefined()
   })
   it('assumes entered bank rank values have been confirmed', () => {

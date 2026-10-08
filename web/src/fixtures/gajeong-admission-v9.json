@@ -1,0 +1,728 @@
+{
+  "recordedSourceFixture": "api/tests/fixtures/gajeong-admission-v8.json",
+  "parser": "parse_official_rules + public_notice",
+  "personalDataIncluded": false,
+  "notice": {
+    "id": "qa-recorded-0000061183",
+    "source": "lh",
+    "sources": [
+      "lh"
+    ],
+    "correction_of_external_id": null,
+    "correction_of_id": null,
+    "provider": "한국토지주택공사",
+    "title": "(정정) 인천가정2지구 B2블록 공공분양 잔여세대 추가 입주자모집공고",
+    "category": "public_sale",
+    "housing_kind": "unknown",
+    "housing_kind_evidence": null,
+    "rank_applicability": {
+      "verification": "official",
+      "source": "official_document_parser",
+      "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+      "evidence_text": "청약저축 가입여부, 과거당첨 사실여부, 소득 및 자산 요건을 불문",
+      "status": "not_applicable",
+      "account_required": false,
+      "reason": "잔여주택 자격완화·무순위 추첨 · 청약통장 불필요 · 아파트 1·2순위 적용 없음",
+      "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54"
+    },
+    "application_method": "optional_supply",
+    "application_method_evidence": {
+      "verification": "official",
+      "source": "official_document_parser",
+      "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+      "evidence_text": "인천가정인천가정인천가정222지구 지구 지구 B2B2B2블록 블록 블록 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정222222222지구 지구 지구 지구 지구 지구 지구 지구 지구 B2B2B2B2B2B2B2B2B2블록 블록 블록 블록 블록 블록 블록 블록 블록 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 추가 추가 추가 추가 추가 추가 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정22222222지구 지구 지구 지구 지구 지구 지구 지구 B2B2B2B2B2B2B2B2블록 블록 블록 블록 블록 블록 블록 블록 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 추가 추가 추가 추가 추가 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정22지구 지구 B2B2블록 블록 공공분양 공공분양 잔여세대 잔여세대 추가 추가 입주자모집공고입주자모집공고 ❚공급위치 : 인천광역시 서해구 가정동, 청라동 일원 인천가정2 공공주택지구내 B2블록 ❚공급대상 : 공공분양주택 308세대 ",
+      "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+      "criterion_date": "2026-09-23"
+    },
+    "qualification_context": {
+      "public_housing": null,
+      "speculation_zone": null,
+      "subscription_overheated": null,
+      "weakened_area": null,
+      "capital_region": null,
+      "rule_effective_date": null,
+      "original_announcement_date": "2026-04-15",
+      "application_announcement_date": "2026-09-23",
+      "application_criterion_date": "2026-09-23",
+      "application_criterion_basis": "announcement"
+    },
+    "contract_schedule": {
+      "status": "unknown",
+      "start_date": null,
+      "end_date": null,
+      "verification": "official",
+      "source": "official_document_parser",
+      "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+      "evidence_text": "공식 문서에 서로 다른 계약 일정이 있어 추가 확인이 필요합니다. 계약기간[2026.11.02(월) / 계약 기간(26.11.02(월) ~ 11.03",
+      "evidence_page": 2,
+      "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+      "source_hash": null,
+      "evidence_location": null
+    },
+    "offered_supplies": [
+      {
+        "supply_type": "일반공급",
+        "unit_type": "74.9500A",
+        "supply_count": 18,
+        "verification": "official",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "74.9500A 74A 74.9500 23.7486 9.7791 41.4895 149.9672 확장 35.71 52.8548 41 23 18 23 0",
+        "evidence_page": 3,
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "criterion_date": "2026-09-23"
+      },
+      {
+        "supply_type": "일반공급",
+        "unit_type": "84.0000A",
+        "supply_count": 154,
+        "verification": "official",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "B2 84.0000A 84A1 84.9900 26.9298 11.0891 47.0473 170.0562 확장 37.54 59.9350 187 33 154 22 1’28.07",
+        "evidence_page": 3,
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "criterion_date": "2026-09-23"
+      },
+      {
+        "supply_type": "일반공급",
+        "unit_type": "84.0000B",
+        "supply_count": 58,
+        "verification": "official",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "84.0000B 84B 84.5900 26.8031 11.0369 46.8259 169.2559 확장 31.18 59.6530 58 - 58 10 2",
+        "evidence_page": 3,
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "criterion_date": "2026-09-23"
+      },
+      {
+        "supply_type": "일반공급",
+        "unit_type": "84.9800C",
+        "supply_count": 22,
+        "verification": "official",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "84.9800C 84C 84.9800 26.9267 11.0878 47.0418 170.0363 확장 31.29 59.9280 22 - 22 23 -",
+        "evidence_page": 3,
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "criterion_date": "2026-09-23"
+      }
+    ],
+    "selection_methods": [],
+    "winning_scores": [],
+    "address": null,
+    "region_code": null,
+    "region_name": null,
+    "announcement_date": "2026-09-23",
+    "sort_date": null,
+    "application_end_date": null,
+    "official_url": "https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do?panId=0000061183&ccrCnntSysDsCd=02&uppAisTpCd=05&aisTpCd=05&mi=1027",
+    "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+    "price_cap_status": "unknown",
+    "events": [],
+    "prices": [],
+    "competitions": [],
+    "competition": {
+      "status": "pending",
+      "last_attempt_at": null,
+      "last_success_at": null,
+      "complete": false,
+      "proof_invalidated": false,
+      "unit_types": [],
+      "evidence_url": null,
+      "message": null
+    },
+    "rules": [
+      {
+        "id": "official-610890ddf9b7caaf",
+        "kind": "application_method",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "인천가정인천가정인천가정222지구 지구 지구 B2B2B2블록 블록 블록 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정222222222지구 지구 지구 지구 지구 지구 지구 지구 지구 B2B2B2B2B2B2B2B2B2블록 블록 블록 블록 블록 블록 블록 블록 블록 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 추가 추가 추가 추가 추가 추가 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정인천가정인천가정인천가정인천가정인천가정인천가정22222222지구 지구 지구 지구 지구 지구 지구 지구 B2B2B2B2B2B2B2B2블록 블록 블록 블록 블록 블록 블록 블록 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 공공분양 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 잔여세대 추가 추가 추가 추가 추가 추가 추가 추가 입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고입주자모집공고 인천가정인천가정22지구 지구 B2B2블록 블록 공공분양 공공분양 잔여세대 잔여세대 추가 추가 입주자모집공고입주자모집공고 ❚공급위치 : 인천광역시 서해구 가정동, 청라동 일원 인천가정2 공공주택지구내 B2블록 ❚공급대상 : 공공분양주택 308세대 ",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "offer_mode": "residual_general_sale",
+        "value": "optional_supply"
+      },
+      {
+        "id": "official-32b10d3c4d3920f3",
+        "kind": "rank_applicability",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "청약저축 가입여부, 과거당첨 사실여부, 소득 및 자산 요건을 불문",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "status": "not_applicable",
+        "account_required": false,
+        "reason": "잔여주택 자격완화·무순위 추첨 · 청약통장 불필요 · 아파트 1·2순위 적용 없음"
+      },
+      {
+        "id": "official-bcad5a92292b4b82",
+        "kind": "qualification_context",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "이 주택의 입주자모집공고일은 2026.09.23",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "value": {
+          "application_criterion_date": "2026-09-23",
+          "application_criterion_basis": "announcement",
+          "application_announcement_date": "2026-09-23",
+          "original_announcement_date": "2026-04-15"
+        }
+      },
+      {
+        "id": "official-a6cbc4c401cef1a9",
+        "kind": "applicant_regions",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "거주지역, 청약저축 가입여부, 과거당첨 사실여부, 소득 및 자산 요건을 불문",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "unrestricted": true,
+        "domestic_only": true,
+        "priority_applicable": false,
+        "priority_division": "none",
+        "scope_complete": true
+      },
+      {
+        "id": "official-ff9ac0a60fb15521",
+        "kind": "any",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "미성년자는 직계존속의 사망, 실종선고 및 행방불명 등으로 형제자매를 부양해야 하거나, 자녀를 부양하여야 하는 세대주만 신청 가능. 이 경우 자녀 및 형제 자매는 미성년자와 같은 세대별 주민등록표",
+        "evidence_page": 2,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "label": "성년 또는 공고의 미성년 세대주",
+        "conditions": [
+          {
+            "id": "official-f8fc1e7a234bcd22",
+            "kind": "age_min",
+            "verification": "official",
+            "source": "official_document_parser",
+            "parser_version": "official-sections-2026-10-07-v9",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "만 19세 이상의 성년자",
+            "evidence_page": 1,
+            "criterion_date": "2026-09-23",
+            "criterion_basis": "announcement",
+            "operator": ">=",
+            "unit": "years",
+            "value": 19,
+            "supply_type": "일반공급"
+          },
+          {
+            "id": "official-8dcbfe4604bc497f",
+            "kind": "minor_household_head",
+            "verification": "official",
+            "source": "official_document_parser",
+            "parser_version": "official-sections-2026-10-07-v9",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "미성년자는 직계존속의 사망, 실종선고 및 행방불명 등으로 형제자매를 부양해야 하거나, 자녀를 부양하여야 하는 세대주만 신청 가능. 이 경우 자녀 및 형제 자매는 미성년자와 같은 세대별 주민등록표",
+            "evidence_page": 2,
+            "criterion_date": "2026-09-23",
+            "criterion_basis": "announcement",
+            "reasons": [
+              "support_children",
+              "support_siblings_parents_dead_or_missing"
+            ],
+            "required_same_register": true,
+            "value": true
+          }
+        ],
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-c642faf918d2c755",
+        "kind": "domestic_residence",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "국내에 거주하는 만 19세 이상의 성년자",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "value": true,
+        "supply_type": "일반공급",
+        "overseas_residence_equivalence": true
+      },
+      {
+        "id": "official-a34950e54226af7f",
+        "kind": "citizenship",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "외국인의 경우 본 아파트 청약신청이 불가",
+        "evidence_page": 2,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "allowed_values": [
+          "korean"
+        ],
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-37652263aac00004",
+        "kind": "homeless",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "기본 신청자격 : 입주자모집공고일(2026.09.23) 현재 국내에 거주하는 만 19세 이상의 성년자 주택소유 거주지역 청약통장 과거당첨사실여부 소득·자산 무주택세대구성원",
+        "evidence_page": 8,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "value": true,
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-a2bb7a656a540d36",
+        "kind": "condition_exemptions",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "거주지역, 청약저축 가입여부, 과거당첨 사실여부, 소득 및 자산 요건을 불문",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "topics": [
+          "account",
+          "income",
+          "assets",
+          "prior_win",
+          "rewinning_restriction"
+        ],
+        "descriptions": {
+          "account": "청약통장 가입 여부 무관",
+          "income": "소득 기준 적용 없음",
+          "assets": "자산 기준 적용 없음",
+          "home_ownership": "유주택자 신청 가능",
+          "prior_win": "과거 당첨 사실 무관",
+          "rewinning_restriction": "재당첨 제한 적용 없음",
+          "prior_project_contract": "이 사업 기존 계약자와 세대원도 신청 가능",
+          "prior_project_winner": "과거 당첨 사실 무관"
+        }
+      },
+      {
+        "id": "official-1740245dce3be0ff",
+        "kind": "price_cap",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "분양가 상한제 적용주택",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "value": "yes"
+      },
+      {
+        "id": "official-8195fa359d79107f",
+        "kind": "overseas_residence",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "입주자모집공고일을 기준으로 국외에 계속하여 90일을 초과하여 거주한 경우(입국일부터 7일 이내 같은 국가로 출국한 경우 국외 계속 거주로 간주)에는 국내에 거주하지 않은 것으로 보아 청약신청이 불가하고, 청약하여 당첨된 경우 부적격 처리됩니다.(세대원 중 주택공급신청자만 생업에 직접 종사하기 위하여 국외에 체류하고 있는 경우 청약 가능)",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "max_continuous_days": 90,
+        "value_basis": "continuous_days_including_reentry_within_7_days",
+        "currently_abroad_only": true,
+        "reentry_same_country": true,
+        "reentry_within_days": 7,
+        "livelihood_exception": true,
+        "livelihood_exception_requires_family": true,
+        "livelihood_exception_excludes": [
+          "sole_household_head",
+          "cohabitant_household_member"
+        ],
+        "exception_evidence_text": "(5) 세대원 중 주택공급신청자만 생업에 종사하기 위하여 국외에 체류하고 있는 경우에는 국내에 거주하고 있는 것으로 인정(단독세대주 또는 동거인의 세대원으로 등재된 경우 해당없음)",
+        "exception_evidence_page": 2,
+        "return_evidence_text": "(3) 입주자모집공고일 전일(2026.09.22)에 입국하여 국내에 체류중인 경우 청약신청 가능(입국일은 해외체류기간에 포함) (4) 입국일로부터 7일 이내 동일 국가로 재출국한 경우에는 국외에 계속 거주한 것으로 간주",
+        "return_evidence_page": 2,
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-f4b8a57ce093a1be",
+        "kind": "original_project_contract_ownership",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "단, 최초 입주자모집(2026.04.15) 당첨 이후 계약을 체결한 자는 「주택공급에 관한 규칙」에 의거 주택을 소유한 것으로 판단되어 신청 불가능합니다",
+        "evidence_page": 8,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "project_id": "LH-INCHEON-GAJEONG2-B2",
+        "scope": "applicant",
+        "original_announcement_date": "2026-04-15",
+        "requires_original_winning": true,
+        "ownership_effect": "contract_date",
+        "first_winning_alone_allowed": true,
+        "ineligible_winning_alone_allowed": true,
+        "permission_evidence_text": "공고일(2026.09.23) 기준 최초 입주자모집공고(2026.04.15) 시 당첨자 및 당첨 후 부적격으로 판정된 자(기간 내 소명하지 아니한 자)도 신청 가능합니다",
+        "permission_evidence_page": 8,
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-1c5de8b286bab4eb",
+        "kind": "application_restriction",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "주택의 전매행위 제한을 위반한 경우, 위반자는 위반한 행위 적발일로부터 10년간 입주자격을 제한합니다",
+        "evidence_page": 10,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "restriction": "resale_restriction_active",
+        "scope": "applicant",
+        "value": false,
+        "supply_type": "일반공급"
+      },
+      {
+        "id": "official-c7324eb8bc4d172b",
+        "kind": "supply_inventory_summary",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "공급대상 : 공공분양주택 308세대 중 잔여 252세대 (전용면적 74㎡ 18세대, 84㎡ 234세대)",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "total_households": 308,
+        "current_supply_count": 252,
+        "official_supply_url": "https://apply.lh.or.kr/lhapply/apply/wt/wrtanc/selectWrtancInfo.do?panId=0000061183&ccrCnntSysDsCd=02&uppAisTpCd=05&aisTpCd=05&mi=1027"
+      },
+      {
+        "id": "official-0506ee13baba6b36",
+        "kind": "application_instructions",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "동일블록 내 중복신청이 불가하며, 신청자 본인 외 다른 세대구성원이 중복 청약하여 당첨될 경우 모두 부적격 처리되오니 유의하시기 바랍니다. ※ 부부(예비신혼부부 제외)는 해당 주택에 대해 각각 청약할 수 있으나, 중복당첨된 경우 「주택공급에 관한 규칙」제55조의2에 따라 청약 접수일(분 단위까지의 접수시간을 포함) 이 빠른 사람의 당첨[분 단위 접수시간이 동일한 경우 신청자의 연령(연월일 계산)이 많은 자가 당첨된 주택을 말함]만을 인정하며, 후 접수분은 무효처리 합니다",
+        "evidence_page": 9,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "instructions": [
+          {
+            "label": "동일 블록 중복 신청·부부 예외",
+            "detail": "동일 세대의 중복 신청으로 한 명이라도 당첨되면 모두 부적격입니다. 부부(예비신혼부부 제외)는 각각 신청할 수 있으며 중복 당첨 시 먼저 접수한 당첨만 유효합니다. 분 단위 접수 시각이 같으면 생년월일 기준 연장자의 당첨을 인정합니다.",
+            "phase": "application",
+            "evidence_page": 9,
+            "evidence_text": "동일블록 내 중복신청이 불가하며, 신청자 본인 외 다른 세대구성원이 중복 청약하여 당첨될 경우 모두 부적격 처리되오니 유의하시기 바랍니다. ※ 부부(예비신혼부부 제외)는 해당 주택에 대해 각각 청약할 수 있으나, 중복당첨된 경우 「주택공급에 관한 규칙」제55조의2에 따라 청약 접수일(분 단위까지의 접수시간을 포함) 이 빠른 사람의 당첨[분 단위 접수시간이 동일한 경우 신청자의 연령(연월일 계산)이 많은 자가 당첨된 주택을 말함]만을 인정하며, 후 접수분은 무효처리 합니다",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54"
+          },
+          {
+            "label": "당첨 후 서류 제출·계약금 납부",
+            "detail": "당첨자 서류 제출과 계약금·중도금·잔금 납부는 당첨 후 이행 절차입니다. 현재 신청 자격의 미확인 요건으로 세지 않습니다.",
+            "phase": "post_selection",
+            "evidence_page": 11,
+            "evidence_text": "당첨자(예비입주자) 제출서류 ■ 공통 안내사항 • 당첨자 및 예비입주자는 당첨자 서류제출 기한[(현장) ‘26.10.10(토) ~ 10.11(일) 10:00~17:00] 내에 관련서류를 제출해야 하며, 서류제출기간 내에 서류를 제출하지 않거나 계 약체결기간 내에 정당한 사유 없이 계약체결하지 않을 경우 계약포기로 간주하오니 유의하",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54"
+          }
+        ]
+      },
+      {
+        "id": "official-c86f7fd5baaacd86",
+        "kind": "offered_supplies",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "74.9500A 74A 74.9500 23.7486 9.7791 41.4895 149.9672 확장 35.71 52.8548 41 23 18 23 0 / B2 84.0000A 84A1 84.9900 26.9298 11.0891 47.0473 170.0562 확장 37.54 59.9350 187 33 154 22 1’28.07 / 84.0000B 84B 84.5900 26.8031 11.0369 46.8259 169.2559 확장 31.18 59.6530 58 - 58 10 2 / 84.9800C 84C 84.9800 26.9267 11.0878 47.0418 170.0363 확장 31.29 59.9280 22 - 22 23 -",
+        "evidence_page": 3,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "supplies": [
+          {
+            "supply_type": "일반공급",
+            "unit_type": "74.9500A",
+            "supply_count": 18,
+            "verification": "official",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "74.9500A 74A 74.9500 23.7486 9.7791 41.4895 149.9672 확장 35.71 52.8548 41 23 18 23 0",
+            "evidence_page": 3,
+            "criterion_date": "2026-09-23"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "84.0000A",
+            "supply_count": 154,
+            "verification": "official",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "B2 84.0000A 84A1 84.9900 26.9298 11.0891 47.0473 170.0562 확장 37.54 59.9350 187 33 154 22 1’28.07",
+            "evidence_page": 3,
+            "criterion_date": "2026-09-23"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "84.0000B",
+            "supply_count": 58,
+            "verification": "official",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "84.0000B 84B 84.5900 26.8031 11.0369 46.8259 169.2559 확장 31.18 59.6530 58 - 58 10 2",
+            "evidence_page": 3,
+            "criterion_date": "2026-09-23"
+          },
+          {
+            "supply_type": "일반공급",
+            "unit_type": "84.9800C",
+            "supply_count": 22,
+            "verification": "official",
+            "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+            "evidence_text": "84.9800C 84C 84.9800 26.9267 11.0878 47.0418 170.0363 확장 31.29 59.9280 22 - 22 23 -",
+            "evidence_page": 3,
+            "criterion_date": "2026-09-23"
+          }
+        ],
+        "inventory_status": "verified"
+      },
+      {
+        "id": "official-836094e8495dd2ac",
+        "kind": "condition_coverage",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "evidence_text": "이 주택의 입주자모집공고일은 2026.09.23",
+        "evidence_page": 1,
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement",
+        "effect": "metadata",
+        "status": "complete",
+        "scopes": [
+          {
+            "supply_type": "일반공급",
+            "complete": true,
+            "verified_rule_count": 7,
+            "missing_topics": [],
+            "topics": [
+              {
+                "topic": "age",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-ff9ac0a60fb15521"
+                ]
+              },
+              {
+                "topic": "application_restrictions",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-1c5de8b286bab4eb"
+                ]
+              },
+              {
+                "topic": "citizenship",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-a34950e54226af7f"
+                ]
+              },
+              {
+                "topic": "domestic_residence",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-c642faf918d2c755"
+                ]
+              },
+              {
+                "topic": "home_ownership",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-37652263aac00004"
+                ]
+              },
+              {
+                "topic": "original_contract_ownership",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-f4b8a57ce093a1be"
+                ]
+              },
+              {
+                "topic": "overseas_residence",
+                "status": "verified",
+                "required": true,
+                "rule_ids": [
+                  "official-8195fa359d79107f"
+                ]
+              },
+              {
+                "topic": "account",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "income",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "assets",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "prior_win",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              },
+              {
+                "topic": "rewinning_restriction",
+                "status": "not_applicable",
+                "required": false,
+                "rule_ids": []
+              }
+            ],
+            "source_gaps": [],
+            "reviewed_document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+            "reviewed_section_pages": [
+              1,
+              2,
+              8,
+              9,
+              10,
+              13
+            ],
+            "branches": [
+              {
+                "branch_id": "adult",
+                "label": "성년 신청자",
+                "requirements": [
+                  "age",
+                  "domestic_residence",
+                  "citizenship",
+                  "home_ownership",
+                  "overseas_residence",
+                  "original_contract_ownership",
+                  "application_restrictions"
+                ]
+              },
+              {
+                "branch_id": "minor_household_head",
+                "label": "미성년 세대주 예외",
+                "requirements": [
+                  "미성년 세대주·동일 등본의 부양 자녀 또는 형제자매",
+                  "domestic_residence",
+                  "citizenship",
+                  "home_ownership",
+                  "overseas_residence",
+                  "original_contract_ownership",
+                  "application_restrictions"
+                ]
+              },
+              {
+                "branch_id": "overseas_livelihood",
+                "label": "생업 목적 해외 체류 예외",
+                "requirements": [
+                  "본인만 생업 목적 해외 체류",
+                  "단독세대주·동거인의 세대원 제외",
+                  "나머지 확인 대상 세대원 국내 거주"
+                ]
+              },
+              {
+                "branch_id": "ownership_exceptions",
+                "label": "공식 주택 소유 예외",
+                "requirements": [
+                  "제53조 12개 예외의 실제 취득·처분·세대·가격·면적 사실"
+                ]
+              }
+            ],
+            "completion_basis": "document_hash_review"
+          }
+        ],
+        "offered_supply_types": [
+          "일반공급"
+        ],
+        "covered_supply_types": [
+          "일반공급"
+        ],
+        "completion_basis": "document_hash_review"
+      },
+      {
+        "id": "official-12fbbf595fe8a5f8",
+        "kind": "contract_schedule",
+        "effect": "metadata",
+        "verification": "official",
+        "source": "official_document_parser",
+        "parser_version": "official-sections-2026-10-07-v9",
+        "document_hash": "acef66815d56e98917f7d3ae2129de9dc6aede9827a4d79a948530373c66ea54",
+        "evidence_url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68804506",
+        "status": "unknown",
+        "start_date": null,
+        "end_date": null,
+        "evidence_page": 2,
+        "evidence_text": "공식 문서에 서로 다른 계약 일정이 있어 추가 확인이 필요합니다. 계약기간[2026.11.02(월) / 계약 기간(26.11.02(월) ~ 11.03",
+        "criterion_date": "2026-09-23",
+        "criterion_basis": "announcement"
+      }
+    ],
+    "rules_complete": true,
+    "updated_at": "2026-10-05T00:00:00Z",
+    "version": 1
+  }
+}

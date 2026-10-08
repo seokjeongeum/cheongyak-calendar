@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlparse
 from .reviewed_sources import REVIEWED_SOURCES
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-07-v8"
+PARSER_VERSION = "official-sections-2026-10-07-v9"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -35,7 +35,7 @@ def parser_version_usable(rule: dict, *, category: str = "", title: str = "", ru
         return True
     # v8 adds supply-scoped special selection metadata. Prior admission facts
     # remain valid until their document is reparsed/corrected.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -131,7 +131,7 @@ def document_cutoff(pages: list[dict], *, method: str = "unknown") -> tuple[str 
                 pass
     for page in pages[:8]:
         text = normal(page["text"])
-        match = re.search(r"(?:(?:이\s*주택의|본\s*주택의)\s*(?:최초\s*)?입주자모집공고일[은는]\s*|분양광고일\s*\()(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})", text)
+        match = re.search(r"(?:(?:이\s*주택의|본\s*주택의)\s*(?:최초\s*)?입주자모집공고일[은는]\s*|(?:분양|모집)광고일[‘’'“”\s]*\()(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})", text)
         if match:
             try:
                 cutoff = date(*(int(v) for v in match.groups())).isoformat()
@@ -201,6 +201,15 @@ def _deposit_table(lines: list[dict]) -> tuple[list[dict], dict | None]:
 
 
 def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: dict | None = None) -> dict:
+    # A known hash for another notice cannot validate the requested notice.
+    source_query = parse_qs(urlparse(str((payload or {}).get("official_url", ""))).query)
+    attachment_query = parse_qs(urlparse(url).query)
+    expected_id = (source_query.get("houseManageNo") or [None])[0]
+    attachment_id = (attachment_query.get("houseManageNo") or [None])[0]
+    publication_id = (attachment_query.get("pblancNo") or [None])[0]
+    if attachment_id and (expected_id and attachment_id != expected_id or publication_id != attachment_id):
+        return {"rules": [], "offered_supply_types": [], "status": "unsupported",
+                "reason": "현재 공고번호와 첨부 문서의 공고번호가 일치하지 않습니다."}
     from .contract_schedule import parse_contract_schedule
     result = _parse_official_rules(pages, url=url, digest=digest, payload=payload)
     contract = parse_contract_schedule(pages, url=url, digest=digest, parser_version=PARSER_VERSION)
@@ -212,6 +221,17 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
         result["contract_schedule"] = {k: contract.get(k) for k in (
             "status", "start_date", "end_date", "verification", "source", "evidence_url", "evidence_text", "evidence_page", "document_hash")}
     from .selection_rules import parse_selection_rules
+    from .application_regions import explicit_applicant_regions
+    if not any(r.get("kind") == "applicant_regions" and r.get("scope_complete") for r in result.get("rules", [])):
+        cutoff = next((r.get("criterion_date") for r in result.get("rules", []) if r.get("criterion_date")), None)
+        if cutoff:
+            def regional_make(kind, *, quote, page, **fields):
+                return {"kind": kind, "verification": "official", "source": "official_document_parser",
+                    "parser_version": PARSER_VERSION, "document_hash": digest, "evidence_url": url,
+                    "evidence_text": quote, "evidence_page": page, "criterion_date": cutoff,
+                    "criterion_basis": "announcement", **fields}
+            method = next((r.get("value") for r in result.get("rules", []) if r.get("kind") == "application_method"), None)
+            result["rules"].extend(explicit_applicant_regions(pages[:8], cutoff=cutoff, make=regional_make, provinces=PROVINCES, method=method))
     # The independent EXCLUSE_AR API field remains usable when a PDF's visual
     # supply table separates the dwelling code and area into different columns.
     # Stale document interpretations cannot supplement a corrected attachment.
@@ -328,6 +348,14 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             rules.append(make("housing_classification", effect="metadata", quote=normal(pages[0]["text"])[:700], page=pages[0]["page"]))
         prices = []
         offered = ["일반공급"]
+        office_review = (reviewed or {}).get("office_review")
+        if outside_apt and office_review:
+            qualification = next((p for p in pages if p["page"] == office_review["qualification_page"]), None)
+            if qualification and all(term in qualification["text"] for term in ("대한민국에 거주", "19", "이상인 자")):
+                quote = normal(qualification["text"]).split("■ 청약일정")[0][:900]
+                rules.append(make("age_min", office_review["adult_age"], supply="일반공급", operator=">=", unit="years", quote=quote, page=qualification["page"]))
+                rules.append(make("domestic_residence", True, supply="일반공급", quote=quote, page=qualification["page"]))
+                rules.append(make("applicant_regions", effect="metadata", scope_complete=True, unrestricted=True, domestic_only=True, priority_applicable=False, quote=quote, page=qualification["page"]))
         if reviewed and reviewed.get("sale_prices"):
             # Exact document hash review binds row/column interpretation,
             # VAT and highest-floor prices. A changed table is never reused.
@@ -368,7 +396,9 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             full = parsed["complete"]
             missing = parsed["missing_topics"]
         else:
-            full = bool(prices)
+            full = bool(prices) or bool(outside_apt and office_review and
+                {"age_min", "domestic_residence"} <= {r["kind"] for r in rules} and
+                all(any(p["page"] == number for p in pages) for number in reviewed["reviewed_pages"]))
             missing = [] if full else ["공고별 신청 자격"]
         if regional["offered"]:
             offered = regional["offered"]
@@ -381,9 +411,10 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             missing = list(reviewed.get("remaining_admission_topics", ["공고의 남은 당첨·계약 제한 및 유형별 예외"]))
             full = bool(reviewed.get("admission_sections_reviewed") and not missing and
                         (not reviewed.get("unranked_review") or parsed["complete"]))
+        missing_by_supply = (reviewed or {}).get("remaining_admission_topics_by_supply", {})
         count = sum(r.get("effect") != "metadata" for r in rules)
         rules.append(make("condition_coverage", effect="metadata", status="complete" if full else "partial", offered_supply_types=offered,
-                          scopes=[{"supply_type": supply, "complete": full, "verified_rule_count": sum(r.get("effect") != "metadata" and (not r.get("supply_type") or r.get("supply_type") == supply) for r in rules), "missing_topics": missing} for supply in offered], quote=normal(anchor["text"])[:850], page=anchor["page"], completion_basis="document_hash_review" if full and nonrank_apt else "validated_document_parser" if full else None))
+                          scopes=[{"supply_type": supply, "complete": full, "verified_rule_count": sum(r.get("effect") != "metadata" and (not r.get("supply_type") or r.get("supply_type") == supply) for r in rules), "missing_topics": missing_by_supply.get(supply, missing)} for supply in offered], quote=normal(anchor["text"])[:850], page=anchor["page"], completion_basis="document_hash_review" if full and nonrank_apt else "validated_document_parser" if full else None))
         return {"rules": rules, "prices": prices, "offered_supply_types": offered, "offered_supplies":regional["supplies"], "status": "complete" if full else "partial", "parser_version": PARSER_VERSION}
 
     class_pattern = r"민영주택으로|민영주택\s*입주자모집공고" if kind == "private" else r"「주택법」에\s*의한\s*국민주택"

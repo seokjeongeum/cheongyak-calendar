@@ -47,3 +47,10 @@
 .qualification-inventory ul{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}.qualification-inventory li{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3px 10px;align-items:start;min-width:0;font-size:11px;line-height:1.7;overflow-wrap:anywhere}.qualification-inventory li strong{color:#45607c}.qualification-inventory li a{display:inline-flex;gap:4px;align-items:center;justify-self:start;color:#3570cb;font-size:10px}
 .qualification-source-diagnostics li,.qualification-remaining-topics li{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}.qualification-remaining-topics li>small{color:#728197;font-size:10px}.qualification-inventory-only{background:#f8fafc;border-color:#e7edf4}.qualification-inventory-only .qualification-supply-title>strong{color:#52677e}
 @media(max-width:640px){.qualification-inventory li{grid-template-columns:minmax(0,1fr)}}
+.qualification-inventory-summary{display:grid;gap:4px;margin:4px 0;color:#405773;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.qualification-inventory-summary a,.qualification-remaining-topics a,.qualification-application-instructions a{display:inline-flex;align-items:center;gap:4px;justify-self:start;color:#3570cb;font-size:11px}
+.qualification-application-instructions{font-size:12px;line-height:1.7;color:#60748d;overflow-wrap:anywhere;min-width:0}
+.qualification-application-instructions>strong{color:#405773}.qualification-application-instructions ul{padding-left:18px;margin:8px 0 0}.qualification-application-instructions li+li{margin-top:8px}.qualification-application-instructions li>strong{font-size:11px}.qualification-application-instructions p{margin:3px 0}
+.qualification-instructions-brief{border:1px solid #e4ebf4;background:#fff;border-radius:8px;padding:10px 12px}
+.qualification-gap-note>strong{color:#435977}.qualification-gap-note>p{margin:4px 0}.qualification-gap-note .qualification-remaining-topics{padding-left:18px;margin:7px 0}.qualification-gap-note .qualification-evidence{font-size:10px}
+@media(max-width:640px){.qualification-inventory-summary,.qualification-application-instructions{font-size:11px}}

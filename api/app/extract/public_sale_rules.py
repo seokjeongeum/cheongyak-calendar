@@ -11,9 +11,12 @@ import json
 import re
 from datetime import date
 
+from .gajeong_admission import GAJEONG_HASH, GAJEONG_REVIEW, gajeong_admission
+
 # Full applicant sections, exemptions and employee clauses compared with the
 # source PDFs. These certify admission, not contract/payment obligations.
 REVIEWED_ADMISSION = {
+    GAJEONG_HASH: GAJEONG_REVIEW,
     "4be040db7f7562135ed57584edede4b9c497eee536fbd686ac20642c13301855": {"pages": [1, 2], "topics": ["age", "domestic_residence", "provider_employee"]},
     "d33f83bc20f2fd5caeea78007e948a9becd46e51426f27f82e5b984d4f531f00": {"pages": [1, 3], "topics": ["age", "domestic_residence"]},
     "91eb4846a866e763b87e0c00b640e9f13dfe78442cda5d69cdac45c8c5a01492": {"pages": [1, 2, 4], "topics": ["age", "domestic_residence", "citizenship", "provider_employee"]},
@@ -22,6 +25,15 @@ REVIEWED_ADMISSION = {
     # The minor exception remains a conditional branch in the browser; the
     # reviewed adult branch does not need the minor's unprovided facts.
     "b6102a6e202fecebed1256f0d18f5404c7e8d033f4920cc59487c31eeff6d770": {"pages": [1, 2, 8], "topics": ["age", "domestic_residence", "citizenship", "provider_employee"]},
+}
+
+TOPIC_LABELS = {
+    "age": "성년·미성년 세대주 신청 조건", "domestic_residence": "신청 기준일의 국내 거주 조건",
+    "citizenship": "외국인 신청 제한", "home_ownership": "세대의 주택·분양권 소유 및 예외",
+    "family": "가족 유형별 신청 조건", "provider_employee": "공급기관 임직원 매입 제한 및 예외",
+    "overseas_residence": "해외 연속 체류 90일 초과 제한·생업 예외",
+    "original_contract_ownership": "최초 공고 당첨 후 계약에 따른 주택 소유 판정",
+    "application_restrictions": "전매 위반 등 현재 신청 제한",
 }
 
 
@@ -106,9 +118,9 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
                  for supply in supplies]
     # A positive documented total may be published, but never copied to each
     # family route: shinhee routes compete for the same inventory.
-    total = _match(pages, r"(?:공급대상[^■]{0,160}?잔여(?:세대)?\s*|총\s*)([\d,]+)\s*세대", limit=3)
+    total = _match(pages, r"공급대상[^■❚]{0,160}?잔여(?:세대)?\s*([\d,]+)\s*세대", limit=3) or _match(pages, r"총\s*([\d,]+)\s*세대", limit=3)
     if total and not shinhee:
-        number = re.search(r"([\d,]+)\s*세대", total["text"])
+        number = re.search(r"잔여(?:세대)?\s*([\d,]+)\s*세대", total["text"]) or re.search(r"([\d,]+)\s*세대", total["text"])
         inventory[0]["supply_count"] = int(number[1].replace(",", ""))
     rules.append(make("offered_supplies", effect="metadata", supplies=inventory, inventory_status="verified"))
     domestic = _match(pages, r"(?:국내|대한민국|전국)[^■]{0,180}?(?:만\s*)?19\s*세\s*이상[^■]{0,100}?(?:성년자|인\s*자|무주택세대)")
@@ -192,6 +204,19 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     if cap:
         cap_value = "no" if re.search(r"미적용|비적용|적용되지", cap["text"]) else "yes"
         rules.append(make("price_cap", cap_value, effect="metadata", evidence=cap))
+    gajeong = gajeong_admission(pages, digest=digest, make=make)
+    if gajeong:
+        rules.extend(rule for _, rule in gajeong["facts"])
+        rules.extend(gajeong["metadata"])
+        topic_rules["일반공급"].extend(gajeong["facts"])
+        context["original_announcement_date"] = gajeong["original_announcement_date"]
+        for rule in rules:
+            if rule["kind"] == "domestic_residence":
+                rule["overseas_residence_equivalence"] = True
+        if gajeong["inventory"]:
+            inventory = gajeong["inventory"]
+            rules = [r for r in rules if r["kind"] != "offered_supplies"]
+            rules.append(make("offered_supplies", effect="metadata", supplies=inventory, inventory_status="verified", evidence={"page": 3, "text": " / ".join(s["evidence_text"] for s in inventory)}))
     review = REVIEWED_ADMISSION.get(digest)
     reviewed_pages = {p["page"] for p in pages}
     scopes = []
@@ -200,11 +225,27 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         required = review["topics"] if review else ["age", "domestic_residence"] + (["home_ownership", "family"] if shinhee else [])
         missing = [topic for topic in required if topic not in kinds]
         complete = bool(review and set(review["pages"]) <= reviewed_pages and not missing and (basis == "contract_date" or cutoff))
-        if not complete:
-            missing += ["문서의 나머지 신청 제한·예외 검토"]
+        source_gaps = []
+        if review:
+            absent_pages = sorted(set(review["pages"]) - reviewed_pages)
+            if absent_pages:
+                source_gaps.append({"item": "검토한 원문 페이지 미확보", "pages": absent_pages, "stage": "document_text"})
+            source_gaps.extend({"item": TOPIC_LABELS.get(topic, topic), "topic": topic, "stage": "clause_extraction"} for topic in missing)
+        else:
+            # Concrete unreviewed admission areas, rather than treating
+            # submission or payment procedures as unknown eligibility.
+            source_gaps = [{"item": item, "stage": "admission_review"} for item in (
+                "국내 거주·해외 연속 체류 제한 및 예외", "주택·분양권·기존 사업 계약의 신청 제한 및 예외",
+                "청약 제한의 적용·면제", "공급기관 임직원 매입 제한의 적용·면제")]
+        if basis != "contract_date" and not cutoff:
+            source_gaps.append({"item": "공식 신청 자격 기준일", "stage": "criterion_date"})
+        missing = list(dict.fromkeys([TOPIC_LABELS.get(topic, topic) for topic in missing] + [gap["item"] + (" (" + ", ".join(map(str, gap["pages"])) + "쪽)" if gap.get("pages") else "") for gap in source_gaps]))
         scopes.append({"supply_type":supply,"complete":complete,"verified_rule_count":len(facts),"missing_topics":missing,
-            "topics":[{"topic":topic,"status":"verified","required":True,"rule_ids":[r["id"] for t,r in facts if t==topic]} for topic in kinds]
+            "topics":[{"topic":topic,"status":"verified","required":True,"rule_ids":[r["id"] for t,r in facts if t==topic]} for topic in sorted(kinds)]
                +[{"topic":t,"status":"not_applicable","required":False,"rule_ids":[]} for t in exempt_topics],
+            "source_gaps": source_gaps, "reviewed_document_hash": digest if review else None,
+            "reviewed_section_pages": review.get("reviewed_section_pages", review["pages"]) if review else [],
+            "branches": review.get("branches", []) if review else [],
             "completion_basis":"document_hash_review" if complete else None})
     complete = bool(scopes and all(s["complete"] for s in scopes))
     rules.append(make("condition_coverage", effect="metadata", status="complete" if complete else "partial", scopes=scopes,

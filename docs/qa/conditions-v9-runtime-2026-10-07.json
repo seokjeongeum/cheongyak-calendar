@@ -1,0 +1,114 @@
+{
+  "containers": [
+    {
+      "name": "/cheongyak-cloud-api-1",
+      "image": "sha256:385c7623592f834165707db3b5f6d7b450ddf442ebe1f45a40f0f78312fdb6e5",
+      "state": "running"
+    },
+    {
+      "name": "/cheongyak-cloud-web-1",
+      "image": "sha256:41dbb33bd106a50002006712477ed7b2bf91016e1ce9df08a2f999718bd49f95",
+      "state": "running"
+    },
+    {
+      "name": "/cheongyak-cloud-worker-1",
+      "image": "sha256:8adfe1ce1a484dac217c0805d0ebe461e01a2b5e3efa0962c0241063c51d4f3a",
+      "state": "running"
+    }
+  ],
+  "runtime_code": {
+    "parser_version": "official-sections-2026-10-07-v9",
+    "poll_interval_seconds": 10800,
+    "contract_schedule_fields": [
+      "status",
+      "start_date",
+      "end_date",
+      "verification",
+      "source",
+      "evidence_url",
+      "evidence_text",
+      "evidence_page",
+      "document_hash",
+      "source_hash",
+      "evidence_location"
+    ]
+  },
+  "http": {
+    "checked_at_utc": "2026-10-07T20:30:39.857869+00:00",
+    "base": "http://127.0.0.1:8080",
+    "health_status": 200,
+    "health": {
+      "status": "ok"
+    },
+    "web_status": 200,
+    "api_notices_status": 200,
+    "web_bundle": "/assets/index-C1wcbaAN.js",
+    "evaluation_worker_bundle": "worker-dBs9mKuj.js",
+    "matches_browser_qa_assets": true,
+    "listed_notice_count": 81
+  },
+  "database_preservation": {
+    "existing_tables_identical": true,
+    "tables": {
+      "notices": {
+        "count": 82,
+        "sha256": "e6a3b8d312174c7033315149529817ab6511c2131f924fbeb656b5995b9dec4d"
+      },
+      "competition_revisions": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "notice_events": {
+        "count": 41,
+        "sha256": "d7fb8903b01b49214c918a805c80ee249489bf7d7766172f98bb019bcc1fa8a2"
+      },
+      "notice_revisions": {
+        "count": 135,
+        "sha256": "07e218d768c1dab0fce9592af3913979914abbb76cae02bf0b0699889f3160a2"
+      },
+      "unit_competitions": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "unit_prices": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "phase": "after_api_web_deploy_and_exact_target_reprocess_before_worker_resumes",
+    "target_records_available": 0,
+    "original_wsl_database_attached": false,
+    "local_pg_dump_bytes": 668608
+  },
+  "target_reprocess": {
+    "attempted": 0,
+    "updated": 0,
+    "verified_conditions": 0,
+    "unsupported": 0,
+    "skipped": 0,
+    "failed": 0,
+    "missing_external_ids": [
+      "0000061183",
+      "2026000463",
+      "2026950085",
+      "2026930033",
+      "2026910256",
+      "2026950087",
+      "2015122300020823"
+    ]
+  },
+  "validation": {
+    "api_tests": 256,
+    "web_tests": 382,
+    "browser_checks": 139,
+    "performance_checks": 22,
+    "production_build_passed": true,
+    "docker_images_built": true
+  },
+  "source_document_audit": "conditions-v9-source-2026-10-07.json",
+  "browser_report": "v9-browser-2026-10-07.json",
+  "performance_reports": [
+    "v9-performance-2026-10-07.json",
+    "v9-performance-slow-2026-10-07.json"
+  ]
+}

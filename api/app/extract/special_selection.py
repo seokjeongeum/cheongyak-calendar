@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 
 from .supply_inventory import canonical_unit
+from .application_regions import normalize_region_text
 
 
 def special_selection_rules(sections, *, inventory, rules, make):
@@ -28,7 +29,7 @@ def special_selection_rules(sections, *, inventory, rules, make):
         page_texts = {}
         for line in section["lines"]:
             page_texts.setdefault(line["page"], []).append(line["text"])
-        page_texts = {page: re.sub(r"\s+", " ", " ".join(lines)) for page, lines in page_texts.items()}
+        page_texts = {page: normalize_region_text(" ".join(lines)) for page, lines in page_texts.items()}
         order_fields = {}
         for line in section["lines"]:
             order = re.search(r"당첨자\s*선정\s*순서\s*[:：]\s*([^■※]{0,300})", line["text"])
@@ -78,7 +79,7 @@ def special_selection_rules(sections, *, inventory, rules, make):
                 break
             if supply != "다자녀가구 특별공급":
                 continue
-            quota = re.search(r"[①②③④⑤]\s*지역\s*[:：]\s*해당시\s*[·ㆍ.]\s*도\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)\s*(?:→|⇒|->)\s*기타지역\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)", text)
+            quota = re.search(r"[①②③④⑤]\s*지역\s*[:：]\s*해당시\s*[·ㆍ.]?\s*도\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)\s*(?:→|⇒|->)\s*기타지역\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)", text)
             if not quota or int(quota[1]) + int(quota[3]) != 100 or max(int(quota[1]), int(quota[3])) > 100:
                 continue
             first_names = [name for name in PROVINCES if name in quota[2]]
@@ -87,7 +88,7 @@ def special_selection_rules(sections, *, inventory, rules, make):
             # not merely a municipality whose label begins with 경기도.
             if first_names != ["경기도"] or set(second_names) != {"서울특별시", "인천광역시"} or not re.search(r"(?:및\s*)경기도\s*거주자", quota[2]):
                 continue
-            first_priority = re.search(r"경쟁이\s*있는\s*경우\s*([^()]{1,35}?)\s*거주자\s*우선", text)
+            first_priority = re.search(r"(?:경쟁이\s*있는\s*경우\s*|경쟁시\s*해당\s*주택건설지역\s*)([^()\[\]]{1,35}?)\s*거주자\s*우선", text)
             advance = re.search(r"경기도\s*거주자가\s*50%\s*우선공급에서\s*낙첨될\s*경우[^■]{0,650}?다시\s*경쟁[^■]{0,200}?우선공급\s*요건은\s*적용되지\s*않습니다", text)
             fields = {
                 "regional_shares": [

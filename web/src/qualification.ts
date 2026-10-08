@@ -1,13 +1,13 @@
-import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeRule, type NoticePrice, type OfferedSupply } from './types'
+import { EMPTY_PROFILE, type FactChangeGroup, type LocalProfile, type Notice, type NoticeRule, type NoticePrice, type OfferedSupply } from './types'
 import { matchesRegionScope, scopeIsDistrict, parentCityCode, districtName, resolveLegacyRegion, provinceCode } from './regions'
 import { deriveHousehold } from './household'
-import { evaluateHouseholdOwnership, OWNERSHIP_LAW_URL } from './ownership'
+import { evaluateHouseholdOwnership, evaluatePropertyOwnership, OWNERSHIP_LAW_URL } from './ownership'
 import { contractEvaluationDate, FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, getEvaluationToday } from './factTimeline'
 export { setEvaluationToday } from './factTimeline'
 
 export type EligibilityStatus = 'possible' | 'mismatch' | 'review' | 'unpublished'
 export type ReasonStatus = 'pass' | 'fail' | 'review'
-export type ReasonCategory = 'condition' | 'missing_input' | 'source_gap' | 'unverified' | 'selection'
+export type ReasonCategory = 'condition' | 'missing_input' | 'past_fact' | 'source_gap' | 'unverified' | 'selection'
 export interface EligibilityReason {
   status: ReasonStatus
   label: string
@@ -20,6 +20,8 @@ export interface EligibilityReason {
   category?: ReasonCategory
   profileField?: keyof LocalProfile
   ruleId?: string
+  historyGroup?: FactChangeGroup
+  contractPreview?: boolean
 }
 export interface EligibilityResult { status: EligibilityStatus; reasons: EligibilityReason[] }
 export interface RankResult extends EligibilityResult { rank: 'first' | 'unknown' | 'not_applicable'; label: string }
@@ -87,9 +89,9 @@ function originalAnnouncementDate(notice: Notice): string | null {
 }
 export function criterionDate(rule: NoticeRule, notice: Notice): string | null {
   if (rule.criterion_basis === 'application_date') return getEvaluationToday()
+  if (rule.criterion_basis === 'contract_date') return contractEvaluationDate(notice)
   const specified = rule.criterion_date || rule.reference_date
   if (typeof specified === 'string') return parseDate(specified) ? specified : null
-  if (rule.criterion_basis === 'contract_date') return contractEvaluationDate(notice)
   if (rule.criterion_basis === 'original_announcement') return originalAnnouncementDate(notice)
   if (rule.criterion_basis && !['announcement', 'announcement_date'].includes(String(rule.criterion_basis))) return null
   if (notice.application_method && notice.application_method !== 'apt_ranked' && notice.application_method !== 'unknown') {
@@ -151,10 +153,10 @@ function residenceCutoffReview(rule: NoticeRule, profile: LocalProfile, notice: 
     const label = field === 'movedInDate' ? '시도' : field === 'cityMovedInDate' ? '상위 시 전체' : '시·군·구'
     return missingInput(rule, notice, '공고 기준일 거주지역', `현재 ${label} 연속 거주 시작일을 입력하면 공고 기준일 ${date}의 거주지역을 공식 신청 범위${requirement ? ` ${requirement}` : ''}와 비교할 수 있습니다.`, requirement, field)
   }
-  return { ...reason(rule, notice, 'review', '공고 기준일 거주지역', `현재 ${changed.label} 연속 거주 시작일 ${changed.date}은 공고 기준일 ${date} 이후입니다. 저장된 당시 주소가 없어 과거 거주지역은 판정을 보류합니다.`, `${profile.region} ${profile.district} · ${changed.date}부터`, requirement), category: 'condition' }
+  return { ...reason(rule, notice, 'review', '공고 기준일 거주지역', `현재 ${changed.label} 연속 거주 시작일 ${changed.date}은 공고 기준일 ${date} 이후입니다. 저장된 당시 주소가 없어 과거 거주지역은 판정을 보류합니다.`, `${profile.region} ${profile.district} · ${changed.date}부터`, requirement), category: 'past_fact' }
 }
 function reason(rule: NoticeRule, notice: Notice, status: ReasonStatus, label: string, detail: string, input?: string, requirement?: string): EligibilityReason {
-  return { status, label, detail, input, requirement, category: 'condition', ruleId: rule.id, criterionDate: criterionDate(rule, notice), evidenceUrl: rule.evidence_url || notice.official_url, evidenceText: rule.evidence_text || rule.text }
+  return { status, label, detail, input, requirement, category: 'condition', ruleId: rule.id, criterionDate: criterionDate(rule, notice), evidenceUrl: rule.evidence_url || notice.official_url, evidenceText: rule.evidence_text || rule.text, ...(rule.criterion_basis === 'contract_date' ? { contractPreview: true } : {}) }
 }
 function result(reasons: EligibilityReason[]): EligibilityResult {
   return { status: reasons.some((r) => r.status === 'fail') ? 'mismatch' : reasons.some((r) => r.status === 'review') ? 'review' : reasons.length ? 'possible' : 'unpublished', reasons }
@@ -180,6 +182,7 @@ export function profileFieldForRule(rule: NoticeRule, notice: Notice): keyof Loc
     shinhee_income: 'monthlyIncomeKrw', shinhee_assets: 'officialNetAssetsKrw', planned_marriage: 'plannedMarriage', single_parent_family: 'raisesChildWithoutSpouse',
   }
   if (rule.kind === 'application_restriction' && ['prior_project_winner', 'prior_project_contract'].includes(String(rule.restriction))) return 'applicationHistoryEvents'
+  if (rule.kind === 'original_project_contract_ownership') return 'applicationHistoryEvents'
   if (['previous_winning', 'special_winning'].includes(rule.kind)) return 'applicationHistoryEvents'
   if (rule.kind === 'subscription_months') return notice.housing_kind === 'private' ? 'privateRankBaseDate' : 'nationalRankBaseDate'
   if (rule.kind === 'residence_months') return residenceScopeIsDistrict(rule) ? 'districtMovedInDate' : 'movedInDate'
@@ -188,7 +191,15 @@ export function profileFieldForRule(rule: NoticeRule, notice: Notice): keyof Loc
   return fields[rule.kind]
 }
 function missingInput(rule: NoticeRule, notice: Notice, label: string, detail: string, requirement?: string, field = profileFieldForRule(rule, notice)): EligibilityReason {
+  if (field === 'householdSnapshotDate' && criterionDate(rule, notice) && criterionDate(rule, notice)! < getEvaluationToday()) return { ...reason(rule, notice, 'review', '가족 구성 변경일', detail, undefined, requirement), category: 'past_fact', profileField: field, historyGroup: 'household' }
   return { ...reason(rule, notice, 'review', label, detail, undefined, requirement), category: 'missing_input', profileField: field }
+}
+const HISTORY_LABELS: Record<FactChangeGroup, string> = {
+  household: '가족 구성 변경일', household_head: '세대주 상태 변경일', domestic_residence: '국내 거주 상태 변경일', restrictions: '청약 제한 상태 변경일', overseas: '해외 체류 상태 변경일', military: '군 복무 상태 변경일', income_tax: '소득세 납부 사실 변경일', income: '소득 변경일', assets: '자산 변경일', bank_private: '민영 통장 잔액 변경일', bank_national: '국민 통장 납입 변경일', citizenship: '국적 변경일', employment: '근로 상태 변경일', parent_support: '부양 시작일', marital: '혼인 상태 변경일', children: '자녀 구성 변경일', pregnancy: '임신 상태 변경일', points: '청약가점 사실 변경일', provider_employee: '공급기관 임직원·관련 가족 상태 변경일', ownership: '주택 보유 상태 변경일',
+}
+function pastFact(rule: NoticeRule, notice: Notice, group: FactChangeGroup, detail?: string): EligibilityReason {
+  const date = criterionDate(rule, notice), label = HISTORY_LABELS[group]
+  return { ...reason(rule, notice, 'review', label, detail || `${date} 당시 사실을 확인할 저장된 이력이 없습니다. ${label} 또는 저장된 당시 사실을 입력하면 같은 기준일의 다른 공고에도 재사용합니다.`, undefined, `${date} 당시 사실`), category: 'past_fact', profileField: FACT_GROUP_ANCHORS[group], historyGroup: group }
 }
 function legacyFactObservation(profile: LocalProfile, group: Parameters<typeof factsAtDate>[1]) {
   const observations = {
@@ -230,6 +241,32 @@ function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notic
   if (!covered || !complete || rule.kind === 'special_winning' && applicable.some((event) => event.specialSupply == null)) return missingInput(rule, notice, label, '공고의 확인 대상 사람들의 당첨·계약 이력과 입력 완료 여부를 확인하세요. 다른 사업의 이력은 이 사업의 이력으로 적용하지 않습니다.', '확인 대상 전체의 공통 이력', 'applicationHistoryEvents')
   return { ...factualBoolean(rule, notice, false, label), detail: `확인 대상 ${people.length}명의 공통 이력에서 ${date}까지${project ? ` 사업 ${project}의` : ''} 해당 사건이 없습니다.` }
 }
+function originalProjectContractOwnership(rule: NoticeRule, profile: LocalProfile, notice: Notice): EligibilityReason {
+  const date = criterionDate(rule, notice), original = typeof rule.original_announcement_date === 'string' ? rule.original_announcement_date : null
+  const project = typeof rule.project_id === 'string' && /^(?:\d{10}|LH-[A-Z0-9-]{1,64})$/.test(rule.project_id) ? rule.project_id : null
+  const label = '최초 공고 당첨 후 계약에 따른 주택 소유'
+  if (!date || !original || !parseDate(original) || !project || rule.scope !== 'applicant') return unsupported(rule, notice, '최초 공고일·사업번호·계약에 따른 소유 판정 범위를 확인해야 합니다.', label)
+  const events = (profile.applicationHistoryEvents || []).filter((event) => event.personId === 'applicant' && event.projectId === project && parseDate(event.eventDate) && original <= event.eventDate && event.eventDate <= date && event.eventDate <= getEvaluationToday())
+  const winners = events.filter((event) => event.eventKind === 'winning')
+  const contracts = events.filter((event) => event.eventKind === 'contract' && winners.some((winner) => winner.eventDate <= event.eventDate))
+  if (!contracts.length) {
+    const complete = profile.applicationHistoryPresence === false || profile.applicationHistoryComplete === true
+    if (complete && profile.applicationHistoryPeople?.includes('applicant')) return reason(rule, notice, 'pass', label, `사업 ${project}의 공통 이력에서 최초 당첨 후 계약은 없습니다. 최초 당첨 또는 부적격 판정만으로 이 경로를 제외하지 않습니다.`, winners.length ? '최초 당첨 · 계약 없음' : '최초 당첨 후 계약 없음', '최초 당첨 후 계약으로 인한 주택 소유 아님')
+    return missingInput(rule, notice, '최초 당첨·계약 사건', `최초 공고 ${original}의 사업 ${project}에서 본인이 실제 당첨 후 계약했는지 공통 사건 이력을 확인하세요. 당첨만 있거나 부적격 이력만 있다는 이유로 제외하지 않습니다.`, '본인의 사업별 날짜가 있는 당첨·계약 이력', 'applicationHistoryEvents')
+  }
+  const dates = contracts.map((event) => event.eventDate)
+  const matched = profile.ownershipFacts.filter((fact) => fact.projectId === project && (fact.ownerMemberId || fact.ownerRelation) === 'applicant' && dates.includes(fact.acquiredDate) && fact.propertyKind !== 'officetel')
+  if (!matched.length) return missingInput(rule, notice, '최초 계약 주택의 취득·처분', `사업 ${project}에서 최초 당첨 후 ${dates.join(' · ')}에 계약했습니다. 계약으로 취득한 주택·분양권을 이 사업번호에 연결하고 실제 취득·처분일을 공통 주택 이력에 입력하면 ${date}의 소유 여부와 공식 예외를 비교합니다. 같은 날 취득한 다른 주택을 대신 적용하지 않습니다.`, '해당 사업 계약 주택·권리의 실제 취득·처분 이력', 'ownershipFacts')
+  const context = { criterionDate: date, assessmentDate: getEvaluationToday(), supplyType: rule.supply_type || undefined, publicRental: notice.category === 'public_rental' }
+  const active = profile.ownershipFacts.filter((fact) => fact.propertyKind !== 'officetel' && parseDate(fact.acquiredDate) && fact.acquiredDate <= date && !(parseDate(fact.disposedDate) && fact.disposedDate <= date))
+  const count = active.length > 1 && active.every((fact) => fact.ownedShare === true) ? null : active.length
+  const evaluated = matched.map((fact) => evaluatePropertyOwnership(fact, context, count))
+  const owner = evaluated.find((entry) => entry.counted === true)
+  if (owner) return reason(rule, notice, 'fail', label, `최초 당첨 후 계약으로 취득한 주택·권리를 ${date}에 소유한 것으로 계산합니다. ${owner.detail}`, `${dates.join(' · ')} 계약 · 주택·권리 보유`, '최초 당첨 후 계약으로 인한 주택 소유 아님')
+  const pending = evaluated.find((entry) => entry.counted === null)
+  if (pending) return missingInput(rule, notice, '최초 계약 주택의 소유 예외', pending.detail, '최초 계약 주택의 처분 또는 공식 소유 예외', 'ownershipFacts')
+  return reason(rule, notice, 'pass', label, `최초 당첨 후 계약 이력은 있으나 ${date}의 소유 판정에서는 ${evaluated.map((entry) => entry.detail).join(' / ')}`, '처분 또는 공식 소유 예외', '최초 당첨 후 계약으로 인한 주택 소유 아님')
+}
 function factualSnapshotReview(rule: NoticeRule, notice: Notice, profile: LocalProfile, snapshot: string, confirmations: { criterionDate: string; unchanged: boolean | null }[], field: keyof LocalProfile, label: string): EligibilityReason | null {
   const cutoff = criterionDate(rule, notice)
   if (!cutoff) return unsupported(rule, notice, `${label}을 비교할 공식 기준일이 필요합니다.`, label)
@@ -238,7 +275,7 @@ function factualSnapshotReview(rule: NoticeRule, notice: Notice, profile: LocalP
   if (group && factsAtDate(profile, group, cutoff, { date: snapshot, confirmations }).known) return null
   if (!group && (snapshot === cutoff || confirmations.find((entry) => entry.criterionDate === cutoff)?.unchanged === true)) return null
   if (cutoff >= getEvaluationToday()) return null
-  return missingInput(rule, notice, label, `현재 사실을 ${cutoff}에 적용할 수 있는 변경 시점이나 저장된 당시 사실이 없습니다. 이 사실이 마지막으로 변경된 시점을 입력하세요.`, `${cutoff} 당시 사실`, group ? FACT_GROUP_ANCHORS[group] : field)
+  return group ? pastFact(rule, notice, group) : { ...missingInput(rule, notice, label, `현재 사실을 ${cutoff}에 적용할 저장된 당시 사실이 없습니다.`, `${cutoff} 당시 사실`, field), category: 'past_fact' }
 }
 function factualBoolean(rule: NoticeRule, notice: Notice, actual: boolean | null, label: string): EligibilityReason {
   if (typeof rule.value !== 'boolean') return unsupported(rule, notice, `${label}의 공고 요구값을 아직 정리하지 못했습니다.`, label)
@@ -282,11 +319,7 @@ function scopeProblem(rule: NoticeRule, notice: Notice): string | null {
 export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: Notice, unitType?: string): EligibilityReason {
   if (rule.verification !== 'official') return { ...unsupported(rule, notice, '문서에서 추출한 내용입니다. 원문과 적용 범위를 검토하기 전에는 자격 판정에 사용하지 않습니다.', '자동 추출 참고 내용'), category: 'unverified' }
   if (!rule.evidence_url && !rule.evidence_text && !rule.text && !notice.official_url) return unsupported(rule, notice, '공식 조건의 원문 근거가 제공되지 않아 자동 판정하지 않습니다.', '근거 미공개')
-  if (rule.criterion_basis === 'contract_date' && !rule.criterion_date) {
-    const date = contractEvaluationDate(notice)
-    if (!date) return unsupported(rule, notice, '계약일 현재의 조건입니다. 비교할 공식 계약 일정이 없거나 종료되어 계약일의 사실을 확정할 수 없습니다.', '계약일 기준 조건')
-    rule = { ...rule, criterion_date: date }
-  }
+  if (rule.criterion_basis === 'contract_date') rule = { ...rule, criterion_date: contractEvaluationDate(notice) }
   profile = profileForResidenceDate(profile, criterionDate(rule, notice))
   const problem = scopeProblem(rule, notice)
   if (problem) return unsupported(rule, notice, problem, '적용 범위')
@@ -296,7 +329,10 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const exceptions = exceptionRules.map((r) => evaluateRule(inheritedCondition(rule, r), profile, notice, unitType))
     const base = evaluateRule({ ...rule, exceptions: undefined }, profile, notice, unitType)
     if (exceptions.some((r) => r.status === 'pass')) return reason(rule, notice, 'pass', base.label, `공식 예외 충족: ${exceptions.filter((r) => r.status === 'pass').map((r) => r.detail).join(' / ')}`, base.input, '공식 예외 조건')
-    if (base.status === 'fail' && (exceptionRules.length !== rule.exceptions.length || exceptions.some((r) => r.status === 'review'))) return unsupported(rule, notice, `${base.detail} · 공식 예외 적용 여부가 미확인입니다.`, base.label)
+    if (base.status === 'fail' && (exceptionRules.length !== rule.exceptions.length || exceptions.some((r) => r.status === 'review'))) {
+      const unresolved = exceptions.find((entry) => entry.status === 'review')
+      return unresolved ? { ...unresolved, detail: `${base.detail} · 공식 예외: ${unresolved.detail}`, ruleId: rule.id } : unsupported(rule, notice, `${base.detail} · 공식 예외 조항을 판독하지 못했습니다.`, base.label)
+    }
     return base
   }
   const children = conditionChildren(rule)
@@ -318,23 +354,29 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
       : mode === 'all' ? statuses.includes('fail') ? 'fail' : statuses.includes('review') ? 'review' : 'pass' : 'review'
     // A passing alternative explains the branch that was actually met. Other
     // allowed regions/family routes are alternatives, not personal failures.
-    const explained = mode === 'any' && status === 'pass' ? evaluated.filter((r) => r.status === 'pass') : evaluated
+    const explained = mode === 'any' && status === 'pass' ? evaluated.filter((r) => r.status === 'pass') : mode === 'all' && status === 'fail' ? evaluated.filter((r) => r.status === 'fail') : evaluated
     const inputs = [...new Set(explained.map((r) => r.input).filter((input): input is string => !!input))]
     const requirements = [...new Set(evaluated.map((r) => r.requirement).filter((requirement): requirement is string => !!requirement))]
     const requirement = rule.text || requirements.join(mode === 'any' ? ' 또는 ' : ' 및 ') || undefined
-    return { ...reason(rule, notice, status, typeof rule.label === 'string' ? rule.label : mode === 'any' ? '대체 충족 조건' : '함께 필요한 조건', explained.map((r) => `${r.label}: ${r.detail}`).join(' / '), inputs.length ? inputs.join(' / ') : undefined, requirement), category: status === 'review' && evaluated.some((r) => r.category === 'missing_input') ? 'missing_input' : status === 'review' ? 'source_gap' : 'condition', profileField: status === 'review' ? evaluated.find((r) => r.category === 'missing_input')?.profileField : undefined }
+    const question = evaluated.find((entry) => entry.status === 'review' && ['missing_input', 'past_fact'].includes(entry.category || ''))
+    return { ...reason(rule, notice, status, typeof rule.label === 'string' ? rule.label : mode === 'any' ? '대체 충족 조건' : '함께 필요한 조건', explained.map((r) => `${r.label}: ${r.detail}`).join(' / '), inputs.length ? inputs.join(' / ') : undefined, requirement), category: status === 'review' ? question?.category || 'source_gap' : 'condition', profileField: status === 'review' ? question?.profileField : undefined, historyGroup: status === 'review' ? question?.historyGroup : undefined }
   }
   const date = criterionDate(rule, notice)
+  if (rule.kind === 'overseas_residence' && rule.currently_abroad_only === true) {
+    const domestic = evaluateRule({ ...rule, kind: 'domestic_residence', value: true, overseas_residence_equivalence: undefined, conditions: undefined, exceptions: undefined }, profile, notice, unitType)
+    if (domestic.status === 'review') return domestic
+    if (domestic.status === 'pass') return reason(rule, notice, 'pass', '해외 연속 체류', '공고 기준일에 국내로 귀국해 거주한다고 입력했습니다. 완료된 과거 해외 체류만으로 현재 해외 장기체류자로 제외하지 않습니다.', '기준일 국내 거주', '기준일 현재 연속 해외 체류 90일 초과 아님')
+  }
   const group = factGroupForRule(rule), currentField = profileFieldForRule(rule, notice)
   const currentValue = rule.kind === 'marriage_months_max' ? profile.maritalStatus : group === 'ownership' ? profile.applicantOwnsHome : currentField ? profile[currentField] : undefined
   if (!['children_min', 'newborn_children_min'].includes(rule.kind) && group && currentValue != null && currentValue !== '' && currentValue !== 'unknown') {
     const legacy = legacyFactObservation(profile, group)
     const temporal = factsAtDate(profile, group, date, legacy)
     const actualMarriage = group === 'marital' && profile.maritalStatus === 'married' && parseDate(profile.marriageDate) && date && profile.marriageDate <= date && !profile.factChanges?.marital
-    const actualSupport = rule.kind === 'parent_support_months_min' && parseDate(profile.parentSupportSince)
+    const actualSupport = ['parent_support_months_min', 'parent_same_register'].includes(rule.kind) && parseDate(profile.parentSupportSince) && date && profile.parentSupportSince <= date && (rule.kind !== 'parent_same_register' || profile.parentSameRegister === true)
     const actualOwnership = group === 'ownership' && profile.ownershipFactsKnown === true && profile.ownershipFacts.length > 0 && profile.ownershipFacts.every((fact) => parseDate(fact.acquiredDate))
     if (!date) return unsupported(rule, notice, '이 사실을 비교할 공식 기준일이 확인되지 않았습니다.', '공고 기준일의 사실')
-    if (!temporal.known && !actualMarriage && !actualSupport && !actualOwnership) return missingInput(rule, notice, '공고 기준일의 사실', `공고 기준일 ${date}에 입력한 사실이 유효했는지 확인할 수 없습니다. 이 사실의 마지막 변경 시점을 입력하세요.`, `${date} 당시 사실`, FACT_GROUP_ANCHORS[group])
+    if (!temporal.known && !actualMarriage && !actualSupport && !actualOwnership) return pastFact(rule, notice, group)
     profile = temporal.profile
   }
   if (['residence_months', 'residence_region', 'residence_area', 'region'].includes(rule.kind)) {
@@ -362,16 +404,22 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   if (rule.kind === 'overseas_residence') {
     const maximum = numberFrom(rule.max_continuous_days, true), days = numberFrom(profile.overseasContinuousDays, true)
     if (maximum === null || rule.value_basis !== 'continuous_days_including_reentry_within_7_days') return unsupported(rule, notice, '공고의 해외 체류 기간·재입국 합산 기준이 아직 정리되지 않았습니다.', '해외 거주')
-    if (days === null) return missingInput(rule, notice, '해외 거주', '공고 기준일의 연속 해외 체류 일수를 입력하세요. 계속 국내에 있었다면 0일입니다.', `연속 해외 체류 ${maximum}일 이하 또는 공식 생업 예외`, 'overseasContinuousDays')
+    if (days === null) return missingInput(rule, notice, '해외 거주', `공고 기준일의 연속 해외 체류 일수를 입력하세요. 귀국 후 7일 이내${rule.reentry_same_country === true ? ' 같은 국가로' : ''} 재출국했다면 해당 기간을 포함합니다. 계속 국내에 있었다면 0일입니다.`, `연속 해외 체류 ${maximum}일 이하${rule.livelihood_exception === true ? ' 또는 공식 생업 예외' : ''}`, 'overseasContinuousDays')
     const observed = factualSnapshotReview(rule, notice, profile, profile.overseasFactsAsOfDate, profile.overseasFactsHistoryConfirmations, 'overseasFactsAsOfDate', '해외 거주 사실의 기준일')
     if (observed) return observed
-    if (days <= maximum) return reason(rule, notice, 'pass', '해외 거주', `입력한 연속 해외 체류 ${days}일이 공고의 ${maximum}일 이하 기준을 충족합니다. 귀국 후 7일 이내 재출국 기간을 포함한 입력입니다.`, `${days}일`, `연속 ${maximum}일 이하`)
+    if (days <= maximum) return reason(rule, notice, 'pass', '해외 거주', `입력한 연속 해외 체류 ${days}일이 공고의 ${maximum}일 이하 기준을 충족합니다. 귀국 후 7일 이내${rule.reentry_same_country === true ? ' 같은 국가로' : ''} 재출국 기간을 포함한 입력입니다.`, `${days}일`, `연속 ${maximum}일 이하`)
     if (rule.livelihood_exception === true) {
+      if (rule.livelihood_exception_requires_family === true) {
+        const household = deriveHousehold(profile, date)
+        if (!household.complete) return missingInput(rule, notice, '해외 생업 예외의 가족 구성', household.reviewDetail || '본인 외 공식 세대구성원을 확인하세요.', '본인 외 국내 거주 세대구성원', household.profileField)
+        if (household.legalCount === 1) return reason(rule, notice, 'fail', '해외 거주 생업 예외', `연속 해외 체류 ${days}일이 ${maximum}일을 넘으며, 공고는 단독세대주·동거인 세대에서 구성원으로 인정되지 않는 신청자에게 생업 예외를 허용하지 않습니다.`, `${days}일 · 본인만인 법정 세대`, '본인 외 국내 거주 세대구성원이 있는 생업 예외')
+      }
       if (profile.overseasOnlyApplicantForLivelihood === null) return missingInput(rule, notice, '해외 거주 생업 예외', `연속 해외 체류 ${days}일이 ${maximum}일을 넘습니다. 본인만 생업을 위해 해외에 있고 배우자·확인 대상 가족은 국내에 거주하는지 입력하세요.`, '본인만 생업을 위한 해외 거주 · 나머지 확인 대상 가족 국내 거주', 'overseasOnlyApplicantForLivelihood')
       if (profile.overseasOnlyApplicantForLivelihood === true) return reason(rule, notice, 'pass', '해외 거주 생업 예외', '본인만 생업을 위해 해외에 있으며 확인 대상 가족은 국내에 거주한다고 입력한 사실이 공식 예외에 해당합니다.', `${days}일 · 본인만 생업 해외 거주`, '공식 생업 예외')
     }
-    return reason(rule, notice, 'fail', '해외 거주', `연속 해외 체류 ${days}일은 ${maximum}일을 넘고 공식 생업 예외가 확인되지 않았습니다.`, `${days}일`, `연속 ${maximum}일 이하 또는 공식 생업 예외`)
+    return reason(rule, notice, 'fail', '해외 거주', `연속 해외 체류 ${days}일은 ${maximum}일을 넘고${rule.livelihood_exception === true ? ' 공식 생업 예외에 해당하지 않습니다.' : ' 이 공고에 확인된 체류 예외가 없습니다.'}`, `${days}일`, `연속 ${maximum}일 이하${rule.livelihood_exception === true ? ' 또는 공식 생업 예외' : ''}`)
   }
+  if (rule.kind === 'original_project_contract_ownership') return originalProjectContractOwnership(rule, profile, notice)
   if (rule.kind === 'application_restriction') {
     const scope = String(rule.scope)
     if (!['applicant', 'applicant_spouse', 'household'].includes(scope) || typeof rule.value !== 'boolean') return unsupported(rule, notice, '이 공고의 당첨·계약·제한 확인 범위를 아직 정리하지 못했습니다.', '청약 제한')
@@ -431,6 +479,12 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     if (profile.currentlyDomesticResident == null) return missingInput(rule, notice, '국내 거주', '공고 기준일 현재 국내에 거주하는지 입력하세요.', '국내 거주', 'currentlyDomesticResident')
     const observed = factualSnapshotReview(rule, notice, profile, profile.domesticResidenceFactsAsOfDate || '', profile.domesticResidenceHistoryConfirmations || [], 'domesticResidenceFactsAsOfDate', '국내 거주 사실의 기준일')
     if (observed) return observed
+    if (profile.currentlyDomesticResident === false && rule.overseas_residence_equivalence === true) {
+      const overseas = notice.rules.find((candidate) => candidate.kind === 'overseas_residence' && candidate.verification === 'official' && scopedRule(candidate, unitType, rule.supply_type || singleOfferedSupplyType(notice)) && criterionDate(candidate, notice) === date && (!rule.document_hash || candidate.document_hash === rule.document_hash))
+      if (!overseas) return unsupported(rule, notice, '공고에서 국내 거주로 인정하는 해외 체류 조건의 원문 근거가 미확보입니다.', '국내 거주로 인정되는 해외 체류')
+      const compared = evaluateRule(overseas, profile, notice, unitType)
+      return { ...compared, label: '국내 거주로 인정되는 해외 체류', detail: `현재 해외 체류 여부와 별도로 공고의 국내 거주 인정 범위를 비교합니다. ${compared.detail}`, ruleId: rule.id }
+    }
     return factualBoolean({ ...rule, value: rule.value ?? true }, notice, profile.currentlyDomesticResident, '국내 거주')
   }
   if (rule.kind === 'provider_employee_restriction') {
@@ -670,7 +724,12 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   }
   if (rule.kind === 'age_min' || rule.kind === 'age_max') return numeric(rule, notice, date ? ageAt(profile.dateOfBirth, date) : null, '공고 기준 만 나이', '세', rule.kind === 'age_max' ? '<=' : '>=')
   if (rule.kind === 'parent_age_min') return numeric(rule, notice, date ? ageAt(profile.parentDateOfBirth, date) : null, '부모 만 나이', '세')
-  if (rule.kind === 'parent_support_months_min') return numeric(rule, notice, date && profile.parentSupportSince ? fullMonths(profile.parentSupportSince, date) : null, '부모 연속 부양 기간', '개월')
+  if (rule.kind === 'parent_support_months_min') {
+    const compared = numeric(rule, notice, date && profile.parentSupportSince ? fullMonths(profile.parentSupportSince, date) : null, '부모 연속 부양 기간', '개월')
+    return compared.category === 'missing_input' && !parseDate(profile.parentSupportSince)
+      ? { ...compared, label: '부양 시작일', detail: `같은 등본에서 부모·조부모를 연속 부양하기 시작한 날짜를 입력하세요. 공고 기준일 ${date}까지의 기간을 ${compared.requirement} 조건과 비교하며, 입력한 시작일을 다른 공고에서도 재사용합니다.` }
+      : compared
+  }
   if (rule.kind === 'children_min' || rule.kind === 'newborn_children_min') {
     if (!date) return unsupported(rule, notice, '자녀 수를 비교할 공식 기준일이 필요합니다.', '자녀 수')
     const childState = factsAtDate(profile, 'children', date)
@@ -750,44 +809,78 @@ export function officialOfferedSupplies(notice: Notice): OfferedSupply[] | undef
   const inventory = (notice.rules || []).find((rule) => rule.kind === 'offered_supplies' && rule.effect === 'metadata' && rule.verification === 'official' && Array.isArray(rule.supplies))
   return inventory ? (inventory.supplies as OfferedSupply[]).filter((supply) => supply.verification === 'official' && supply.supply_count !== 0) : undefined
 }
+function singleOfferedSupplyType(notice: Notice): string | undefined {
+  const supplies = [...new Set((officialOfferedSupplies(notice) || []).map((item) => item.supply_type))]
+  return supplies.length === 1 ? supplies[0] : undefined
+}
 
 function scopedRule(rule: NoticeRule, unitType?: string, supplyType?: string): boolean {
-  return (!rule.unit_type || rule.unit_type === unitType) && (!Array.isArray(rule.unit_types) || !!unitType && rule.unit_types.includes(unitType)) && (!rule.supply_type || compact(rule.supply_type) === compact(supplyType || ''))
+  return (!rule.unit_type || rule.unit_type === unitType) && (!Array.isArray(rule.unit_types) || !!unitType && rule.unit_types.includes(unitType)) && (!rule.supply_type || compact(rule.supply_type) === compact(supplyType || '')) && (!Array.isArray(rule.supply_types) || !!supplyType && rule.supply_types.some((supply) => typeof supply === 'string' && compact(supply) === compact(supplyType)))
+}
+
+function applicationProcedure(rule: NoticeRule): boolean {
+  return ['procedure', 'instruction'].includes(String(rule.effect)) || rule.purpose === 'application_instruction' || ['application_instructions', 'document_submission', 'payment_procedure', 'duplicate_application_instruction'].includes(rule.kind)
+}
+function concreteMissingTopic(topic: string): string {
+  return /^(?:문서의 나머지 신청 제한·예외 검토|기타 공식 조건|신청 제한·연령 예외의 전체 검토)$/.test(topic.trim()) ? '신청자격 문단의 필수 조건·면제 검토 기록 미확보' : topic
+}
+function documentUrlIdentity(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  try { const url = new URL(value); url.hash = ''; url.searchParams.sort(); return url.href } catch { return null }
+}
+function latestAttachmentUnreviewed(notice: Notice, reviewed: NoticeRule[]): boolean {
+  const failures = notice.rules.filter((rule) => rule.kind === 'document_diagnostics' && rule.verification === 'official' && ['unreadable', 'error'].includes(String(rule.status)) && Array.isArray(rule.diagnostics))
+  if (!failures.length) return false
+  const urls = new Set(reviewed.filter((rule) => rule.verification === 'official' && typeof rule.document_hash === 'string').map((rule) => documentUrlIdentity(rule.evidence_url)).filter((url): url is string => !!url))
+  if (!urls.size) return false
+  const attachmentStages = ['download', 'conversion', 'decode', 'interpretation']
+  return failures.some((rule) => (rule.diagnostics as Record<string, unknown>[]).some((entry) => {
+    if (!entry || typeof entry !== 'object' || entry.status === 'ok' || !attachmentStages.includes(String(entry.stage))) return false
+    const url = documentUrlIdentity(entry.evidence_url)
+    return !!url && !urls.has(url)
+  }))
 }
 
 export function conditionCoverage(notice: Notice, unitType?: string, supplyType?: string): ConditionCoverage {
   const metadata = (notice.rules || []).filter((r) => r.kind === 'condition_coverage' && r.effect === 'metadata')
-  const scopes = metadata.flatMap((r) => Array.isArray(r.scopes) ? r.scopes.filter((s): s is Record<string, unknown> => !!s && typeof s === 'object').map((scope) => ({ scope, official: r.verification === 'official' })) : [])
-  const matched = scopes.filter(({ scope }) => (!scope.unit_type || scope.unit_type === unitType) && (!scope.supply_type || scope.supply_type === supplyType))
-  const selected = (notice.rules || []).filter((r) => r.effect !== 'metadata' && r.effect !== 'priority' && r.purpose !== 'first_rank' && r.verification === 'official' && (!r.unit_type || r.unit_type === unitType) && (!r.supply_type || r.supply_type === supplyType))
-  const topics = matched.flatMap(({ scope, official }) => official && Array.isArray(scope.topics) ? scope.topics.filter((topic): topic is Record<string, unknown> => !!topic && typeof topic === 'object').map((topic) => ({ topic: String(topic.topic || ''), status: ['verified', 'partial', 'missing', 'not_applicable'].includes(String(topic.status)) ? topic.status as 'verified' | 'partial' | 'missing' | 'not_applicable' : 'missing' as const, ruleIds: Array.isArray(topic.rule_ids) ? topic.rule_ids.filter((id): id is string => typeof id === 'string') : [], required: topic.required !== false, reason: typeof topic.reason === 'string' ? topic.reason : undefined })) : [])
+  const scopes = metadata.flatMap((r) => Array.isArray(r.scopes) ? r.scopes.filter((s): s is Record<string, unknown> => !!s && typeof s === 'object').map((scope) => ({ scope, rule: r, official: r.verification === 'official', documentHash: typeof r.document_hash === 'string' ? r.document_hash : null })) : [])
+  const matched = scopes.filter(({ scope }) => scopedRule({ ...scope, kind: 'condition_coverage' } as NoticeRule, unitType, supplyType))
+  const selected = (notice.rules || []).filter((r) => !applicationProcedure(r) && r.effect !== 'metadata' && r.effect !== 'priority' && r.purpose !== 'first_rank' && r.verification === 'official' && scopedRule(r, unitType, supplyType))
+  const topics = matched.flatMap(({ scope, official }) => official && Array.isArray(scope.topics) ? scope.topics.filter((topic): topic is Record<string, unknown> => !!topic && typeof topic === 'object').map((topic) => ({ topic: String(topic.topic || ''), status: ['verified', 'partial', 'missing', 'not_applicable'].includes(String(topic.status)) ? topic.status as 'verified' | 'partial' | 'missing' | 'not_applicable' : 'missing' as const, ruleIds: Array.isArray(topic.rule_ids) ? topic.rule_ids.filter((id): id is string => typeof id === 'string') : [], required: topic.required !== false && !['application', 'post_selection'].includes(String(topic.phase)), reason: typeof topic.reason === 'string' ? topic.reason : undefined })) : [])
+  const changedDocument = matched.some(({ documentHash }) => documentHash && selected.some((rule) => typeof rule.document_hash === 'string' && rule.document_hash !== documentHash))
+  const pendingAttachment = latestAttachmentUnreviewed(notice, [...selected, ...matched.map(({ rule }) => rule)])
   return {
-    complete: (metadata.length ? matched.length > 0 && matched.every(({ scope, official }) => official && scope.complete === true) : notice.rules_complete === true) && topics.every((topic) => !topic.required || ['verified', 'not_applicable'].includes(topic.status)),
+    complete: !changedDocument && !pendingAttachment && (metadata.length ? matched.length > 0 && matched.every(({ scope, official }) => official && scope.complete === true) : notice.rules_complete === true) && topics.every((topic) => !topic.required || ['verified', 'not_applicable'].includes(topic.status)),
     verifiedCount: selected.length,
-    missingTopics: [...new Set(matched.flatMap(({ scope }) => Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((x): x is string => typeof x === 'string') : []))],
+    missingTopics: [...new Set([...matched.flatMap(({ scope }) => !Array.isArray(scope.topics) && Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((x): x is string => typeof x === 'string').map(concreteMissingTopic) : []), ...topics.filter((topic) => topic.required && !['verified', 'not_applicable'].includes(topic.status)).map((topic) => concreteMissingTopic(topic.reason || topic.topic)), ...(changedDocument ? ['신청 조건과 분기별 검토 기록의 문서 해시 불일치'] : []), ...(pendingAttachment ? ['최신 모집공고 첨부의 신청 제한·면제 원문 미확보'] : [])])],
     status: metadata.length ? String(metadata[metadata.length - 1].status || 'partial') : selected.length ? 'partial' : 'unsupported',
     topics,
   }
 }
 export function evaluateQualification(notice: Notice, profile: LocalProfile = EMPTY_PROFILE, unitType?: string, supplyType?: string): EligibilityResult {
   const inventory = officialOfferedSupplies(notice)
+  supplyType ||= singleOfferedSupplyType(notice)
   if (inventory && supplyType && !inventory.some((supply) => compact(supply.supply_type) === compact(supplyType) && (!unitType || !supply.unit_type || supply.unit_type === unitType))) return { status: 'unpublished', reasons: [{ status: 'review', category: 'selection', label: '모집하지 않는 공급유형', detail: `이 공고는 ${supplyType}${unitType ? ` · ${unitType}` : ''} 조합을 모집하지 않습니다.`, evidenceUrl: notice.official_url }] }
   const coverage = conditionCoverage(notice, unitType, supplyType)
   // Standalone extraction candidates remain available in the collapsed source
   // panel. Once this exact scope has complete official conditions, candidates
   // cannot add another mandatory requirement or invalidate that verified set.
   const completeOfficialScope = coverage.complete && coverage.verifiedCount > 0
-  const relevant = (notice.rules || []).filter((rule) => (!completeOfficialScope || rule.verification === 'official') && rule.effect !== 'metadata' && rule.effect !== 'priority' && rule.purpose !== 'first_rank' &&
-    (!unitType || !rule.unit_type || rule.unit_type === unitType) && (!supplyType || !rule.supply_type || rule.supply_type === supplyType))
-  const selected = relevant.filter((rule) => (!rule.unit_type || !!unitType) && (!rule.supply_type || !!supplyType))
-  const needsSelection = relevant.some((rule) => (rule.unit_type && !unitType) || (rule.supply_type && !supplyType))
+  const relevant = (notice.rules || []).filter((rule) => !applicationProcedure(rule) && (!completeOfficialScope || rule.verification === 'official') && rule.effect !== 'metadata' && rule.effect !== 'priority' && rule.purpose !== 'first_rank' &&
+    (!unitType || (!rule.unit_type || rule.unit_type === unitType) && (!Array.isArray(rule.unit_types) || rule.unit_types.includes(unitType))) && (!supplyType || (!rule.supply_type || compact(rule.supply_type) === compact(supplyType)) && (!Array.isArray(rule.supply_types) || rule.supply_types.includes(supplyType))))
+  const selected = relevant.filter((rule) => scopedRule(rule, unitType, supplyType))
+  const needsSelection = relevant.some((rule) => ((rule.unit_type || Array.isArray(rule.unit_types)) && !unitType) || ((rule.supply_type || Array.isArray(rule.supply_types)) && !supplyType))
   const applicationRegion = applicantRegionEligibility(notice, profile, { unitType, supplyType })
   if (!selected.length && !needsSelection) {
     const gap: EligibilityReason = { status: 'review', category: 'source_gap', label: '공고 조건 정리 중', detail: '공고문 조건을 아직 정리하지 못했습니다. 공식 공고문에서 신청 요건을 확인할 수 있습니다.', evidenceUrl: notice.official_url }
     return applicationRegion ? result([applicationRegion, gap]) : { status: (notice.rules || []).some((rule) => rule.effect === 'priority') ? 'review' : 'unpublished', reasons: [gap] }
   }
-  const reasons = selected.map((rule) => evaluateRule({ ...rule, supply_type: rule.supply_type || supplyType }, profile, notice, unitType))
+  let reasons = selected.map((rule) => evaluateRule({ ...rule, supply_type: rule.supply_type || supplyType }, profile, notice, unitType))
   if (applicationRegion && !reasons.some((entry) => entry.ruleId && entry.ruleId === applicationRegion.ruleId)) reasons.unshift(applicationRegion)
+  // One established failure is sufficient to close this supply path. Asking
+  // its remaining personal facts cannot change that failure; other paths are
+  // still evaluated independently by specialDiagnostics/eligibilityCombinations.
+  if (supplyType && reasons.some((entry) => entry.status === 'fail')) reasons = reasons.filter((entry) => !['missing_input', 'past_fact'].includes(entry.category || ''))
   if (needsSelection) reasons.push({ status: 'review', category: 'selection', label: '유형별 조건 비교', detail: '주택형 또는 공급유형별 조건이 다릅니다. 해당 유형의 근거를 확인하세요.', evidenceUrl: notice.official_url })
   if (supplyType && !isGeneralSupply(supplyType)) {
     const expected: Record<SpecialType, string[]> = {
@@ -797,9 +890,9 @@ export function evaluateQualification(notice: Notice, profile: LocalProfile = EM
     }
     const type = specialType(supplyType), kinds = allKinds(selected)
     const certifiedType = (notice.rules || []).some((rule) => rule.kind === 'condition_coverage' && rule.verification === 'official' && Array.isArray(rule.scopes) && rule.scopes.some((scope) => scope && typeof scope === 'object' && scope.supply_type === supplyType && scope.complete === true))
-    if (!certifiedType && (!expected[type].length || !expected[type].some((kind) => kinds.includes(kind)))) reasons.push({ status: 'review', category: 'source_gap', label: '유형별 추가 조건', detail: `${supplyType}의 세부 요건은 공고문 대조가 더 필요합니다.`, evidenceUrl: notice.official_url })
+    if (!certifiedType && (!expected[type].length || !expected[type].some((kind) => kinds.includes(kind)))) reasons.push({ status: 'review', category: 'source_gap', label: '미확보 유형별 요건', detail: `${supplyType}의 ${expected[type].length ? expected[type].map((kind) => ({ marital_status: '혼인 상태', marriage_months_max: '혼인 기간', newborn_children_min: '신생아 출생 기준', never_owned_home: '과거 주택 소유', children_min: '미성년 자녀 수', parent_age_min: '부양 부모 나이', parent_support_months_min: '연속 부양 기간', recommendation: '기관 추천', age_min: '최소 나이', age_max: '최대 나이', relocated_worker: '이전기관 근로' })[kind]).join('·') : '신청자격 조항'} 원문 근거가 미확보입니다.`, evidenceUrl: notice.official_url })
   }
-  if (!coverage.complete) reasons.push({ status: 'review', category: 'source_gap', label: '추가로 대조할 공고 조건', detail: coverage.missingTopics.length ? `확인한 조건은 위와 같습니다. 남은 공고 조건: ${coverage.missingTopics.join(' · ')}.` : '확인한 조건은 위와 같습니다. 공고의 필수 요건 전체와 예외를 대조하고 있습니다.', evidenceUrl: notice.official_url })
+  if (!coverage.complete && !(needsSelection && !coverage.missingTopics.length)) reasons.push({ status: 'review', category: 'source_gap', label: '미확보 공고 조항', detail: coverage.missingTopics.length ? `서비스가 확보하지 못한 조항·검토 항목: ${coverage.missingTopics.join(' · ')}.` : '이 신청 분기의 필수 요건·면제 검토 기록을 확보하지 못했습니다. 문서 해시에 연결된 분기별 검토 기록이 필요합니다.', evidenceUrl: notice.official_url })
   return result(reasons)
 }
 
@@ -902,16 +995,16 @@ function regionMilitaryException(metadata: NoticeRule, profile: LocalProfile, no
 export function applicantRegionEligibility(notice: Notice, profile: LocalProfile, selection: RegionScopeSelection = {}): EligibilityReason | null {
   let metadata = applicantRegionMetadata(notice, selection)
   if (!metadata) return null
-  if (metadata.criterion_basis === 'contract_date' && !metadata.criterion_date) {
-    const date = contractEvaluationDate(notice)
-    if (!date) return unsupported(metadata, notice, '거주지역은 계약일 현재의 조건입니다. 비교할 공식 계약 일정이 없거나 종료되어 계약일의 사실을 확정할 수 없습니다.', '계약일 기준 거주지역')
-    metadata = { ...metadata, criterion_date: date }
-  }
+  if (metadata.criterion_basis === 'contract_date') metadata = { ...metadata, criterion_date: contractEvaluationDate(notice) }
   const date = criterionDate(metadata, notice)
   profile = profileForResidenceDate(profile, date)
   if (metadata.scope_complete === false) return unsupported(metadata, notice, '공식 신청 지역 범위와 거주 예외를 아직 대조하지 못했습니다.', '신청 가능한 지역')
   if (metadata.domestic_only === true) {
-    const domestic = evaluateRule({ ...metadata, kind: 'domestic_residence', effect: undefined, exceptions: undefined, value: true }, profile, notice)
+    const supplyType = selection.supplyType || singleOfferedSupplyType(notice)
+    const equivalenceRules = notice.rules.filter((rule) => rule.kind === 'domestic_residence' && rule.verification === 'official' && rule.overseas_residence_equivalence === true && criterionDate(rule, notice) === date && (!metadata.document_hash || rule.document_hash === metadata.document_hash))
+    const equivalence = equivalenceRules.find((rule) => scopedRule(rule, selection.unitType, supplyType))
+    const domestic = evaluateRule(equivalence ? { ...equivalence, supply_type: equivalence.supply_type || supplyType } : { ...metadata, kind: 'domestic_residence', effect: undefined, exceptions: undefined, value: true }, profile, notice, selection.unitType)
+    if (domestic.status === 'fail' && !supplyType && equivalenceRules.length) return { ...reason(metadata, notice, 'review', '공급유형별 국내 거주 인정 범위', '공식 해외 체류 예외는 해당 공급유형에만 적용됩니다. 모집 유형별 신청 조건에서 국내 거주 인정 여부를 비교합니다.'), category: 'selection' }
     if (domestic.status !== 'pass') return domestic
   }
   if (metadata.unrestricted === true) return reason(metadata, notice, 'pass', '신청 가능한 지역', '공식 공고는 신청 지역을 제한하지 않습니다. 해당지역 우선배정 여부는 별도로 비교합니다.', `${profile.region} ${profile.district}`.trim() || '주소 입력 불필요', '지역 제한 없음')

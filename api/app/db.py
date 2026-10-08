@@ -25,7 +25,7 @@ def database_url() -> str:
 
 def make_engine(url: str | None = None) -> Engine:
     url = url or database_url()
-    kwargs: dict = {"pool_pre_ping": True}
+    kwargs: dict = {"pool_pre_ping": True, "hide_parameters": True}
     if url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
     return create_engine(url, **kwargs)
@@ -40,10 +40,13 @@ def init_db(target_engine: Engine | None = None) -> None:
     from app import models  # noqa: F401
 
     selected = target_engine or engine
-    Base.metadata.create_all(selected)
     # Additive upgrade for existing installations. No notice or result rows
-    # are replaced. Serialize concurrent API/worker startup on PostgreSQL.
+    # are replaced. Serialize table creation as well as upgrades because
+    # Compose can start the API and worker together against an older database.
     with selected.begin() as connection:
+        if selected.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_xact_lock(hashtext('cheongyak_schema'))"))
+        Base.metadata.create_all(connection)
         if selected.dialect.name == "postgresql":
             connection.execute(text("ALTER TABLE competition_state ADD COLUMN IF NOT EXISTS proof_invalidated BOOLEAN NOT NULL DEFAULT FALSE"))
         elif "proof_invalidated" not in {c["name"] for c in inspect(connection).get_columns("competition_state")}:

@@ -113,6 +113,37 @@ describe('household ownership factual completeness', () => {
     const small = fact({ areaSqm: '20' })
     expect(evaluateHouseholdOwnership({ ...person, ownershipFacts: [small, { ...small, id: 'second' }] }, context).value).toBe(false)
   })
+  it('reviews shared owner records that may describe one 20sqm household dwelling', () => {
+    const small = fact({ areaSqm: '20', ownedShare: true })
+    const profile = { ...person, hasSpouse: true, maritalStatus: 'married' as const, spouseOwnsHome: true,
+      ownershipFacts: [small, { ...small, id: 'spouse-share', ownerRelation: 'spouse' as const, ownerMemberId: 'spouse' }] }
+    const result = evaluateHouseholdOwnership(profile, context)
+    expect(result).toMatchObject({ value: null, countedHomes: null, profileField: 'ownershipFacts' })
+    expect(result.properties.every((property) => property.counted === null && property.clause === 5)).toBe(true)
+    expect(result.detail).toContain('같은 한 주택인지 여러 주택인지')
+  })
+  it('reviews sole low-price exemption when shared records lack physical dwelling identity', () => {
+    const small = fact({ areaSqm: '60', ownedShare: true, valueBasis: 'annex1_official', officialValueKrw: '160000000', valueAsOfDate: '2026-04-30' })
+    const profile = { ...person, hasSpouse: true, maritalStatus: 'married' as const, spouseOwnsHome: true,
+      ownershipFacts: [small, { ...small, id: 'spouse-share', ownerRelation: 'spouse' as const, ownerMemberId: 'spouse' }] }
+    const result = evaluateHouseholdOwnership(profile, context)
+    expect(result).toMatchObject({ value: null, countedHomes: null })
+    expect(result.properties.every((property) => property.counted === null && property.clause === 9)).toBe(true)
+    expect(evaluateHouseholdOwnership({ ...profile, ownershipFacts: profile.ownershipFacts.map((property) => ({ ...property, officialValueKrw: '160000001' })) }, context).value).toBe(false)
+  })
+  it('keeps counted ordinary shared homes and separate sole-title homes definitive', () => {
+    const ordinary = fact({ ownedShare: true })
+    expect(evaluateHouseholdOwnership({ ...person, ownershipFacts: [ordinary, { ...ordinary, id: 'second' }] }, context).value).toBe(false)
+    const small = fact({ areaSqm: '20', ownedShare: true })
+    expect(evaluateHouseholdOwnership({ ...person, ownershipFacts: [small, { ...small, id: 'sole-title', ownedShare: false }] }, context).value).toBe(false)
+  })
+  it('preserves the 60-plus ancestor exemption despite shared dwelling ambiguity', () => {
+    const parents = ['parent-1', 'parent-2'].map((id) => ({ id, relation: 'applicant_parent' as const, register: 'applicant' as const, dateOfBirth: '1950-01-01', ownsHome: true, previouslyOwnedHome: null }))
+    const properties = parents.map((parent) => fact({ id: `${parent.id}-share`, ownerMemberId: parent.id, ownerRelation: 'ascendant', ownerDateOfBirth: parent.dateOfBirth, ownedShare: true, areaSqm: '20' }))
+    const result = evaluateHouseholdOwnership({ ...person, applicantOwnsHome: false, householdMembers: parents, ownershipFacts: properties }, context)
+    expect(result).toMatchObject({ value: true, countedHomes: 0 })
+    expect(result.properties.every((property) => property.counted === false && property.clause === 6)).toBe(true)
+  })
   it('requires factual records for every declared owner group, not a different exempt parent only', () => {
     const parent = fact({ ownerMemberId: 'parent', ownerRelation: 'ascendant', ownerDateOfBirth: '1950-01-01' })
     const result = evaluateHouseholdOwnership({ ...person, householdMembers: [{ id: 'parent', relation: 'applicant_parent', register: 'applicant', dateOfBirth: '1950-01-01', ownsHome: true, previouslyOwnedHome: null }], ownershipFacts: [parent] }, context)

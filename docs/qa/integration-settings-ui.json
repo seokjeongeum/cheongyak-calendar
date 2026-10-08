@@ -1,0 +1,26 @@
+{
+  "checks": [
+    "1280: opens on request",
+    "1280: six direct key links",
+    "1280: unauthorized error",
+    "1280: save clears secrets",
+    "1280: only changed keys submitted",
+    "1280: explicit delete",
+    "1280: new Gemini key resets consent",
+    "1280: no horizontal overflow",
+    "1280: secrets absent from browser storage",
+    "1280: close clears pending secrets",
+    "375: opens on request",
+    "375: six direct key links",
+    "375: unauthorized error",
+    "375: save clears secrets",
+    "375: only changed keys submitted",
+    "375: explicit delete",
+    "375: new Gemini key resets consent",
+    "375: no horizontal overflow",
+    "375: secrets absent from browser storage",
+    "375: close clears pending secrets"
+  ],
+  "passed": 20,
+  "fictional_keys_only": true
+}

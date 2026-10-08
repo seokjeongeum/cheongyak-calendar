@@ -20,7 +20,7 @@ import tempfile
 import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 from xml.etree import ElementTree
 
 import httpx
@@ -28,6 +28,7 @@ from pypdf import PdfReader
 
 from .official_rules import PARSER_VERSION, parse_official_rules
 from .reviewed_sources import reviewed_document_url
+from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
@@ -44,6 +45,7 @@ TRUSTED_HOSTS = (
     "gdco.co.kr",
 )
 DOCUMENT_EXTENSIONS = (".pdf", ".hwp", ".hwpx")
+REVIEWED_PROJECT_DOCUMENTS = {"https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf"}
 
 
 def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error", source_format: str | None = None, http_status: int | None = None) -> dict:
@@ -53,6 +55,7 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "announcement_download_failed": "공식 공고 페이지를 가져오지 못했습니다.",
         "attachment_not_found": "공식 공고 페이지에서 모집공고문 첨부를 찾지 못했습니다.",
         "attachment_found": "공식 모집공고문 첨부를 찾았습니다.",
+        "attachment_fallback_succeeded": "동일한 공식 첨부의 청약홈 www 경로에서 원문을 확보했습니다.",
         "document_download_failed": "공식 모집공고문 파일을 내려받지 못했습니다.",
         "document_downloaded": "공식 모집공고문 파일을 내려받았습니다.",
         "unexpected_response": "첨부 주소가 PDF·HWP·HWPX 문서 대신 다른 응답을 반환했습니다.",
@@ -64,8 +67,16 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "context_not_supported": "공고문은 읽었지만 모집 방식·기준일 또는 신청 조건의 구조를 아직 해석하지 못했습니다.",
         "conditions_parsed": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
         "parser_failed": "공고문 조건을 해석하는 과정에서 오류가 발생했습니다.",
+        "document_changed": "공고문이 변경되어 이전 문서의 지역 조건·신청 제한 검토를 다시 확인합니다.",
     }
     result = {"stage": stage, "code": code, "status": status, "message": messages[code], "evidence_url": url}
+    if status != "ok":
+        result["missing_items"] = {
+            "discovery": ["현재 모집공고문의 첨부 주소"], "download": ["모집공고문 원본"],
+            "conversion": ["변환된 신청자격·지역 조건 문단"], "decode": ["신청자격·지역 조건의 원문 텍스트"],
+            "interpretation": ["공고의 모집 방식·자격 기준일·신청 가능 지역", "공급유형별 신청 제한·면제"],
+            "identity": ["변경된 문서의 지역 조건·신청 제한·면제 검토"],
+        }.get(stage, [])
     if source_format:
         result["source_format"] = source_format
     if http_status is not None:
@@ -102,17 +113,69 @@ def extraction_configured() -> bool:
     billed. A key from a billing-enabled project could incur charges before a
     quota error occurs, so a key alone is deliberately insufficient here.
     """
-    return bool(os.getenv("GEMINI_API_KEY", "").strip()) and os.getenv(
-        "GEMINI_UNBILLED_PROJECT_CONFIRMED", ""
-    ).strip().lower() in {"1", "true", "yes"}
+    from app.integration_settings import setting_value
+    return bool(setting_value("GEMINI_API_KEY")) and setting_value(
+        "GEMINI_UNBILLED_PROJECT_CONFIRMED"
+    ).lower() in {"1", "true", "yes"}
 
 
 def _trusted_url(url: str) -> bool:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
-    return parsed.scheme == "https" and any(
+    return url in REVIEWED_PROJECT_DOCUMENTS or parsed.scheme == "https" and any(
         host == root or host.endswith("." + root) for root in TRUSTED_HOSTS
     )
+
+
+def announcement_page_url(url: str) -> str:
+    """The provider's current public detail view retains the same notice ids."""
+    parsed = urlparse(url)
+    if parsed.hostname in {"www.applyhome.co.kr", "applyhome.co.kr"} and re.fullmatch(
+        r"/ai/aia/select(?:APT|APTRemndr|PRMO|OPT|PBLPVT)LttotPblancDetail\.do", parsed.path):
+        return parsed._replace(path=parsed.path.replace("Detail.do", "DetailView.do")).geturl()
+    return url
+
+
+def applyhome_attachment_fallback_url(url: str) -> str | None:
+    """The same public attachment endpoint also exists on Applyhome's www host."""
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    number = (query.get("houseManageNo") or [""])[0]
+    if (parsed.scheme != "https" or parsed.hostname != "static.applyhome.co.kr"
+            or parsed.path != "/ai/aia/getAtchmnfl.do" or not re.fullmatch(r"\d{10}", number)
+            or (query.get("pblancNo") or [""])[0] != number
+            or not all(re.fullmatch(r"\d+", (query.get(key) or [""])[0]) for key in ("atchmnflSeqNo", "atchmnflSn"))):
+        return None
+    return parsed._replace(netloc="www.applyhome.co.kr").geturl()
+
+
+def _retain_same_hash_regions(previous: list[dict], incoming: list[dict], digest: str) -> list[dict]:
+    """A partial reparse cannot erase a reviewed geographic scope for the same bytes."""
+    def regional(rule):
+        return rule.get("kind") in {"applicant_regions", "regional_allocation", "residence_region"} or any(
+            regional(child) for child in rule.get("conditions", []) if isinstance(child, dict))
+    def scope(rule):
+        return (rule.get("kind"), rule.get("supply_type"), tuple(rule.get("supply_types") or []),
+                rule.get("unit_type"), tuple(rule.get("unit_types") or []))
+    def partial(rule):
+        if rule.get("scope_complete") is False or rule.get("status") in {"partial", "unreadable", "unsupported", "error"}:
+            return True
+        if rule.get("kind") == "applicant_regions":
+            return rule.get("scope_complete") is not True
+        if rule.get("kind") == "regional_allocation":
+            method = rule.get("allocation_method")
+            return not method or method == "unknown" or method == "regional_quota" and not rule.get("regional_shares") and rule.get("local_share_percent") is None
+        return False
+    reviewed = [r for r in previous if regional(r) and r.get("verification") == "official"
+                and r.get("source") == "official_document_parser" and r.get("document_hash") == digest]
+    complete_scopes = {scope(r) for r in reviewed if not partial(r)}
+    # Prefer the prior complete review over a weaker reparse for identical
+    # bytes, instead of publishing two contradictory copies of the scope.
+    incoming = [r for r in incoming if not (regional(r) and partial(r) and scope(r) in complete_scopes)]
+    incoming_scopes = {scope(r) for r in incoming if regional(r)}
+    retained = [{**r, "preserved_review_parser_version": r.get("preserved_review_parser_version") or r.get("parser_version"), "parser_version": PARSER_VERSION}
+                for r in reviewed if scope(r) not in incoming_scopes]
+    return [*incoming, *retained]
 
 
 class _DocumentLinkParser(HTMLParser):
@@ -302,9 +365,25 @@ def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
 
 async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload: dict | None = None) -> dict:
     data, content_type = await _download(url, client)
+    diagnostics = []
+    fallback = applyhome_attachment_fallback_url(url)
+    if fallback and not data.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
+        original_url = url
+        try:
+            alternative, alternative_type = await _download(fallback, client)
+        except (httpx.HTTPError, ValueError) as exc:
+            diagnostics.append(document_diagnostic("download", "document_download_failed", fallback,
+                http_status=exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None))
+        else:
+            if alternative.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
+                diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
+                    "previous_url": original_url})
+                url, data, content_type = fallback, alternative, alternative_type
+            else:
+                diagnostics.append(document_diagnostic("decode", "unexpected_response", fallback))
     digest = hashlib.sha256(data).hexdigest()
     source_format = "pdf" if data.startswith(b"%PDF") else "hwp" if data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") else "hwpx" if data.startswith(b"PK") else "unknown"
-    diagnostics = [document_diagnostic("download", "document_downloaded", url, status="ok", source_format=source_format)]
+    diagnostics.append(document_diagnostic("download", "document_downloaded", url, status="ok", source_format=source_format))
     try:
         pages = document_pages(url, data, content_type)
     except Exception:
@@ -329,7 +408,9 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
         result["rules"] = [{"kind": "condition_coverage", "effect": "metadata", "verification": "official",
             "source": "official_document_parser", "parser_version": PARSER_VERSION,
             "document_hash": digest, "evidence_url": url, "status": result["status"], "scopes": [], "offered_supply_types": [], "covered_supply_types": []}]
-    return {**result, "document_hash": digest, "data": data, "content_type": content_type, "diagnostics": diagnostics}
+    # An HTML error returned with HTTP 200 is not a changed announcement.
+    # Keep its processing failure, without replacing the last PDF identity.
+    return {**result, "document_hash": digest if source_format != "unknown" else None, "data": data, "content_type": content_type, "diagnostics": diagnostics}
 
 
 def _clean_extraction(raw: dict, url: str, digest: str) -> dict:
@@ -405,7 +486,8 @@ async def extract_document(
     """Return unverified extraction candidates from one public official document."""
     if not extraction_configured():
         raise ExtractionDeferred("A key from a confirmed unbilled Gemini project is required")
-    key = os.environ["GEMINI_API_KEY"].strip()
+    from app.integration_settings import setting_value
+    key = setting_value("GEMINI_API_KEY")
     if not _trusted_url(url):
         raise ValueError("Only official public announcement URLs are accepted")
     owns_client = client is None
@@ -466,11 +548,16 @@ async def enrich_notice(
             links = [official_url]
         else:
             try:
-                page_bytes, content_type = await _download(official_url, client)
+                current_page_url = announcement_page_url(official_url)
+                page_bytes, content_type = await _download(current_page_url, client)
                 if page_bytes.startswith((b"%PDF", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", b"PK")) or "application/pdf" in content_type.lower():
                     links = [official_url]
                 else:
-                    links = find_document_links(page_bytes.decode("utf-8", errors="replace"), official_url)
+                    page_html = page_bytes.decode("utf-8", errors="replace")
+                    links = find_document_links(page_html, current_page_url)
+                    detail_contract = parse_lh_detail_contract_schedule(page_html, url=official_url, external_id=payload.get("external_id"))
+                    if detail_contract:
+                        enriched["rules"] = [r for r in enriched.get("rules", []) if not (r.get("kind") == "contract_schedule" and r.get("source") == "lh_official_detail")] + [detail_contract]
             except (httpx.HTTPError, ValueError) as exc:
                 code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
                 diagnostics.append(document_diagnostic("discovery", "announcement_download_failed", official_url, http_status=code))
@@ -513,14 +600,15 @@ async def enrich_notice(
                     pass
             if conditions:
                 break
-        if best is None:
+        if best is None or not best.get("document_hash"):
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         digest = best["document_hash"]
         changed = bool(known_document_hash and digest != known_document_hash)
-        existing_rules = list(payload.get("rules") or [])
+        existing_rules = list(enriched.get("rules") or [])
         existing_prices = list(payload.get("prices") or [])
         has_facts = any(r.get("effect") != "metadata" for r in best.get("rules", []))
         if changed:
+            diagnostics.append(document_diagnostic("identity", "document_changed", link, status="partial"))
             existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser" and r.get("verification") not in {"ai_unverified", "auto_unverified"}]
             existing_prices = [p for p in existing_prices if p.get("verification") not in {"ai_unverified", "auto_unverified"}]
             enriched["replace_rules"] = True
@@ -528,7 +616,8 @@ async def enrich_notice(
         # An unchanged, temporarily unreadable source keeps its reviewed facts.
         # A successful parse replaces local facts, rather than appending copies.
         if has_facts or changed or not any(r.get("source") == "official_document_parser" and r.get("effect") != "metadata" for r in existing_rules):
-            existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser"] + best.get("rules", [])
+            parsed_rules = best.get("rules", []) if changed else _retain_same_hash_regions(existing_rules, best.get("rules", []), digest)
+            existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser"] + parsed_rules
             enriched["replace_rules"] = True
             coverage = next((r for r in best.get("rules", []) if r.get("kind") == "condition_coverage"), {})
             enriched["rules_complete"] = coverage.get("status") == "complete"

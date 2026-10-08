@@ -8,10 +8,14 @@ from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import request_validation_exception_handler
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import get_session, init_db
+from app.integration_settings import router as integrations_router
 from app.models import Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
 from app.schemas import CoveragePublic, HealthPublic, NoticeDetail, NoticePage, NoticePublic, SourceStatusPublic
@@ -31,9 +35,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=False,
-    allow_methods=["GET"],
-    allow_headers=["Accept", "Content-Type"],
+    allow_methods=["GET", "PUT"],
+    allow_headers=["Accept", "Content-Type", "Authorization"],
 )
+app.include_router(integrations_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    # Standard validation errors echo submitted inputs, including secrets.
+    if request.url.path == "/api/integrations":
+        return JSONResponse(status_code=422, content={"detail": "연결 설정 형식을 확인하세요."}, headers={"Cache-Control": "no-store"})
+    return await request_validation_exception_handler(request, exc)
 
 
 @app.get("/health", response_model=HealthPublic)

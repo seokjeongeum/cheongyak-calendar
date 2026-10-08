@@ -1,0 +1,38 @@
+{
+  "mode": "existing_postgresql_public_tables",
+  "tables": {
+    "notices": {
+      "count": 82,
+      "sha256": "e6a3b8d312174c7033315149529817ab6511c2131f924fbeb656b5995b9dec4d"
+    },
+    "competition_revisions": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "notice_events": {
+      "count": 41,
+      "sha256": "d7fb8903b01b49214c918a805c80ee249489bf7d7766172f98bb019bcc1fa8a2"
+    },
+    "notice_revisions": {
+      "count": 135,
+      "sha256": "07e218d768c1dab0fce9592af3913979914abbb76cae02bf0b0699889f3160a2"
+    },
+    "unit_competitions": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "unit_prices": {
+      "count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "target_ids": [
+    "0000061183",
+    "2026000463",
+    "2026950085",
+    "2026930033",
+    "2026910256",
+    "2026950087",
+    "2015122300020823"
+  ]
+}

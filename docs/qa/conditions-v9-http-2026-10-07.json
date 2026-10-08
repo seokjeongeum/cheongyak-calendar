@@ -1,0 +1,14 @@
+{
+  "checked_at_utc": "2026-10-07T20:30:39.857869+00:00",
+  "base": "http://127.0.0.1:8080",
+  "health_status": 200,
+  "health": {
+    "status": "ok"
+  },
+  "web_status": 200,
+  "api_notices_status": 200,
+  "web_bundle": "/assets/index-C1wcbaAN.js",
+  "evaluation_worker_bundle": "worker-dBs9mKuj.js",
+  "matches_browser_qa_assets": true,
+  "listed_notice_count": 81
+}

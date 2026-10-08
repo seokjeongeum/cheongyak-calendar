@@ -40,14 +40,22 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed, make):
 
     # Qualifying sentences must explicitly state applicant scope; statutory
     # family definitions or a sale address are not eligibility requirements.
-    region = find(r"(?:무순위\s*\(?사후\)?\s*)?입주자모집공고일\s*현재\s*(?:" + "|".join(regions) + r")[^■]{0,180}?거주[^■]{0,80}?무주택\s*세대(?:구성원|주|의\s*세대주)")
+    region = find(r"(?:무순위\s*\(?사후\)?\s*)?입주자모집공고일\s*현재\s*[^■]{0,120}?(?:" + "|".join(regions) + r")[^■]{0,180}?거주[^■]{0,80}?무주택\s*세대(?:구성원|주|의\s*세대주)")
     if region:
         names = [name for name in regions if re.search(re.escape(name) + r"(?:에|에서)?\s*거주", region["quote"])]
+        capital = re.search(r"수도권\s*\(([^)]*)\)(?:에|에서)?\s*거주", region["quote"])
+        if capital and {name for name in regions if name in capital[1]} == {"경기도", "서울특별시", "인천광역시"}:
+            names = [name for name in regions if name in capital[1]]
         if len(names) == 1:
             name = names[0]
             rules.append(make("residence_region", supply="일반공급", region_code=regions[name], region_name=name, **region))
             rules.append(make("applicant_regions", effect="metadata", scope_complete=True, regions=[{"region_code": regions[name], "region_name": name}],
                               local_priority={"region_code": regions[name], "region_name": name, "min_months": 0, "criterion_date": cutoff}, **region))
+        elif len(names) > 1:
+            rules.append(make("any", supply="일반공급", label="신청 가능한 거주지역", conditions=[
+                make("residence_region", region_code=regions[name], region_name=name, **region) for name in names], **region))
+            rules.append(make("applicant_regions", effect="metadata", scope_complete=True, priority_applicable=False,
+                regions=[{"region_code": regions[name], "region_name": name} for name in names], **region))
         rules.append(make("homeless", True, supply="일반공급", unit="boolean", **region))
         if re.search(r"무주택\s*세대(?:주|의\s*세대주)", region["quote"]):
             rules.append(make("household_head", True, supply="일반공급", **region))

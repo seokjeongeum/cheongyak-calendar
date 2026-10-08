@@ -58,7 +58,7 @@ def regional_supplement(pages, *, reviewed, cutoff, make):
 
 def residual_special_conditions(pages, *, reviewed, offered, make):
     """The two reviewed cancellation documents have different actual subtypes."""
-    if not reviewed or reviewed["title"] not in {"고양 장항 아테라", "탕정 푸르지오 리버파크"}:
+    if not reviewed or reviewed["title"] not in {"고양 장항 아테라", "탕정 푸르지오 리버파크", "도안 푸르지오 디아델 29블록"}:
         return []
     def anchor(pattern, limit=900):
         for page in pages:

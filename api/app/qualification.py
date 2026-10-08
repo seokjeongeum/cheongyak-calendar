@@ -20,8 +20,13 @@ APPLICATION_METHODS = {"apt_ranked", "unranked_after", "optional_supply", "cance
 def public_contract_schedule(rules: list[dict[str, Any]], *, contract_events: list[dict] | None = None) -> ContractSchedulePublic:
     """Project verified schedules; event callers supply only official contracts."""
     candidates = [r for r in rules if r.get("kind") == "contract_schedule" and r.get("verification") == "official"]
+    # LH's current detail specifies the administratively published closing
+    # date while an attached first-come PDF may say "until further notice".
+    # Prefer only that explicit official detail field, never a posting expiry.
+    detail = [r for r in candidates if r.get("source") == "lh_official_detail" and r.get("status") in {"fixed", "range"}
+              and r.get("evidence_location") == "#sta_ctrtDt" and r.get("source_hash")]
     documents = [r for r in candidates if r.get("document_hash")]
-    candidates = documents or candidates
+    candidates = detail or documents or candidates
     valid = []
     for row in candidates:
         status = row.get("status")

@@ -125,6 +125,8 @@ class ContractSchedulePublic(BaseModel):
     evidence_text: str | None = None
     evidence_page: int | None = None
     document_hash: str | None = None
+    source_hash: str | None = None
+    evidence_location: str | None = None
 
 
 class NoticePublic(BaseModel):

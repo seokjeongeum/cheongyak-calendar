@@ -1,6 +1,7 @@
 import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeEvent, type NoticeCompetition, type OfferedSupply } from './types'
 import { competitionUnitKey, competitionRowUnavailable, generalCompetition, generalPriorityEvent, type CompetitionDecision } from './competition'
 import { evaluateQualification, evaluateRule, offeredSpecialSupplies, isGeneralSupply, officialOfferedSupplies as qualificationInventory, type EligibilityReason, type EligibilityResult } from './qualification'
+import { getEvaluationToday } from './factTimeline'
 export { ELIGIBILITY_LABEL, deriveRank, unitRankResults, specialDiagnostics, specialType, offeredSpecialSupplies, evaluateRule, conditionCoverage } from './qualification'
 export type { EligibilityStatus, ReasonStatus, EligibilityReason, EligibilityResult, RankResult, SpecialDiagnosis, SpecialType } from './qualification'
 // Public notices and profiles are immutable within one worker revision.
@@ -11,7 +12,7 @@ export function evaluateEligibility(notice: Notice, profile: LocalProfile = EMPT
   if (!profiles) { profiles = new WeakMap(); evaluationCache.set(notice, profiles) }
   let results = profiles.get(profile)
   if (!results) { results = new Map(); profiles.set(profile, results) }
-  const key = `${unitType || ''}\u0000${supplyType || ''}`
+  const key = `${getEvaluationToday()}\u0000${unitType || ''}\u0000${supplyType || ''}`
   let result = results.get(key)
   if (!result) { result = evaluateQualification(notice, profile, unitType, supplyType); results.set(key, result) }
   return result
@@ -178,7 +179,7 @@ export function eligibilityCombinations(notice: Notice, profile: LocalProfile = 
 }
 
 export function reasonKey(reason: EligibilityReason): string {
-  return JSON.stringify([reason.status, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.evidenceUrl, reason.evidenceText, reason.profileField])
+  return JSON.stringify([reason.status, reason.category, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.evidenceUrl, reason.evidenceText, reason.profileField, reason.contractPreview, reason.historyGroup])
 }
 export function uniqueReasons(reasons: EligibilityReason[]): EligibilityReason[] {
   return [...new Map(reasons.map((reason) => [reasonKey(reason), reason])).values()]
@@ -187,8 +188,11 @@ export function actionableReasons(reasons: EligibilityReason[]): EligibilityReas
   return uniqueReasons(reasons.filter((reason) => !['source_gap', 'unverified', 'selection'].includes(reason.category || '')))
 }
 
-export interface SourceDiagnostic { stage: string; code: string; message: string; evidenceUrl?: string; sourceFormat?: string; httpStatus?: number }
-export interface RemainingConditionTopic { label: string; scopes: string[]; reason?: string }
+export interface SourceDiagnostic { stage: string; code: string; message: string; evidenceUrl?: string; sourceFormat?: string; httpStatus?: number; missingItems?: string[] }
+export interface RemainingConditionTopic { label: string; scopes: string[]; reason?: string; evidenceUrl?: string; evidenceText?: string; evidencePage?: number; documentHash?: string }
+function remainingTopicLabel(value: string): string {
+  return /^(?:문서의 나머지 신청 제한·예외 검토|기타 공식 조건|신청 제한·연령 예외의 전체 검토)$/.test(value.trim()) ? '신청자격 문단의 필수 조건·면제 검토 기록 미확보' : value
+}
 export function conditionSourceStatus(notice: Notice): { diagnostics: SourceDiagnostic[]; topics: RemainingConditionTopic[] } {
   const diagnostics = new Map<string, SourceDiagnostic>()
   const topics = new Map<string, RemainingConditionTopic>()
@@ -199,25 +203,59 @@ export function conditionSourceStatus(notice: Notice): { diagnostics: SourceDiag
       const diagnostic = { stage: String(item.stage || 'interpretation'), code: String(item.code || ''), message: item.message,
         evidenceUrl: typeof item.evidence_url === 'string' ? item.evidence_url : undefined,
         sourceFormat: typeof item.source_format === 'string' ? item.source_format : undefined,
-        httpStatus: typeof item.http_status === 'number' ? item.http_status : undefined }
+        httpStatus: typeof item.http_status === 'number' ? item.http_status : undefined,
+        missingItems: Array.isArray(item.missing_items) ? item.missing_items.filter((value: unknown): value is string => typeof value === 'string' && !!value.trim()) : undefined }
       diagnostics.set(JSON.stringify([diagnostic.stage, diagnostic.code, diagnostic.message]), diagnostic)
     }
     if (rule.kind !== 'condition_coverage' || !Array.isArray(rule.scopes)) continue
     for (const scope of rule.scopes) {
       if (!scope || typeof scope !== 'object') continue
       const scopeLabel = [scope.supply_type, scope.unit_type].filter((value) => typeof value === 'string' && value).join(' · ')
-      const remaining: Record<string, unknown>[] = Array.isArray(scope.topics) ? scope.topics.filter((item: unknown): item is Record<string, unknown> => !!item && typeof item === 'object' &&
-        (item as Record<string, unknown>).required !== false && !['verified', 'not_applicable'].includes(String((item as Record<string, unknown>).status))) : []
-      const labels: Record<string, unknown>[] = remaining.length ? remaining : (Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((label: unknown): label is string => typeof label === 'string').map((topic: string) => ({ topic })) : [])
+      const hasTopics = Array.isArray(scope.topics)
+      const remaining: Record<string, unknown>[] = hasTopics ? (scope.topics as unknown[]).filter((item: unknown): item is Record<string, unknown> => !!item && typeof item === 'object' &&
+        (item as Record<string, unknown>).required !== false && !['application', 'post_selection'].includes(String((item as Record<string, unknown>).phase)) &&
+        !['verified', 'not_applicable'].includes(String((item as Record<string, unknown>).status))) : []
+      // A reviewed topic list can deliberately contain only instructions or
+      // exempt requirements. Do not reintroduce stale legacy missing_topics.
+      const labels: Record<string, unknown>[] = hasTopics ? remaining : (Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((label: unknown): label is string => typeof label === 'string').map((topic: string) => ({ topic })) : [])
       for (const item of labels) {
         if (typeof item.topic !== 'string' || !item.topic.trim()) continue
-        const previous = topics.get(item.topic)
+        const label = remainingTopicLabel(item.topic)
+        const key = JSON.stringify([label, item.reason, item.evidence_text, item.document_hash || rule.document_hash])
+        const previous = topics.get(key)
         if (previous) { if (scopeLabel && !previous.scopes.includes(scopeLabel)) previous.scopes.push(scopeLabel) }
-        else topics.set(item.topic, { label: item.topic, scopes: scopeLabel ? [scopeLabel] : [], reason: typeof item.reason === 'string' ? item.reason : undefined })
+        else topics.set(key, { label, scopes: scopeLabel ? [scopeLabel] : [], reason: typeof item.reason === 'string' ? item.reason : undefined,
+          evidenceUrl: typeof item.evidence_url === 'string' ? item.evidence_url : typeof rule.evidence_url === 'string' ? rule.evidence_url : undefined,
+          evidenceText: typeof item.evidence_text === 'string' ? item.evidence_text : undefined,
+          evidencePage: typeof item.evidence_page === 'number' ? item.evidence_page : undefined,
+          documentHash: typeof item.document_hash === 'string' ? item.document_hash : typeof rule.document_hash === 'string' ? rule.document_hash : undefined })
       }
     }
   }
   return { diagnostics: [...diagnostics.values()], topics: [...topics.values()] }
+}
+
+export interface SupplyInventorySummary { totalHouseholds: number; currentSupplyCount: number; evidenceUrl?: string; evidenceText?: string }
+/** Distinguish a development's total homes from the offer in this notice. */
+export function supplyInventorySummary(notice: Notice): SupplyInventorySummary | undefined {
+  const rule = (notice.rules || []).find((item) => item.kind === 'supply_inventory_summary' && item.effect === 'metadata' && item.verification === 'official' &&
+    typeof item.total_households === 'number' && Number.isInteger(item.total_households) && item.total_households > 0 &&
+    typeof item.current_supply_count === 'number' && Number.isInteger(item.current_supply_count) && item.current_supply_count >= 0 && item.current_supply_count <= item.total_households)
+  return rule ? { totalHouseholds: rule.total_households as number, currentSupplyCount: rule.current_supply_count as number,
+    evidenceUrl: rule.evidence_url || undefined, evidenceText: rule.evidence_text || undefined } : undefined
+}
+
+export interface ApplicationInstruction { label: string; detail: string; evidenceUrl?: string; evidenceText?: string; evidencePage?: number }
+/** Actions when applying do not count as an unanswered personal condition. */
+export function applicationInstructions(notice: Notice): ApplicationInstruction[] {
+  const rows: ApplicationInstruction[] = []
+  for (const rule of notice.rules || []) if (rule.kind === 'application_instructions' && rule.effect === 'metadata' && rule.verification === 'official' && Array.isArray(rule.instructions)) {
+    for (const item of rule.instructions) if (item && typeof item === 'object' && item.phase !== 'post_selection' && typeof item.label === 'string' && typeof item.detail === 'string') {
+      rows.push({ label: item.label, detail: item.detail, evidenceUrl: typeof item.evidence_url === 'string' ? item.evidence_url : rule.evidence_url || undefined,
+        evidenceText: typeof item.evidence_text === 'string' ? item.evidence_text : undefined, evidencePage: typeof item.evidence_page === 'number' ? item.evidence_page : undefined })
+    }
+  }
+  return [...new Map(rows.map((row) => [JSON.stringify([row.label, row.detail]), row])).values()]
 }
 
 export function rankUnitComparisons(notice: Notice, profile: LocalProfile): { units: string[]; reasons: EligibilityReason[] }[] {

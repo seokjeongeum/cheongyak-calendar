@@ -89,6 +89,52 @@ async def test_audit_merges_document_only_after_concurrent_feed_and_is_idempoten
 
 
 @pytest.mark.asyncio
+async def test_official_external_id_filter_does_not_reprocess_unrelated_retained_notices(store, monkeypatch):
+    wanted = seed(store, external_id="2026930033")
+    seed(store, external_id="2026910256")
+    downloaded = []
+    async def local(snapshot, **kwargs):
+        downloaded.append(snapshot["external_id"])
+        return snapshot
+    monkeypatch.setattr(reprocess, "enrich_notice", local)
+    result = await reprocess.reprocess(external_ids=["2026930033", "2026950087", "2026930033"], all_targets=True)
+    assert downloaded == ["2026930033"]
+    assert result["attempted"] == 1
+    assert result["records"][0]["notice_id"] == wanted
+    assert result["missing_external_ids"] == ["2026950087"]
+    with store() as session:
+        assert session.get(SourceStatus, "official_conditions").status == "partial"
+
+
+@pytest.mark.asyncio
+async def test_missing_official_external_ids_report_absent_originals_and_never_fall_back_to_all(store, monkeypatch):
+    seed(store)
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("A missing explicit target must not trigger unrelated source downloads")
+    monkeypatch.setattr(reprocess, "enrich_notice", forbidden)
+    result = await reprocess.reprocess(external_ids=["2026950087", "2026950085"], all_targets=True)
+    assert result["attempted"] == result["updated"] == result["failed"] == 0
+    assert result["records"] == []
+    assert result["missing_external_ids"] == ["2026950087", "2026950085"]
+    with store() as session:
+        state = session.get(SourceStatus, "official_conditions")
+        assert state.status == "partial" and "저장된 원본이 없는 지정 공고 2개" in state.message
+
+
+@pytest.mark.asyncio
+async def test_uuid_and_official_external_id_filters_intersect(store, monkeypatch):
+    first = seed(store, external_id="2026950085")
+    seed(store, external_id="2026950087")
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("Independent explicit filters should intersect")
+    monkeypatch.setattr(reprocess, "enrich_notice", forbidden)
+    result = await reprocess.reprocess(ids=[first], external_ids=["2026950087"], all_targets=True, dry_run=True)
+    assert result["attempted"] == 0 and result["missing_external_ids"] == []
+    with pytest.raises(ValueError):
+        await reprocess.reprocess(external_ids=[""], all_targets=True)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("correction", [
     {"official_url": "https://www.applyhome.co.kr/corrected/1"},
     {"announcement_date": "2026-10-03"},
