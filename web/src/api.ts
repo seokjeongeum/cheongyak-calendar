@@ -4,7 +4,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 async function getJson<T>(path: string, params?: URLSearchParams, signal?: AbortSignal): Promise<T> {
   const url = `${API_BASE}${path}${params ? `?${params}` : ''}`
-  const response = await fetch(url, { headers: { Accept: 'application/json' }, signal })
+  const response = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store', signal })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   return response.json() as Promise<T>
 }
@@ -41,8 +41,33 @@ export function getCoverage(signal?: AbortSignal): Promise<CoverageResponse> {
 
 export interface IntegrationSettingsResponse {
   admin_initialized: boolean
+  admin_setup_url?: string | null
   services: { name: string; label: string; key_url: string; configured: boolean; storage: string; uses_shared_key: boolean }[]
   gemini_unbilled_confirmed: boolean
+}
+
+export interface CollectionStatus {
+  job_id: string | null
+  status: 'idle' | 'running' | 'completed' | 'error' | 'interrupted'
+  trigger: string | null
+  started_at: string | null
+  finished_at: string | null
+  message: string
+}
+
+export function getCollectionStatus(signal?: AbortSignal): Promise<CollectionStatus> {
+  return getJson<CollectionStatus>('/api/collection', undefined, signal)
+}
+
+export async function startCollection(token: string): Promise<CollectionStatus> {
+  const response = await fetch(`${API_BASE}/api/collection`, {
+    method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    cache: 'no-store', referrerPolicy: 'no-referrer',
+  })
+  if (!response.ok) throw new Error(response.status === 401
+    ? '수집을 시작하려면 관리자 인증키를 확인하세요.'
+    : '수집을 시작하지 못했습니다. 저장된 설정을 유지하며 다시 시도할 수 있습니다.')
+  return response.json() as Promise<CollectionStatus>
 }
 
 export function getIntegrationSettings(): Promise<IntegrationSettingsResponse> {

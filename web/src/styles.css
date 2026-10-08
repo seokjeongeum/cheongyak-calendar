@@ -255,6 +255,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .coverage-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:19px}
 .coverage-heading svg{color:#b5c7df}
 .coverage-heading h2{font-size:22px}
+.coverage-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:0 0 14px}
+.coverage-controls>span,.collection-status{font-size:13px;line-height:1.65;color:#596675}
 .coverage-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .coverage-item{display:flex;align-items:center;gap:11px;border:1px solid #e6ebf3;background:#fff;border-radius:10px;padding:15px;min-width:0}
 .source-icon{display:grid;place-items:center;height:34px;width:34px;border-radius:9px;flex-shrink:0}
@@ -466,6 +468,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .integration-service-heading a { display: inline-flex; gap: 4px; align-items: center; color: #146a54; font-size: 12px; }
 .integration-key-row { display: flex; gap: 8px; margin-top: 8px; }
 .integration-key-row button { flex-shrink: 0; }
+.integration-provider-links { margin-top: 22px; }
+.integration-provider-links h4 { margin: 0 0 10px; font-size: 14px; }
+.integration-provider { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #e2e8ee; }
+.integration-provider > div { min-width: 0; display: grid; gap: 4px; }
+.integration-provider strong { font-size: 13px; overflow-wrap: anywhere; }
+.integration-provider a { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; color: #146a54; font-size: 12px; }
+.integration-overrides { margin-top: 18px; }
+.integration-overrides > summary { font-size: 13px; font-weight: 600; cursor: pointer; }
+.integration-overrides .integration-services { margin-top: 12px; }
+.integration-admin a { display: inline-flex; align-items: center; gap: 4px; color: #146a54; }
+.integration-admin-required { padding: 9px 11px; background: #f4f7fc; border-radius: 8px; }
+.integration-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
 .integration-confirm { display: flex; gap: 8px; align-items: flex-start; margin-top: 20px; font-size: 13px; line-height: 1.6; }
 .integration-confirm input { margin-top: 4px; flex-shrink: 0; }
 @media (max-width: 600px) { .integration-services { grid-template-columns: 1fr; } .integration-form { padding: 16px; } }

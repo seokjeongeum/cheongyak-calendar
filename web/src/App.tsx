@@ -4,7 +4,7 @@ import {
   CircleAlert, Clock3, Database, ExternalLink, Info, ListFilter, LockKeyhole, MapPin,
   RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Wallet, X,
 } from 'lucide-react'
-import { getCalendarNotices, getCoverage } from './api'
+import { getCalendarNotices, getCoverage, getCollectionStatus, startCollection, type CollectionStatus } from './api'
 import { competitionDecision, competitionFresh, competitionRateLabel, competitionRowLabel, competitionUnitKey, resultCompetitionRows, RESIDENCE_AREA_LABEL, type CompetitionDecision } from './competition'
 import { demoNotices } from './demo'
 import { ELIGIBILITY_LABEL, applicationEventAvailability, type EligibilityStatus } from './eligibility'
@@ -27,6 +27,7 @@ export { selectBriefReasons as briefReasons } from './EligibilityDetails'
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const RESIDENCE_OVERRIDE_KEY = 'cheongyak-residence-overrides-v1'
 const KST_DISPLAY_TIME = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+const KST_REFRESH_TIME = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 
 function kstToday(): string {
@@ -233,6 +234,11 @@ function App() {
   const [dataError, setDataError] = useState(false)
   const [coverage, setCoverage] = useState<CoverageResponse | null>(null)
   const [coverageError, setCoverageError] = useState(false)
+  const [coverageLoading, setCoverageLoading] = useState(true)
+  const [coverageCheckedAt, setCoverageCheckedAt] = useState<number | null>(null)
+  const [collection, setCollection] = useState<CollectionStatus | null>(null)
+  const [collectionError, setCollectionError] = useState('')
+  const [collectionRequesting, setCollectionRequesting] = useState(false)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [coverageRefreshVersion, setCoverageRefreshVersion] = useState(0)
   const coverageSuccessRef = useRef<string | null>(null)
@@ -253,6 +259,26 @@ function App() {
     setRefreshVersion((value) => value + 1)
     setCoverageRefreshVersion((value) => value + 1)
   }, [])
+
+  const collectNow = useCallback(async (token: string) => {
+    setCollectionRequesting(true)
+    setCollectionError('')
+    try {
+      const state = await startCollection(token)
+      setCollection(state)
+      setCoverageRefreshVersion((version) => version + 1)
+    } catch (reason) {
+      setCollectionError(reason instanceof Error ? reason.message : '수집 요청을 확인하지 못했습니다.')
+      throw reason
+    } finally {
+      setCollectionRequesting(false)
+    }
+  }, [])
+
+  const onSettingsSaved = useCallback((token: string) => {
+    refreshAll()
+    void collectNow(token).catch(() => { /* the collection status reports this failure separately from saved keys */ })
+  }, [refreshAll, collectNow])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -326,9 +352,15 @@ function App() {
         timer = window.setTimeout(poll, 30_000)
         return
       }
+      setCoverageLoading(true)
       try {
-        const value = await getCoverage(controller.signal)
+        const [coverageResult, collectionResult] = await Promise.allSettled([
+          getCoverage(controller.signal), getCollectionStatus(controller.signal),
+        ])
         if (controller.signal.aborted) return
+        if (collectionResult.status === 'fulfilled') setCollection(collectionResult.value)
+        if (coverageResult.status === 'rejected') throw coverageResult.reason
+        const value = coverageResult.value
         const successSignature = value.sources.map((source) =>
           `${source.source}:${source.last_success_at || ''}:${source.record_count ?? ''}${source.source === 'cheongyak_competition' ? `:${source.status}:${source.last_attempt_at || ''}` : ''}`,
         ).sort().join('|')
@@ -339,12 +371,15 @@ function App() {
         coverageSuccessRef.current = successSignature
         setCoverage(value)
         setCoverageError(false)
-        timer = window.setTimeout(poll, value.sources.some((source) =>
+        setCoverageCheckedAt(Date.now())
+        timer = window.setTimeout(poll, collectionResult.status === 'fulfilled' && collectionResult.value.status === 'running' || value.sources.some((source) =>
           source.status === 'pending' || source.status === 'running') ? 30_000 : 300_000)
       } catch {
         if (controller.signal.aborted) return
         setCoverageError(true)
         timer = window.setTimeout(poll, 30_000)
+      } finally {
+        if (!controller.signal.aborted) setCoverageLoading(false)
       }
     }
     void poll()
@@ -562,7 +597,14 @@ function App() {
           <ResultsPane active={view === 'results'} today={today} refreshVersion={refreshVersion} capOnly={capOnly} category={category} categoryGroup={categoryGroup} profile={profile} residenceOverrides={residenceOverrides} now={competitionNow} onSummary={setResultsSummary} onRefresh={refreshAll} renderCard={renderResultCard} />
         </section>
 
-        <section className="coverage-section" id="coverage"><div className="coverage-heading"><div><span className="section-kicker">DATA TRANSPARENCY</span><h2>어디에서 가져온 공고인가요?</h2><p>기관별 마지막 수집 상태를 공개합니다. 일정과 가격은 반드시 공식 공고문에서 다시 확인하세요.</p></div><Database size={26} /></div><IntegrationSettings /><CoveragePanel coverage={coverage} error={coverageError} /></section>
+        <section className="coverage-section" id="coverage">
+          <div className="coverage-heading"><div><span className="section-kicker">DATA TRANSPARENCY</span><h2>어디에서 가져온 공고인가요?</h2><p>기관별 마지막 수집 상태를 공개합니다. 일정과 가격은 반드시 공식 공고문에서 다시 확인하세요.</p></div><Database size={26} /></div>
+          <div className="coverage-controls"><button type="button" className="period-button" onClick={refreshAll} disabled={coverageLoading}><RotateCcw size={15} /> {coverageLoading ? '수집 상태 확인 중…' : '수집 상태 새로고침'}</button><span role="status">{coverageLoading ? '최신 수집 상태를 조회합니다.' : coverageCheckedAt ? `상태 확인 ${KST_REFRESH_TIME.format(coverageCheckedAt)}` : '아직 상태를 확인하지 못했습니다.'}</span></div>
+          {(collectionRequesting || collection) && <p className="collection-status" role="status">{collectionRequesting ? '저장된 설정으로 수집 시작을 요청합니다…' : collection?.status === 'idle' ? '수집 실행 기록이 없습니다. API 키를 저장하면 바로 수집을 시작합니다.' : collection?.message}</p>}
+          {collectionError && <p className="error-banner" role="alert">{collectionError}</p>}
+          <IntegrationSettings onSaved={onSettingsSaved} onCollect={collectNow} />
+          <CoveragePanel coverage={coverage} error={coverageError} />
+        </section>
       </main>
 
       <footer className="site-footer"><div className="page-width footer-inner"><div className="footer-brand"><span className="brand-symbol"><CalendarDays size={15} /></span><strong>청약한눈</strong></div><p>정보 안내용 서비스입니다. 청약 자격·금액·일정의 최종 기준은 각 기관의 공식 모집공고입니다.</p><span>대한민국 표준시 KST</span></div></footer>
@@ -736,7 +778,7 @@ function CompetitionSection({ notice, decision, override, onOverride, now, demoM
 
 const CoveragePanel = memo(function CoveragePanel({ coverage, error }: { coverage: CoverageResponse | null; error: boolean }) {
   const sources = coverage?.sources || []
-  if (error) return <div className="coverage-empty"><CircleAlert size={18} /> 수집 상태 API에 연결할 수 없습니다. 공고별 원문 링크를 확인해 주세요.</div>
+  if (error && !coverage) return <div className="coverage-empty"><CircleAlert size={18} /> 수집 상태를 조회하지 못했습니다. 새로고침으로 다시 확인할 수 있습니다.</div>
   if (!coverage) return <div className="coverage-empty">수집 상태를 불러오는 중입니다…</div>
   if (!sources.length) return <div className="coverage-empty"><Info size={18} /> 아직 기록된 수집 상태가 없습니다. 공고별 원문 링크를 확인해 주세요.</div>
   const displayTime = (value?: string | null) => {
@@ -745,13 +787,13 @@ const CoveragePanel = memo(function CoveragePanel({ coverage, error }: { coverag
       ? KST_DISPLAY_TIME.format(date)
       : '기록 없음'
   }
-  return <div className="coverage-list">{sources.map((item, index) => {
+  return <>{error && <p className="error-banner" role="alert">최신 상태 조회에 실패해 마지막으로 확인한 수집 상태를 표시합니다.</p>}<div className="coverage-list">{sources.map((item, index) => {
     const lastSuccess = item.last_success_at ? new Date(item.last_success_at) : null
     const stale = item.status === 'ok' && !!lastSuccess && !Number.isNaN(lastSuccess.getTime()) && Date.now() - lastSuccess.getTime() > 6 * 60 * 60 * 1000
     const ok = item.status === 'ok' && !stale
     const status = item.status === 'running' ? '수집 중' : item.status === 'partial' ? '일부 누락' : item.status === 'error' ? '수집 실패' : item.status === 'disabled' ? '연결 미설정' : item.status === 'pending' ? '수집 대기' : stale ? '갱신 지연' : ok ? '정상' : '확인 필요'
     return <div className="coverage-item" key={`${item.source}-${index}`}><div className={`source-icon ${ok ? 'source-ok' : 'source-warn'}`}>{ok ? <CheckCircle2 size={19} /> : item.status === 'running' ? <Clock3 size={19} /> : <CircleAlert size={19} />}</div><div className="coverage-copy"><strong>{sourceName(item.source)}</strong><span>{item.message || status}</span><small>마지막 시도 {displayTime(item.last_attempt_at)} · 성공 {displayTime(item.last_success_at)}{item.record_count != null ? ` · ${item.record_count}건` : ''}</small></div><div className="coverage-meta"><span className={ok ? 'coverage-ok' : 'coverage-warn'}>{status}</span></div></div>
-  })}</div>
+  })}</div></>
 })
 
 export default App

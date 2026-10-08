@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getCalendarNotices, getNotices, saveIntegrationSettings } from './api'
+import { getCalendarNotices, getNotices, getCoverage, getCollectionStatus, startCollection, saveIntegrationSettings } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -18,7 +18,7 @@ describe('public notice requests', () => {
       expect(parsed.searchParams.get('exclude_public_rental')).toBe('true')
       expect(parsed.searchParams.get('application_only')).toBe('true')
       expect(parsed.searchParams.get('start')).toBe('2026-09-30')
-      expect(init).toEqual({ headers: { Accept: 'application/json' }, signal: undefined })
+      expect(init).toEqual({ headers: { Accept: 'application/json' }, cache: 'no-store', signal: undefined })
       expect(JSON.stringify([url, init])).not.toMatch(/region|district|movedInDate|householdSize/)
     }
   })
@@ -56,7 +56,7 @@ describe('public notice requests', () => {
       expect(params.get('application_only')).toBe('true')
       expect(params.get('exclude_public_rental')).toBe('true')
       expect([...params.keys()].sort()).toEqual(['application_only', 'end', 'exclude_public_rental', 'page', 'page_size', 'start', 'view'])
-      expect(init).toEqual({ headers: { Accept: 'application/json' }, signal: undefined })
+      expect(init).toEqual({ headers: { Accept: 'application/json' }, cache: 'no-store', signal: undefined })
     }
   })
 })
@@ -78,5 +78,41 @@ describe('hosted integration credentials', () => {
   it('does not expose the submitted credentials in authentication errors', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
     await expect(saveIntegrationSettings('fictional-admin', { LH_API_KEY: 'fictional-api-key' }, false)).rejects.toThrow('관리자 인증키를 확인하세요.')
+  })
+})
+
+describe('collection refresh and owner start', () => {
+  it('always fetches current coverage and job state without cache or applicant facts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ sources: [] }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await getCoverage()
+    await getCoverage()
+    await getCollectionStatus()
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/coverage', '/api/coverage', '/api/collection'])
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(init.cache).toBe('no-store')
+      expect(init.headers).toEqual({ Accept: 'application/json' })
+      expect(init.body).toBeUndefined()
+      expect(String(url)).not.toMatch(/profile|token|region|admin/)
+    }
+  })
+
+  it('starts a job with owner authentication only in its header and no request body', async () => {
+    const state = { job_id: 'fictional-job', status: 'running', message: '수집 중' }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => state })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await startCollection('fictional-owner-token')).toEqual(state)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('/api/collection')
+    expect(init.method).toBe('POST')
+    expect(init.headers.Authorization).toBe('Bearer fictional-owner-token')
+    expect(init.body).toBeUndefined()
+    expect(init.cache).toBe('no-store')
+    expect(init.referrerPolicy).toBe('no-referrer')
+  })
+
+  it('keeps collection authentication errors separate from already saved settings', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 401 }))
+    await expect(startCollection('fictional-owner-token')).rejects.toThrow('수집을 시작하려면 관리자 인증키를 확인하세요.')
   })
 })

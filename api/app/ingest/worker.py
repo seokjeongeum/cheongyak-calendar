@@ -12,6 +12,7 @@ import asyncio
 import copy
 import logging
 import os
+import signal
 from datetime import date, datetime, timedelta, timezone
 from time import monotonic
 from urllib.parse import unquote
@@ -21,6 +22,7 @@ import httpx
 from sqlalchemy import select
 
 from app.db import SessionLocal, init_db
+from app.collection import CollectionHeartbeat, claim_collection, finish_collection, renew_collection
 from app.integration_settings import setting_value
 from app.extract.pipeline import enrich_notice, extraction_configured
 from app.models import DocumentExtractionState, Notice
@@ -257,10 +259,41 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
             await client.aclose()
 
 
+async def run_cycle(*, job_id: str | None = None) -> dict[str, dict] | None:
+    """Share collection ownership across manual, Compose and scheduled CLI runs."""
+    init_db()
+    if job_id:
+        if not renew_collection(job_id):
+            LOGGER.info("Collection job is no longer owned; skipping")
+            return None
+    else:
+        state, claimed = claim_collection("scheduled")
+        if not claimed:
+            LOGGER.info("Collection already running; skipping duplicate cycle")
+            return None
+        job_id = state.job_id
+    try:
+        with CollectionHeartbeat(job_id):
+            result = await run_once()
+        failed = [source for source, value in result.items() if value.get("status") == "error"]
+        message = "수집을 마쳤습니다. 출처별 결과를 확인하세요."
+        if failed:
+            message = f"수집을 마쳤으나 {len(failed)}개 출처에서 실패했습니다. 출처별 사유를 확인하세요."
+        finish_collection(job_id, "completed", message)
+        return result
+    except BaseException as error:
+        interrupted = isinstance(error, (KeyboardInterrupt, asyncio.CancelledError))
+        finish_collection(
+            job_id, "interrupted" if interrupted else "error",
+            "수집 실행이 중단되었습니다. 다시 수집할 수 있습니다." if interrupted else "수집 실행에 실패했습니다. 출처별 상태를 확인하고 다시 시도하세요.",
+        )
+        raise
+
+
 async def _forever() -> None:
     while True:
         started = monotonic()
-        result = await run_once()
+        result = await run_cycle()
         LOGGER.info("Collection cycle complete: %s", result)
         await asyncio.sleep(max(60, POLL_SECONDS - (monotonic() - started)))
 
@@ -268,16 +301,31 @@ async def _forever() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Collect official Korean housing subscription notices")
     parser.add_argument("--once", action="store_true", help="Run a single collection cycle then exit")
+    parser.add_argument("--job-id", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.job_id and not args.once:
+        parser.error("--job-id requires --once")
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+    def stop(_signum, _frame):
+        raise KeyboardInterrupt()
+
+    previous_term = signal.signal(signal.SIGTERM, stop)
     try:
         if args.once:
-            result = asyncio.run(run_once())
+            result = asyncio.run(run_cycle(job_id=args.job_id))
+            if args.job_id and result is None:
+                raise SystemExit(1)
             LOGGER.info("Collection cycle complete: %s", result)
         else:
             asyncio.run(_forever())
     except KeyboardInterrupt:
         pass
+    except Exception as error:
+        # Database and transport exception text may include credentials.
+        LOGGER.error("Collection execution failed: %s", type(error).__name__)
+        raise SystemExit(1)
+    finally:
+        signal.signal(signal.SIGTERM, previous_term)
 
 
 if __name__ == "__main__":

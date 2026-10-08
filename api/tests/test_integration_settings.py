@@ -68,6 +68,74 @@ def test_delete_overrides_environment_and_shared_key_still_works(client, monkeyp
     assert _api_key('lh') == 'common+key'
 
 
+def test_common_key_save_persists_for_all_public_providers_and_competition(client):
+    common = 'fictional-common%2Bprovider-key'
+    response = update(client, {"keys": {"DATA_GO_KR_API_KEY": common}})
+    assert response.status_code == 200
+    assert common not in response.text and TOKEN not in response.text
+    # Open a new connection/session as a restarted API or worker would.
+    with settings.SessionLocal() as session:
+        assert settings.setting_value('DATA_GO_KR_API_KEY', session) == common
+        services = {item['name']: item for item in settings.public_settings(session)['services']}
+        for name in settings.KEY_NAMES - {'GEMINI_API_KEY'}:
+            assert services[name]['configured']
+            assert services[name]['storage'] == 'server'
+            assert services[name]['uses_shared_key'] == (name != 'DATA_GO_KR_API_KEY')
+        assert not services['GEMINI_API_KEY']['configured']
+        assert not services['GEMINI_API_KEY']['uses_shared_key']
+        assert (settings.setting_value('CHEONGYAK_COMPETITION_API_KEY', session)
+                or settings.setting_value('DATA_GO_KR_API_KEY', session)) == common
+    for source in ('cheongyak_home', 'myhome', 'lh', 'ih'):
+        assert _api_key(source) == 'fictional-common+provider-key'
+    result = client.get('/api/integrations')
+    assert result.status_code == 200
+    assert result.json() == response.json()
+    assert common not in result.text
+
+
+def test_provider_override_and_delete_restore_shared_key_without_losing_saved_common(client):
+    common, override = 'fictional-common-provider-key', 'fictional-competition-override'
+    update(client, {"keys": {"DATA_GO_KR_API_KEY": common, "CHEONGYAK_COMPETITION_API_KEY": override}})
+    with settings.SessionLocal() as session:
+        services = {item['name']: item for item in settings.public_settings(session)['services']}
+        assert services['CHEONGYAK_COMPETITION_API_KEY']['configured']
+        assert not services['CHEONGYAK_COMPETITION_API_KEY']['uses_shared_key']
+        assert services['CHEONGYAK_COMPETITION_API_KEY']['storage'] == 'server'
+        assert (settings.setting_value('CHEONGYAK_COMPETITION_API_KEY', session)
+                or settings.setting_value('DATA_GO_KR_API_KEY', session)) == override
+    response = update(client, {"keys": {"CHEONGYAK_COMPETITION_API_KEY": ''}})
+    assert response.status_code == 200
+    assert common not in response.text and override not in response.text
+    with settings.SessionLocal() as session:
+        assert settings.setting_value('DATA_GO_KR_API_KEY', session) == common
+        assert settings.setting_value('CHEONGYAK_COMPETITION_API_KEY', session) == ''
+        services = {item['name']: item for item in settings.public_settings(session)['services']}
+        assert services['CHEONGYAK_COMPETITION_API_KEY']['configured']
+        assert services['CHEONGYAK_COMPETITION_API_KEY']['uses_shared_key']
+        assert (settings.setting_value('CHEONGYAK_COMPETITION_API_KEY', session)
+                or settings.setting_value('DATA_GO_KR_API_KEY', session)) == common
+
+
+def test_deleting_common_key_disables_shared_providers_but_preserves_specific_override(client, monkeypatch):
+    monkeypatch.setenv('DATA_GO_KR_API_KEY', 'fictional-inherited-common-key')
+    update(client, {"keys": {"DATA_GO_KR_API_KEY": 'fictional-saved-common-key', "LH_API_KEY": KEY}})
+    response = update(client, {"keys": {"DATA_GO_KR_API_KEY": ''}})
+    assert response.status_code == 200
+    with settings.SessionLocal() as session:
+        assert settings.setting_value('DATA_GO_KR_API_KEY', session) == ''
+        services = {item['name']: item for item in settings.public_settings(session)['services']}
+        for name in settings.KEY_NAMES - {'LH_API_KEY'}:
+            assert not services[name]['configured']
+            assert not services[name]['uses_shared_key']
+        assert services['LH_API_KEY']['configured']
+        assert not services['LH_API_KEY']['uses_shared_key']
+        assert (settings.setting_value('CHEONGYAK_COMPETITION_API_KEY', session)
+                or settings.setting_value('DATA_GO_KR_API_KEY', session)) == ''
+    assert _api_key('lh') == KEY
+    assert _api_key('cheongyak_home') == ''
+    assert KEY not in response.text
+
+
 def test_gemini_needs_explicit_confirmation_for_each_new_key(client):
     update(client, {"keys": {"GEMINI_API_KEY": KEY}})
     assert not extraction_configured()
@@ -91,6 +159,17 @@ def test_catalog_contains_direct_official_service_key_links(client):
     services = client.get('/api/integrations').json()['services']
     assert len(services) == 6
     assert all(s['key_url'].startswith('https://www.data.go.kr/data/') or s['key_url'] == 'https://aistudio.google.com/apikey' for s in services)
+
+
+def test_render_administrator_link_contains_only_a_valid_service_id(client, monkeypatch):
+    monkeypatch.setenv('RENDER_SERVICE_ID', 'srv-fictionalservice1234')
+    result = client.get('/api/integrations').json()
+    assert result['admin_setup_url'] == 'https://dashboard.render.com/web/srv-fictionalservice1234/env'
+    for invalid in ('https://untrusted.example', 'srv-valid?admin=fictional-secret'):
+        monkeypatch.setenv('RENDER_SERVICE_ID', invalid)
+        response = client.get('/api/integrations')
+        assert response.json()['admin_setup_url'] is None
+        assert invalid not in response.text
 
 
 def test_database_error_diagnostics_hide_secret_parameters(tmp_path):

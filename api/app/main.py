@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import asyncio
 from datetime import date
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session, init_db
 from app.integration_settings import initialize_hosted_admin, router as integrations_router
+from app.collection import manual_collector, router as collection_router
 from app.models import Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
 from app.schemas import CoveragePublic, HealthPublic, NoticeDetail, NoticePage, NoticePublic, SourceStatusPublic
@@ -26,7 +28,11 @@ from app.static_web import mount_static_web
 async def lifespan(_: FastAPI):
     init_db()
     initialize_hosted_admin()
-    yield
+    manual_collector.startup()
+    try:
+        yield
+    finally:
+        await asyncio.to_thread(manual_collector.shutdown)
 
 
 app = FastAPI(
@@ -37,10 +43,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=False,
-    allow_methods=["GET", "PUT"],
+    allow_methods=["GET", "PUT", "POST"],
     allow_headers=["Accept", "Content-Type", "Authorization"],
 )
 app.include_router(integrations_router)
+app.include_router(collection_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -143,7 +150,8 @@ def get_notice(notice_id: str, session: Session = Depends(get_session)) -> Notic
 
 
 @app.get("/api/coverage", response_model=CoveragePublic)
-def get_coverage(session: Session = Depends(get_session)) -> CoveragePublic:
+def get_coverage(response: Response, session: Session = Depends(get_session)) -> CoveragePublic:
+    response.headers["Cache-Control"] = "no-store"
     return CoveragePublic(sources=[SourceStatusPublic.model_validate(item, from_attributes=True) for item in source_coverage(session)])
 
 

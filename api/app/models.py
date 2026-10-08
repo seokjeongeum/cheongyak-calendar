@@ -133,6 +133,21 @@ class SourceStatus(Base):
     record_count: Mapped[int | None] = mapped_column(Integer)
 
 
+class CollectionRun(Base):
+    """Shared singleton lease for manual and scheduled public-feed collection."""
+
+    __tablename__ = "collection_runs"
+
+    name: Mapped[str] = mapped_column(String(32), primary_key=True)
+    job_id: Mapped[str | None] = mapped_column(String(36))
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="idle")
+    trigger: Mapped[str | None] = mapped_column(String(32))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    message: Mapped[str | None] = mapped_column(String(240))
+
+
 class DocumentExtractionState(Base):
     """Durable free-tier cooldown across worker restarts and deployments."""
 

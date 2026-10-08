@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { consumeIntegrationEntry, IntegrationSettings } from './IntegrationSettings'
+import { consumeIntegrationEntry, editIntegrationKey, integrationKeyStatus, IntegrationSettings } from './IntegrationSettings'
+import type { IntegrationSettingsResponse } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -49,5 +50,45 @@ describe('private hosted settings entry', () => {
     expect(html).toContain('aria-expanded="false"')
     expect(html).not.toContain('integration-admin-token')
     expect(html).not.toMatch(/docker compose|git pull|\.env/)
+  })
+})
+
+const service = (name: string, configured = false, usesShared = false): IntegrationSettingsResponse['services'][number] => ({ name, label: name, key_url: 'https://www.data.go.kr/', configured, uses_shared_key: usesShared, storage: 'server' })
+const common = service('DATA_GO_KR_API_KEY', true)
+
+describe('one public-data key and optional provider overrides', () => {
+  it('removes an empty edit without submitting a deletion of the saved key', () => {
+    expect(editIntegrationKey({ LH_API_KEY: 'new-key', MYHOME_API_KEY: 'other-key' }, 'LH_API_KEY', '')).toEqual({ MYHOME_API_KEY: 'other-key' })
+    expect(editIntegrationKey({}, 'LH_API_KEY', '   ')).toEqual({})
+  })
+
+  it('preserves an explicit delete until it is cancelled or replaced', () => {
+    expect(editIntegrationKey({ LH_API_KEY: '', MYHOME_API_KEY: 'other-key' }, 'MYHOME_API_KEY', 'changed')).toEqual({ LH_API_KEY: '', MYHOME_API_KEY: 'changed' })
+    expect(editIntegrationKey({ LH_API_KEY: '' }, 'LH_API_KEY', '')).toEqual({})
+    expect(editIntegrationKey({ LH_API_KEY: '' }, 'LH_API_KEY', 'replacement')).toEqual({ LH_API_KEY: 'replacement' })
+  })
+
+  it('previews a shared key for unconfigured providers before saving it', () => {
+    expect(integrationKeyStatus(service('LH_API_KEY'), service('DATA_GO_KR_API_KEY'), { DATA_GO_KR_API_KEY: 'fictional-key' })).toBe('공통 키 사용 예정')
+  })
+
+  it('marks effective shared configurations as common usage instead of an individual key', () => {
+    expect(integrationKeyStatus(service('LH_API_KEY', true, true), common, {})).toBe('공통 키 사용')
+  })
+
+  it('preserves a configured provider override when the common key is changed or deleted', () => {
+    const own = service('LH_API_KEY', true)
+    expect(integrationKeyStatus(own, common, { DATA_GO_KR_API_KEY: 'replacement' })).toBe('기관별 키 연결됨')
+    expect(integrationKeyStatus(own, common, { DATA_GO_KR_API_KEY: '' })).toBe('기관별 키 연결됨')
+  })
+
+  it('shows fallback to the common key only after an explicit override deletion', () => {
+    expect(integrationKeyStatus(service('LH_API_KEY', true), common, { LH_API_KEY: '' })).toBe('별도 키 삭제 · 공통 키 사용 예정')
+    expect(integrationKeyStatus(service('LH_API_KEY', true, true), common, { DATA_GO_KR_API_KEY: '' })).toBe('공통 키 삭제 예정')
+  })
+
+  it('keeps Gemini independent from public-data key changes', () => {
+    expect(integrationKeyStatus(service('GEMINI_API_KEY'), common, { DATA_GO_KR_API_KEY: 'replacement' })).toBe('키 미설정')
+    expect(integrationKeyStatus(service('GEMINI_API_KEY', true), common, { GEMINI_API_KEY: '' })).toBe('키 삭제 예정')
   })
 })

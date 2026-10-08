@@ -94,15 +94,28 @@ def require_admin(request: Request, session: Session = Depends(get_session)) -> 
 
 
 def public_settings(session: Session) -> dict:
+    shared_key = setting_value("DATA_GO_KR_API_KEY", session)
+    services = []
+    for name, label, url in CATALOG:
+        own_key = setting_value(name, session)
+        uses_shared_key = name not in {"DATA_GO_KR_API_KEY", "GEMINI_API_KEY"} and not own_key and bool(shared_key)
+        effective_key = shared_key if uses_shared_key else own_key
+        stored_name = "DATA_GO_KR_API_KEY" if uses_shared_key else name
+        services.append({
+            "name": name, "label": label, "key_url": url,
+            "configured": bool(effective_key),
+            "storage": "server" if session.get(IntegrationSetting, stored_name) is not None else "environment",
+            "uses_shared_key": uses_shared_key,
+        })
+    render_service_id = os.getenv("RENDER_SERVICE_ID", "")
+    admin_setup_url = (
+        f"https://dashboard.render.com/web/{render_service_id}/env"
+        if re.fullmatch(r"srv-[a-z0-9]{4,64}", render_service_id) else None
+    )
     return {
         "admin_initialized": session.get(IntegrationSetting, ADMIN_HASH) is not None,
-        "services": [
-            {"name": name, "label": label, "key_url": url,
-             "configured": bool(setting_value(name, session)),
-             "storage": "server" if session.get(IntegrationSetting, name) is not None else "environment",
-             "uses_shared_key": name not in {"DATA_GO_KR_API_KEY", "GEMINI_API_KEY"} and not setting_value(name, session) and bool(setting_value("DATA_GO_KR_API_KEY", session))}
-            for name, label, url in CATALOG
-        ],
+        "admin_setup_url": admin_setup_url,
+        "services": services,
         "gemini_unbilled_confirmed": setting_value(CONFIRMATION, session).lower() in {"1", "true", "yes"},
     }
 
