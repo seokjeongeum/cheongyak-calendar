@@ -1,0 +1,20 @@
+# One Free public web service. No Render databases, disks, workers, or cron jobs.
+services:
+  - type: web
+    name: cheongyak-calendar
+    runtime: docker
+    plan: free
+    repo: https://github.com/seokjeongeum/cheongyak-calendar
+    branch: work
+    autoDeployTrigger: commit
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Supply a durable Neon Free PostgreSQL URL.
+      # Render's own Free PostgreSQL expires after 30 days.
+      - key: DATABASE_URL
+        sync: false
+      # Render generates this credential; the API stores only its hash.
+      - key: INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN
+        generateValue: true

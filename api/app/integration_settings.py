@@ -32,16 +32,22 @@ router = APIRouter(prefix="/api/integrations", tags=["API 연결 설정"])
 
 
 def initialize_hosted_admin(session: Session | None = None) -> bool:
-    """Bootstrap a fresh hosted database from a hash, preserving existing owners.
+    """Bootstrap a fresh hosted database without replacing its existing owner.
 
-    The raw administrator credential stays in the owner's private connection
-    link. Neither the image nor Railway variables contain that credential.
+    Prefer an explicit hash; otherwise hash the platform-generated bootstrap
+    credential server-side. Persist only the hash, never the raw credential.
     """
     digest = os.getenv("INTEGRATIONS_ADMIN_TOKEN_SHA256", "").strip().lower()
-    if not digest:
-        return False
-    if not re.fullmatch(r"[0-9a-f]{64}", digest):
-        raise RuntimeError("Invalid hosted administrator hash configuration")
+    if digest:
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise RuntimeError("Invalid hosted administrator hash configuration")
+    else:
+        token = os.getenv("INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN", "")
+        if not token:
+            return False
+        if not 32 <= len(token) <= 4096 or any(char.isspace() for char in token):
+            raise RuntimeError("Invalid hosted administrator bootstrap configuration")
+        digest = hashlib.sha256(token.encode()).hexdigest()
     if session is None:
         with SessionLocal() as selected:
             created = initialize_hosted_admin(selected)

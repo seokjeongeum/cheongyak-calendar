@@ -103,6 +103,7 @@ def test_database_error_diagnostics_hide_secret_parameters(tmp_path):
 
 
 def test_hosted_bootstrap_needs_valid_hash_and_preserves_existing_owner(tmp_path, monkeypatch):
+    monkeypatch.delenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', raising=False)
     engine = make_engine(f"sqlite:///{tmp_path / 'bootstrap.db'}")
     init_db(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -120,3 +121,57 @@ def test_hosted_bootstrap_needs_valid_hash_and_preserves_existing_owner(tmp_path
         assert not settings.initialize_hosted_admin(session)
         assert settings.setting_value(settings.ADMIN_HASH, session) == digest
     engine.dispose()
+
+
+@pytest.fixture
+def hosted_session(tmp_path, monkeypatch):
+    for name in ('INTEGRATIONS_ADMIN_TOKEN_SHA256', 'INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN'):
+        monkeypatch.delenv(name, raising=False)
+    engine = make_engine(f"sqlite:///{tmp_path / 'hosted-settings.db'}")
+    init_db(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with factory() as session:
+        yield session
+    engine.dispose()
+
+
+def test_generated_bootstrap_token_is_hashed_without_echo_and_preserves_owner(hosted_session, monkeypatch, caplog):
+    # Render generates a 256-bit base64 credential; '+' '/' '=' are valid.
+    token = 'fictional/Render+bootstrap/token/000000000000='
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', token)
+    assert settings.initialize_hosted_admin(hosted_session)
+    hosted_session.commit()
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    assert settings.setting_value(settings.ADMIN_HASH, hosted_session) == digest
+    assert token not in str(settings.public_settings(hosted_session))
+    assert token not in caplog.text
+    assert not settings.initialize_hosted_admin(hosted_session)
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', 'fictional-new-bootstrap-credential-000000000000')
+    assert not settings.initialize_hosted_admin(hosted_session)
+    assert settings.setting_value(settings.ADMIN_HASH, hosted_session) == digest
+
+
+@pytest.mark.parametrize('token', ['short-fictional-token', 'x' * 31, 'x' * 32 + ' ', '\t' + 'x' * 32, 'x' * 32 + '\n'])
+def test_invalid_generated_bootstrap_token_fails_without_echo(hosted_session, monkeypatch, token, caplog):
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', token)
+    with pytest.raises(RuntimeError, match='Invalid hosted administrator bootstrap configuration') as error:
+        settings.initialize_hosted_admin(hosted_session)
+    assert token not in str(error.value)
+    assert token not in caplog.text
+    assert hosted_session.get(settings.IntegrationSetting, settings.ADMIN_HASH) is None
+
+
+def test_explicit_hash_takes_priority_over_invalid_generated_bootstrap_token(hosted_session, monkeypatch):
+    digest = hashlib.sha256(TOKEN.encode()).hexdigest()
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', digest)
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', 'too short')
+    assert settings.initialize_hosted_admin(hosted_session)
+    assert settings.setting_value(settings.ADMIN_HASH, hosted_session) == digest
+
+
+def test_invalid_explicit_hash_never_falls_back_to_generated_token(hosted_session, monkeypatch):
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_TOKEN_SHA256', 'invalid-explicit-hash')
+    monkeypatch.setenv('INTEGRATIONS_ADMIN_BOOTSTRAP_TOKEN', 'fictional-generated-bootstrap-token-000000000000')
+    with pytest.raises(RuntimeError, match='Invalid hosted administrator hash configuration'):
+        settings.initialize_hosted_admin(hosted_session)
+    assert hosted_session.get(settings.IntegrationSetting, settings.ADMIN_HASH) is None
