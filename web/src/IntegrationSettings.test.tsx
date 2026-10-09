@@ -73,7 +73,7 @@ describe('one public-data key and optional provider overrides', () => {
   })
 
   it('marks effective shared configurations as common usage instead of an individual key', () => {
-    expect(integrationKeyStatus(service('LH_API_KEY', true, true), common, {})).toBe('공통 키 사용')
+    expect(integrationKeyStatus(service('LH_API_KEY', true, true), common, {})).toBe('공통 키 연결됨')
   })
 
   it('preserves a configured provider override when the common key is changed or deleted', () => {

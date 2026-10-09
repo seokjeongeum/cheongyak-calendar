@@ -2,7 +2,7 @@ import type { LocalProfile, Notice } from './types'
 import { ageAt, fullMonths, parseDate, criterionDate } from './qualification'
 import { getEvaluationToday, factsAtDate } from './factTimeline'
 import { deriveHousehold } from './household'
-import { evaluateHouseholdOwnership, evaluatePropertyOwnership } from './ownership'
+import { evaluateHouseholdOwnership, evaluatePropertyOwnership, ownershipInventoryComplete } from './ownership'
 
 export const POINTS_SOURCE = 'https://www.applyhome.co.kr/ap/apg/selectAddpntCalculatorView.do'
 export interface PointsPart { label: string; score: number | null; maximum: number; detail: string; field?: keyof LocalProfile }
@@ -30,10 +30,10 @@ export function recognizedAccountMonths(start: string, birth: string, cutoff: st
 function homeless(profile: LocalProfile, date: string): PointsPart {
   const part: PointsPart = { label: '무주택기간', score: null, maximum: 32, detail: '', field: 'ownershipFacts' }
   const temporal = factsAtDate(profile, 'ownership', date)
-  const dated = profile.ownershipFactsKnown === true && profile.ownershipFacts.every((r) => !!parseDate(r.acquiredDate))
-  if (!temporal.known && !dated) return { ...part, detail: '공고일의 주택 소유 사실이 필요합니다.', field: 'ownershipFactsKnown' }
+  const dated = profile.ownershipFacts.length > 0 && ownershipInventoryComplete(profile) && profile.ownershipFacts.every((r) => !!parseDate(r.acquiredDate))
+  if (!temporal.known && !dated) return { ...part, detail: '공고일의 주택 소유 사실이 필요합니다.', field: 'ownershipFacts' }
   profile = temporal.profile
-  const ownership = evaluateHouseholdOwnership(profile, { criterionDate: date, supplyType: '일반공급' })
+  const ownership = evaluateHouseholdOwnership(profile, { criterionDate: date, inventoryDate: temporal.source === 'snapshot' ? date : undefined, supplyType: '일반공급' })
   if (ownership.value === false) return { ...part, score: 0, detail: '공고일 유주택으로 무주택기간 가점은 0점입니다.' }
   if (ownership.value === null) return { ...part, detail: ownership.detail, field: ownership.profileField || 'ownershipFacts' }
   const age = ageAt(profile.dateOfBirth, date)
@@ -66,7 +66,7 @@ function dependants(profile: LocalProfile, date: string): PointsPart {
   let count = profile.hasSpouse === true ? 1 : 0
   const exclusions: string[] = []
   const members = profile.householdMembers.filter((m) => m.register !== 'separate' && !['sibling', 'unrelated', 'descendant_spouse'].includes(m.relation))
-  if (members.some((member) => !/parent$/.test(member.relation) || member.ownsHome !== true) && (pointsFacts.profile.pointsFamilyComplete !== true || !pointsFacts.known)) return { ...part, detail: '가점용 가족 인정 사실과 마지막 변경일을 입력하세요.' }
+  if (members.some((member) => !/parent$/.test(member.relation) || member.ownsHome !== true) && !pointsFacts.known) return { ...part, detail: '공고일의 가점용 가족 사실을 확인할 수 있는 변경 이력이 필요합니다.' }
   profile = pointsFacts.profile
   for (const member of members) {
     const f = profile.pointsFamily[member.id]

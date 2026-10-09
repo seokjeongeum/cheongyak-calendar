@@ -13,11 +13,11 @@ export function setEvaluationToday(today?: string | null): void {
 }
 export function getEvaluationToday(): string { return evaluationToday || new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10) }
 export const FACT_GROUP_ANCHORS: Record<FactChangeGroup, keyof LocalProfile> = {
-  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFactsKnown',
+  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFacts',
 }
 
 export const FACT_GROUP_FIELDS: Partial<Record<FactChangeGroup, readonly (keyof LocalProfile)[]>> = {
-  household: ['applicantOnRegister', 'hasSpouse', 'spouseSameRegister', 'householdMembers', 'householdMembersComplete', 'maritalStatus'],
+  household: ['applicantOnRegister', 'hasSpouse', 'spouseSameRegister', 'householdMembers', 'householdMembersComplete', 'additionalFamilyPresence', 'maritalStatus'],
   household_head: ['isHouseholdHead'], domestic_residence: ['currentlyDomesticResident'],
   restrictions: ['applicationRestrictionFacts', 'restrictedFromApplying', 'ineligibleRestrictionActive', 'resaleRestrictionActive', 'rewinningRestrictionActive'],
   overseas: ['overseasContinuousDays', 'overseasOnlyApplicantForLivelihood'],
@@ -32,7 +32,7 @@ export const FACT_GROUP_FIELDS: Partial<Record<FactChangeGroup, readonly (keyof 
   marital: ['maritalStatus', 'hasSpouse', 'marriageDate', 'plannedMarriage', 'raisesChildWithoutSpouse', 'hasDeFactoPartner'],
   children: ['hasChildren', 'children'], pregnancy: ['pregnant', 'expectedChildren'], points: ['pointsFamily', 'pointsFamilyComplete', 'pointsHomelessSince', 'spouseAccountPresent', 'spouseAccountBaseDate'],
   provider_employee: ['providerEmployeeOrRelatedFamily', 'providerPurchaseApproval'],
-  ownership: ['applicantOwnsHome', 'spouseOwnsHome', 'familyOwnsHome', 'ownershipFactsKnown', 'ownershipFacts'],
+  ownership: ['applicantOwnsHome', 'spouseOwnsHome', 'familyOwnsHome', 'ownershipFactsKnown', 'ownershipFacts', 'ownershipPropertyCounts'],
 }
 
 const GROUPS: Record<string, FactChangeGroup> = {
@@ -57,6 +57,11 @@ export function factsAtDate(profile: LocalProfile, group: FactChangeGroup, date:
   const snapshot = profile.factSnapshots?.find((item) => item.group === group && item.date === date && Object.keys(item.values).length > 0)
   if (snapshot) {
     const values = Object.fromEntries((FACT_GROUP_FIELDS[group] || []).filter((field) => Object.hasOwn(snapshot.values, field)).map((field) => [field, snapshot.values[field]]))
+    // Newly added facts must not inherit today's value into an older snapshot.
+    if (group === 'household' && !Object.hasOwn(snapshot.values, 'additionalFamilyPresence')) values.additionalFamilyPresence = null
+    if (group === 'household' && !Object.hasOwn(snapshot.values, 'householdMembersComplete')) values.householdMembersComplete = null
+    if (group === 'ownership' && !Object.hasOwn(snapshot.values, 'ownershipPropertyCounts')) values.ownershipPropertyCounts = {}
+    if (group === 'ownership' && !Object.hasOwn(snapshot.values, 'ownershipFactsKnown')) values.ownershipFactsKnown = null
     return { known: true, profile: { ...profile, ...values }, source: 'snapshot' }
   }
   const change = profile.factChanges?.[group]

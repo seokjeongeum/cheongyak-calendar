@@ -39,7 +39,7 @@ describe('unranked conditions remain independent from apartment rank', () => {
     expect(evaluateRule(minimum, facts({ householdSize: '99', incomeHouseholdSize: '7' }), notice).status).toBe('fail')
     const child = { ...createHouseholdMember('child'), relation: 'applicant_child' as const, register: 'applicant' as const, ownsHome: false }
     expect(evaluateRule(minimum, facts({ householdMembers: [child] }), notice).status).toBe('pass')
-    expect(evaluateRule(minimum, facts({ householdMembersComplete: null }), notice)).toMatchObject({ status: 'review', profileField: 'householdMembersComplete' })
+    expect(evaluateRule(minimum, facts({ householdMembersComplete: null }), notice)).toMatchObject({ status: 'review', profileField: 'additionalFamilyPresence' })
   })
   it('never asserts homeless status when the official criterion date is missing', () => {
     const homeless = { ...rule('homeless', { value: true }), criterion_date: undefined }

@@ -53,7 +53,7 @@ function familyMember(profile: LocalProfile, member: HouseholdMember, index: num
   }
   return { ...base, included: true, reason: member.relation.includes('parent') ? '본인 또는 배우자의 부모·조부모가 본인·배우자 등본에 함께 있어 포함됩니다.' : '본인의 자녀·손자녀와 그 배우자가 본인·배우자 등본에 함께 있어 포함됩니다.' }
 }
-/** Exact factual roster, never the former legal-scope self-assessment. */
+/** Derive the legal scope from family facts rather than a completeness affirmation. */
 export function deriveHousehold(profile: LocalProfile, criterionDate?: string | null): HouseholdScope {
   const temporal = criterionDate ? factsAtDate(profile, 'household', criterionDate, { date: profile.householdSnapshotDate, confirmations: profile.householdHistoryConfirmations, unchangedSince: profile.householdCompositionUnchanged === true }) : null
   if (temporal?.known) profile = temporal.profile
@@ -64,7 +64,12 @@ export function deriveHousehold(profile: LocalProfile, criterionDate?: string | 
   if (profile.applicantOnRegister !== true) return incomplete(profile.applicantOnRegister === false ? '본인이 주민등록등본에 등재되어 있지 않다고 입력했습니다. 이 공고에서 인정하는 세대 구성과 신청 조건을 확인해야 합니다.' : '본인이 주민등록등본에 등재되어 있는지 입력하세요.', 'applicantOnRegister')
   if (profile.hasSpouse === null) return incomplete('현재 법률상 배우자가 있는지 입력하세요. 배우자는 별도 주소여도 함께 확인합니다.', 'hasSpouse')
   if (profile.maritalStatus === 'married' && profile.hasSpouse === false || profile.maritalStatus === 'single' && profile.hasSpouse === true) return incomplete('혼인 상태와 배우자 유무가 서로 다릅니다. 현재 가족 구성에 맞게 수정하세요.', 'hasSpouse')
-  if (profile.householdMembersComplete !== true) return incomplete('본인·배우자 등본에 적힌 가족을 한 명씩 추가하고, 빠진 가족이 없는지 답해 주세요. 가족이 없으면 추가하지 않아도 됩니다.', 'householdMembersComplete')
+  if (!profile.householdMembers?.length) {
+    if (profile.additionalFamilyPresence === true) return incomplete('본인·배우자 외 등본에 함께 있는 가족이 있다고 입력했습니다. 해당 가족의 관계와 등본 위치를 추가하세요.', 'householdMembers')
+    // A saved empty roster with an earlier explicit complete answer already
+    // records applicant/spouse only. Keep that fact without asking it again.
+    if (profile.additionalFamilyPresence !== false && profile.householdMembersComplete !== true) return incomplete('본인·배우자 외 등본에 함께 있는 가족이 있는지 입력하세요. 있다면 관계와 등본 위치를 추가하면 포함 여부를 계산합니다.', 'additionalFamilyPresence')
+  }
   const ids = members.map((member) => member.id)
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) return incomplete('가족 항목이 중복되거나 연결 정보가 잘못되었습니다. 해당 가족 항목을 다시 추가해 주세요.', 'householdMembers')
   if (members.some((member) => member.included === null)) return incomplete('가족 관계 또는 등본 위치가 미입력·불일치입니다. 각 가족의 포함 이유에 표시된 정보를 입력하세요.', 'householdMembers')

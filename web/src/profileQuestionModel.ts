@@ -1,6 +1,7 @@
 import { criterionDate, evaluateRule, inheritedCondition, offeredSpecialSupplies, officialOfferedSupplies, specialType } from './qualification'
 import { FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, setEvaluationToday } from './factTimeline'
 import { parentCityCode } from './regions'
+import { isParentRule, resolveParentSupport } from './parentSupport'
 import type { FactChangeGroup, LocalProfile, Notice, NoticeRule } from './types'
 
 export interface ProfileRuleContext { rule: NoticeRule; notice: Notice; date: string | null }
@@ -137,8 +138,27 @@ export function getProfileHistoryTarget(field: keyof LocalProfile, profile: Loca
   // The support start is its own dated fact. Past ownership questions pass an
   // explicit history group instead of diverting the actual start-date input.
   if (field === 'parentSupportSince') return undefined
+  const parentKind = ({ parentSameRegister: 'parent_same_register', parentOwnsHome: 'parent_owns_home', parentSpouseOwnsHome: 'parent_spouse_owns_home' } as const)[field as 'parentSameRegister' | 'parentOwnsHome' | 'parentSpouseOwnsHome']
+  if (parentKind && resolveParentSupport(profile).mode !== 'legacy') {
+    for (const { rule, date } of model.scopedRules) if (rule.kind === parentKind && date) {
+      const entry = resolveParentSupport(profile, date).facts[parentKind]
+      if (!entry.temporalKnown && entry.value != null && entry.value !== '') return entry.historyGroup
+    }
+    return undefined
+  }
   if (profile[field] == null || profile[field] === '' || profile[field] === 'unknown') return undefined
   return (Object.entries(FACT_GROUP_ANCHORS) as [FactChangeGroup, keyof LocalProfile][]).find(([group, anchor]) => anchor === field && model.scopedRules.some(({ rule, date }) =>
     (factGroupForRule(rule) === group || group === 'pregnancy' && ['children_min', 'newborn_children_min'].includes(rule.kind) && rule.include_pregnancy === true) && date && !factsAtDate(profile, group, date).known,
   ))?.[0]
+}
+
+/** Parent facts reuse the dated input for their original household/points/ownership source. */
+export function getParentSupportHistoryGroups(profile: LocalProfile, model: ProfileQuestionModel): FactChangeGroup[] {
+  const groups = new Set<FactChangeGroup>()
+  if (resolveParentSupport(profile).mode !== 'linked' || getElderParentQuestionState(profile, model).stopped) return []
+  for (const { rule, date } of model.scopedRules) if (isParentRule(rule.kind) && date) {
+    const entry = resolveParentSupport(profile, date).facts[rule.kind]
+    if (!entry.temporalKnown && entry.value != null && entry.value !== '' && entry.historyGroup) groups.add(entry.historyGroup)
+  }
+  return [...groups]
 }

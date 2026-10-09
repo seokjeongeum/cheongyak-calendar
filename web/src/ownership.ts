@@ -1,4 +1,5 @@
 import { deriveHousehold } from './household'
+import { getEvaluationToday } from './factTimeline'
 import type { LocalProfile, OwnershipFact } from './types'
 
 export const OWNERSHIP_LAW_URL = 'https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0053&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR'
@@ -6,6 +7,8 @@ export const OWNERSHIP_EFFECTIVE_DATE = '2026-06-15'
 export interface OwnershipContext {
   criterionDate: string | null
   assessmentDate?: string
+  /** Day to which the factual inventory count refers (today, or a dated snapshot). */
+  inventoryDate?: string
   supplyType?: string
   publicRental?: boolean
 }
@@ -30,6 +33,41 @@ function date(value: string): Date | null {
   return result.getUTCFullYear() === y && result.getUTCMonth() === m - 1 && result.getUTCDate() === d ? result : null
 }
 function n(value: string): number | null { return /^\d+(?:\.\d+)?$/.test(value) && Number.isFinite(Number(value)) ? Number(value) : null }
+function ownerId(fact: OwnershipFact): string { return fact.ownerMemberId || (['applicant', 'spouse'].includes(fact.ownerRelation) ? fact.ownerRelation : '') }
+function activeOn(fact: OwnershipFact, inventoryDate: string): boolean { return fact.propertyKind !== 'officetel' && fact.acquiredDate <= inventoryDate && !(fact.disposedDate && fact.disposedDate <= inventoryDate) }
+interface InventoryState { complete: boolean; detail: string; profileField?: keyof LocalProfile }
+
+function memberInventoryState(profile: LocalProfile, memberId: string, inventoryDate: string): InventoryState {
+  const member = deriveHousehold(profile, inventoryDate).members.find((person) => person.id === memberId)
+  if (!member || member.ownsHome === null) return { complete: false, detail: `${member?.label || '소유자'}의 주택·분양권·입주권 보유 여부를 입력하세요.`, profileField: memberId === 'applicant' ? 'applicantOwnsHome' : memberId === 'spouse' ? 'spouseOwnsHome' : 'householdMembers' }
+  const facts = profile.ownershipFacts.filter((fact) => ownerId(fact) === memberId && fact.propertyKind !== 'officetel')
+  if (facts.some((fact) => fact.propertyKind === 'unknown' || !date(fact.acquiredDate) || fact.acquiredDate > getEvaluationToday() || fact.disposedDate && (!date(fact.disposedDate) || fact.disposedDate < fact.acquiredDate || fact.disposedDate > getEvaluationToday()))) return { complete: false, detail: `${member.label}의 주택·권리 종류와 실제 취득·처분일을 입력하세요.`, profileField: 'ownershipFacts' }
+  const active = facts.filter((fact) => activeOn(fact, inventoryDate)).length
+  const raw = profile.ownershipPropertyCounts?.[memberId] || ''
+  // Preserve a former explicit inventory declaration, while concrete counts
+  // take precedence once the user supplies them. Unknown people stay unknown.
+  if (!raw && profile.ownershipFactsKnown === true) return { complete: member.ownsHome === false || facts.length > 0, detail: member.ownsHome === true && !facts.length ? `${member.label}의 주택·권리 보유를 입력했지만 연결된 소유 항목이 없습니다.` : '', profileField: member.ownsHome === true && !facts.length ? 'ownershipFacts' : undefined }
+  if (member.ownsHome === false && !active && !raw) return { complete: true, detail: '' }
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(Number(raw))) return { complete: false, detail: `${member.label}가 현재 보유한 주택·분양권·입주권 수를 입력하세요. 한 항목이 있다는 이유로 한 주택만 보유했다고 가정하지 않습니다.`, profileField: 'ownershipPropertyCounts' }
+  const count = Number(raw)
+  if ((member.ownsHome === true) !== (count > 0)) return { complete: false, detail: `${member.label}의 보유 여부와 입력한 ${count}호가 서로 다릅니다. 현재 보유 여부 또는 주택 수를 바로잡으세요.`, profileField: 'ownershipPropertyCounts' }
+  if (count !== active) return { complete: false, detail: `${member.label}: 보유 ${count}호를 입력했지만 ${inventoryDate}에 보유 중인 연결 항목은 ${active}개입니다. 누락 항목이나 취득·처분일을 바로잡으세요.`, profileField: 'ownershipFacts' }
+  return { complete: true, detail: '' }
+}
+
+/** Numeric counts refer to this inventory day; current counts use today's rows.
+ * Once complete, dated acquisition/disposal rows can reconstruct a past cutoff.
+ */
+export function ownershipMemberInventoryComplete(profile: LocalProfile, memberId: string, inventoryDate = getEvaluationToday()): boolean {
+  return !!date(inventoryDate) && memberInventoryState(profile, memberId, inventoryDate).complete
+}
+
+export function ownershipInventoryComplete(profile: LocalProfile, inventoryDate = getEvaluationToday()): boolean {
+  if (!date(inventoryDate)) return false
+  const scope = deriveHousehold(profile, inventoryDate)
+  if (!scope.complete || profile.ownershipFacts.some((fact) => !scope.members.some((member) => member.id === ownerId(fact)))) return false
+  return scope.members.filter((member) => member.included === true).every((member) => memberInventoryState(profile, member.id, inventoryDate).complete)
+}
 function koreanToday(): string { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()) }
 function age(birth: string, cutoff: string): number | null {
   const b = date(birth), c = date(cutoff)
@@ -166,12 +204,6 @@ export function evaluateHouseholdOwnership(profile: LocalProfile, context: Owner
   const scope = deriveHousehold(profile, context.criterionDate)
   if (!scope.complete) return { value: null, countedHomes: null, properties: [], detail: scope.reviewDetail || '가족 관계와 등본 위치를 입력하세요.', profileField: scope.profileField }
   const members = scope.members.filter((member) => member.included === true)
-  const knownOwners = members.map((member) => member.ownsHome)
-  if (profile.ownershipFactsKnown !== true) {
-    if (knownOwners.every((owns) => owns === false)) return { value: true, countedHomes: 0, properties: [], detail: `계산된 확인 대상 ${members.length}명(${members.map((member) => member.label).join(', ')})의 주택·분양권·입주권 미보유 사실을 입력했습니다.` }
-    const missing = members.find((member) => member.ownsHome === null)
-    return { value: null, countedHomes: null, properties: [], detail: knownOwners.includes(true) ? '보유한 주택·권리를 소유한 가족과 연결하고 면적·취득 경위를 입력하면 법정 예외를 자동 비교합니다.' : `${missing?.label || '확인 대상 가족'}의 주택·권리 보유 사실을 입력하세요.`, profileField: knownOwners.includes(true) ? 'ownershipFacts' : missing?.id === 'applicant' ? 'applicantOwnsHome' : missing?.id === 'spouse' ? 'spouseOwnsHome' : 'householdMembers' }
-  }
   const linkedFacts: OwnershipFact[] = []
   for (const fact of profile.ownershipFacts) {
     // The only unambiguous migration links are applicant and spouse themselves.
@@ -186,6 +218,9 @@ export function evaluateHouseholdOwnership(profile: LocalProfile, context: Owner
   if (missingOwner) return { value: null, countedHomes: null, properties: [], detail: `${missingOwner.label}의 주택·권리 보유를 입력했지만 연결된 소유 항목이 없습니다. 추가하거나 보유 사실을 바로잡으세요.`, profileField: 'ownershipFacts' }
   const unknownOwner = members.find((member) => member.ownsHome === null && !linkedFacts.some((fact) => fact.ownerMemberId === member.id))
   if (unknownOwner) return { value: null, countedHomes: null, properties: [], detail: `${unknownOwner.label}의 주택·권리 보유 사실을 입력하세요. 다른 가족의 소유 목록만으로 이 사람의 미보유를 확정하지 않습니다.`, profileField: unknownOwner.id === 'applicant' ? 'applicantOwnsHome' : unknownOwner.id === 'spouse' ? 'spouseOwnsHome' : 'householdMembers' }
+  const inventoryDate = context.inventoryDate || getEvaluationToday()
+  const inventoryIssue = members.map((member) => memberInventoryState(profile, member.id, inventoryDate)).find((state) => !state.complete)
+  if (inventoryIssue) return { value: null, countedHomes: null, properties: [], detail: inventoryIssue.detail, profileField: inventoryIssue.profileField }
   const activeFacts = linkedFacts.filter((fact) => fact.propertyKind !== 'officetel' && (!context.criterionDate || !date(fact.acquiredDate) || fact.acquiredDate <= context.criterionDate) && !(context.criterionDate && date(fact.disposedDate) && fact.disposedDate <= context.criterionDate))
   // Separate owners' shares may describe one physical dwelling. Without a
   // dwelling identity, neither collapse those records nor call them two homes.

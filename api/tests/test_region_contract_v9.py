@@ -121,7 +121,8 @@ def test_same_hash_partial_reparse_preserves_complete_review_and_is_idempotent(w
 
 
 @pytest.mark.asyncio
-async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_unresolved_failure(monkeypatch):
+@pytest.mark.parametrize("static_status", [200, 403, 500])
+async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_unresolved_failure(monkeypatch, static_status):
     source = CURRENT[3]
     original = source["document_url"].replace("www.applyhome.co.kr", "static.applyhome.co.kr")
     fake_pdf = b"%PDF-current-notice"
@@ -137,7 +138,7 @@ async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_un
     def handler(request):
         requests.append(str(request.url))
         if str(request.url) == original:
-            return httpx.Response(200, text="The requested URL was not found on this server.<br><br><br>")
+            return httpx.Response(static_status, text="The requested URL was not found on this server.<br><br><br>")
         assert str(request.url) == source["document_url"]
         return httpx.Response(200, content=fake_pdf, headers={"Content-Type": "application/octet-stream"})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
@@ -150,6 +151,62 @@ async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_un
     assert next(d for d in result["diagnostics"] if d["code"] == "attachment_fallback_succeeded")["status"] == "ok"
     assert pipeline.applyhome_attachment_fallback_url(original.replace("2026950087", "not-an-id")) is None
     assert pipeline.applyhome_attachment_fallback_url(original.replace("static.applyhome.co.kr", "example.com")) is None
+
+
+def test_same_official_attachment_www_host_retains_hash_bound_review():
+    from app.extract.reviewed_sources import REVIEWED_SOURCES, reviewed_source_for_document
+    source = REVIEWED_SOURCES["2026000498"]
+    www = source["document_url"].replace("static.applyhome.co.kr", "www.applyhome.co.kr")
+    assert reviewed_source_for_document(www, source["document_hash"]) is source
+    assert reviewed_source_for_document(www, "changed-file") is None
+    assert reviewed_source_for_document(www.replace("www.applyhome.co.kr", "example.com"), source["document_hash"]) is None
+    assert reviewed_source_for_document(www.replace("atchmnflSn=1", "atchmnflSn=2"), source["document_hash"]) is None
+    assert reviewed_source_for_document(www + "#other", source["document_hash"]) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ancillary_links", [False, True])
+async def test_hyangnam_corrected_project_fallback_after_provider_page_and_attachment_fail(monkeypatch, ancillary_links):
+    from app.extract.reviewed_sources import reviewed_document_urls
+    source = HYANGNAM
+    candidates = reviewed_document_urls(source["payload"]["official_url"], announcement_date="2026-10-02")
+    assert candidates[-1] == source["document_url"]
+    assert not reviewed_document_urls(source["payload"]["official_url"], announcement_date="2026-09-01")
+    assert not reviewed_document_urls(source["payload"]["official_url"].replace("2026000463", "2026000999"), announcement_date="2026-10-02")
+    calls = []
+    async def extract(url, client, *, payload):
+        calls.append(url)
+        if url != source["document_url"]:
+            request = httpx.Request("GET", url)
+            raise httpx.HTTPStatusError("provider unavailable", request=request, response=httpx.Response(500, request=request))
+        return {**parsed(source), "document_hash": source["document_hash"], "diagnostics": []}
+    monkeypatch.setattr(pipeline, "extract_local_document", extract)
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, text=''.join(
+        f'<a href="/ancillary-{number}.pdf">첨부 PDF</a>' for number in range(3))) if ancillary_links else httpx.Response(404))
+    async with httpx.AsyncClient(transport=transport) as http:
+        result = await pipeline.enrich_notice(source["payload"], http, allow_gemini=False)
+    assert calls == (["https://www.applyhome.co.kr/ancillary-0.pdf", "https://www.applyhome.co.kr/ancillary-1.pdf", source["document_url"]] if ancillary_links else candidates)
+    assert result["document_hash"] == source["document_hash"]
+    scope = next(r for r in result["rules"] if r["kind"] == "applicant_regions" and not r.get("supply_type"))
+    assert {r["region_code"] for r in scope["regions"]} == {"41", "11", "28"}
+    assert scope["local_priority"]["region_code"] == "41590"
+    assert scope["evidence_url"] == source["document_url"]
+
+
+@pytest.mark.asyncio
+async def test_geographic_only_same_hash_reparse_retains_reviewed_admission_facts(monkeypatch):
+    region = reviewed_region()
+    admission = {"kind": "age_min", "value": 19, "verification": "official", "source": "official_document_parser",
+                 "document_hash": "same-file", "parser_version": PARSER_VERSION}
+    current = {"official_url": "https://www.applyhome.co.kr/notice", "document_hash": "same-file",
+               "rules": [region, admission]}
+    async def extract(*args, **kwargs):
+        return {"document_hash": "same-file", "rules": [region], "diagnostics": [], "status": "partial"}
+    monkeypatch.setattr(pipeline, "extract_local_document", extract)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text='<a href="/notice.pdf">모집공고</a>'))) as http:
+        result = await pipeline.enrich_notice(current, http, known_document_hash="same-file", allow_gemini=False)
+    assert admission in result["rules"] and region in result["rules"]
+    assert result["rules_complete"] is False
 
 
 @pytest.mark.asyncio

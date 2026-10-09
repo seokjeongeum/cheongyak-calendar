@@ -1,12 +1,32 @@
 import { describe, expect, it } from 'vitest'
 import { deriveHousehold } from './household'
 import { createHouseholdMember, createOwnershipFact, EMPTY_PROFILE, type HouseholdMember, type LocalProfile } from './types'
-import { migrateProfile } from './profile'
+import { migrateProfile, updateProfileFacts } from './profile'
 import { evaluateHouseholdOwnership } from './ownership'
 const cutoff = '2026-09-30'
 const profile = (extra: Partial<LocalProfile> = {}): LocalProfile => ({ ...EMPTY_PROFILE, applicantOnRegister: true, hasSpouse: false, applicantOwnsHome: false, householdMembersComplete: true, householdSnapshotDate: cutoff, ...extra })
 const member = (relation: HouseholdMember['relation'], register: HouseholdMember['register'], id = `${relation}-${register}`): HouseholdMember => ({ ...createHouseholdMember(id), relation, register, ownsHome: false })
 describe('Article 2 family roster scope, effective2026-06-15', () => {
+  it('uses an explicit absence of other family without a completeness affirmation', () => {
+    const applicant = profile({ additionalFamilyPresence: false, householdMembersComplete: null })
+    expect(deriveHousehold(applicant, cutoff)).toMatchObject({ complete: true, legalCount: 1 })
+    expect(deriveHousehold({ ...applicant, hasSpouse: true, spouseOwnsHome: false }, cutoff)).toMatchObject({ complete: true, legalCount: 2 })
+  })
+  it('uses the actual roster without requiring another confirmation', () => {
+    for (const additionalFamilyPresence of [true, false, null]) {
+      const actual = profile({ additionalFamilyPresence, householdMembersComplete: null, householdMembers: [member('applicant_child', 'applicant')] })
+      expect(deriveHousehold(actual, cutoff)).toMatchObject({ complete: true, legalCount: 2 })
+    }
+  })
+  it('keeps a new empty roster unknown and asks the concrete missing fact', () => {
+    const fresh = profile({ householdMembersComplete: null, additionalFamilyPresence: null })
+    expect(deriveHousehold(fresh, cutoff)).toMatchObject({ complete: false, profileField: 'additionalFamilyPresence' })
+    expect(deriveHousehold(fresh).reviewDetail).not.toContain('빠진 가족')
+    expect(deriveHousehold({ ...fresh, additionalFamilyPresence: true }, cutoff)).toMatchObject({ complete: false, profileField: 'householdMembers' })
+  })
+  it('preserves a saved applicant-only roster without asking for completeness again', () => {
+    expect(deriveHousehold(profile({ additionalFamilyPresence: undefined }), cutoff)).toMatchObject({ complete: true, legalCount: 1 })
+  })
   it('includes the applicant and legal spouse at separate addresses', () => {
     const scope = deriveHousehold(profile({ hasSpouse: true, spouseSameRegister: false, spouseOwnsHome: false }), cutoff)
     expect(scope).toMatchObject({ complete: true, legalCount: 2 })
@@ -41,6 +61,16 @@ describe('Article 2 family roster scope, effective2026-06-15', () => {
     const relative = member('applicant_parent', 'unknown')
     expect(deriveHousehold(profile({ householdMembers: [relative] }), cutoff)).toMatchObject({ complete: false, profileField: 'householdMembers' })
     expect(deriveHousehold(profile({ householdMembers: [member('applicant_child', 'applicant', 'applicant')] }), cutoff).complete).toBe(false)
+    expect(deriveHousehold(profile({ householdMembersComplete: null, householdMembers: [{ ...member('applicant_child', 'applicant'), relation: 'unknown' }] }), cutoff)).toMatchObject({ complete: false, profileField: 'householdMembers' })
+  })
+  it('preserves dated facts while an edit does not verify unknown past family composition', () => {
+    const fresh = profile({ householdMembersComplete: null, householdSnapshotDate: '', additionalFamilyPresence: null })
+    const answeredToday = updateProfileFacts(fresh, { additionalFamilyPresence: false }, '2026-10-05')
+    expect(deriveHousehold(answeredToday, cutoff)).toMatchObject({ complete: false, profileField: 'householdSnapshotDate' })
+    const old = profile({ additionalFamilyPresence: false, householdMembersComplete: null })
+    const changed = updateProfileFacts(old, { additionalFamilyPresence: true, householdMembers: [member('applicant_parent', 'applicant')] }, '2026-10-05')
+    expect(deriveHousehold(changed, cutoff)).toMatchObject({ complete: true, legalCount: 1 })
+    expect(deriveHousehold(changed, '2026-10-01')).toMatchObject({ complete: false, profileField: 'householdSnapshotDate' })
   })
   it('requires exact earlier-date composition confirmation and does not promote general unchanged', () => {
     const current = profile({ householdSnapshotDate: '2026-10-04', householdCompositionUnchanged: true })

@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal, init_db
 from app.collection import CollectionHeartbeat, claim_collection, finish_collection, renew_collection
 from app.integration_settings import setting_value
-from app.extract.pipeline import enrich_notice, extraction_configured
+from app.extract.pipeline import DOCUMENT_PIPELINE_VERSION, enrich_notice, extraction_configured
 from app.models import DocumentExtractionState, Notice, SourceStatus
 from app.qualification import is_metadata, merge_poll_rules
 from app.repository import NON_APPLICATION_KINDS, is_open_ended_application, lock_notice, record_source_status, resolve_pending_corrections, upsert_notice
@@ -74,6 +74,16 @@ def _save_priority(payload: dict, today: date) -> int:
             return 0
     announced = date_iso(payload.get("announcement_date"))
     return 1 if announced and announced >= (today - timedelta(days=45)).isoformat() else 2
+
+
+def _failed_document_needs_new_pipeline(existing: Notice | None) -> bool:
+    """One same-day retry after a download fix; successful reviews stay cached."""
+    return bool(existing and any(
+        rule.get("kind") == "document_diagnostics"
+        and rule.get("status") in {"unreadable", "error"}
+        and rule.get("pipeline_version") != DOCUMENT_PIPELINE_VERSION
+        for rule in existing.rules or []
+    ))
 
 
 def _save_progress(session: Session, state: SourceStatus | None, source: str, saved: int, total: int) -> SourceStatus:
@@ -124,7 +134,8 @@ async def _save_rows(
                 deferred += 1
             should_audit = (
                 (existing is None or url_changed or (
-                    (extraction_state is None or extraction_state.audited_on != today or (
+                    (extraction_state is None or extraction_state.audited_on != today
+                     or _failed_document_needs_new_pipeline(existing) or (
                         extraction_configured() and not quota_blocked
                         and deferred_until is not None and deferred_until <= now
                     ))

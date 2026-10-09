@@ -14,6 +14,8 @@ from typing import Any
 
 import httpx
 
+from app.supply_classification import reviewed_supply_classification
+
 from .common import FeedError, add_event, body_rows, date_iso, decimal_number, get_json, manwon_to_krw, omit_empty_enrichment, public_url, value
 
 BASE = "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1"
@@ -238,6 +240,14 @@ def normalize(detail: dict[str, Any], models: list[dict[str, Any]], pair: Pair) 
         "rules": _qualification_metadata(detail, pair, official_url),
         "rules_complete": False,
     }
+    supply_classification = reviewed_supply_classification(
+        official_url=official_url, announcement_date=payload["announcement_date"],
+        title=payload["title"], provider=payload["provider"])
+    if supply_classification:
+        payload["category"] = supply_classification["category"]
+        payload["rules"].append(supply_classification)
+        if payload["category"] == "public_rental":
+            payload["price_cap_status"] = "not_applicable"
     fees = []
     exclusive = []
     inventory = _offered_supplies(models, detail, pair, official_url)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createOwnershipFact, EMPTY_PROFILE, type OwnershipFact } from './types'
-import { evaluatePropertyOwnership, evaluateHouseholdOwnership } from './ownership'
+import { setEvaluationToday } from './factTimeline'
+import { evaluatePropertyOwnership, evaluateHouseholdOwnership, ownershipInventoryComplete, ownershipMemberInventoryComplete } from './ownership'
 const context = { criterionDate: '2026-09-30', assessmentDate: '2026-10-04', supplyType: '일반공급' }
 const fact = (extra: Partial<OwnershipFact> = {}) => ({ ...createOwnershipFact('dwelling-1'), ownerRelation: 'applicant' as const, propertyKind: 'apartment' as const, areaSqm: '84', propertyRegionCode: '41', acquiredDate: '2020-01-01', acquisitionMethod: 'purchase' as const, abandonedOrDestroyedOrNonResidential: false, oldLawUnauthorized: false, ...extra })
 const evaluate = (extra: Partial<OwnershipFact>, count = 1, ctx = context) => evaluatePropertyOwnership(fact(extra), ctx, count)
@@ -107,7 +108,8 @@ describe('household ownership factual completeness', () => {
   })
   it('does not claim ownership list complete if knownheldproperty hasnoentry', () => {
     expect(evaluateHouseholdOwnership({ ...person, ownershipFacts: [] }, context).value).toBeNull()
-    expect(evaluateHouseholdOwnership({ ...person, ownershipFactsKnown: null, applicantOwnsHome: false }, context).value).toBe(true)
+    expect(evaluateHouseholdOwnership({ ...person, ownershipFactsKnown: null, applicantOwnsHome: false, ownershipFacts: [] }, context).value).toBe(true)
+    expect(evaluateHouseholdOwnership({ ...person, ownershipFactsKnown: null, applicantOwnsHome: false }, context).value).toBeNull()
   })
   it('treats each rawhousehold dwellingasone foronehouseholdonly exceptions', () => {
     const small = fact({ areaSqm: '20' })
@@ -149,5 +151,58 @@ describe('household ownership factual completeness', () => {
     const result = evaluateHouseholdOwnership({ ...person, householdMembers: [{ id: 'parent', relation: 'applicant_parent', register: 'applicant', dateOfBirth: '1950-01-01', ownsHome: true, previouslyOwnedHome: null }], ownershipFacts: [parent] }, context)
     expect(result).toMatchObject({ value: null, profileField: 'ownershipFacts' })
     expect(result.detail).toContain('본인')
+  })
+})
+
+describe('factual ownership counts instead of completion confirmations', () => {
+  const today = '2026-10-09'
+  const stable = { household: { mode: 'never_changed' as const, date: '' } }
+  const person = { ...EMPTY_PROFILE, applicantOnRegister: true, hasSpouse: false, householdMembersComplete: true, applicantOwnsHome: true, ownershipFactsKnown: null, factChanges: stable, ownershipFacts: [fact({ areaSqm: '20' })], ownershipPropertyCounts: { applicant: '1' } }
+  const ctx = { ...context, assessmentDate: today }
+
+  it('accepts one declared dwelling with linked dated facts without an all-added checkbox', () => {
+    setEvaluationToday(today)
+    expect(ownershipInventoryComplete(person)).toBe(true)
+    expect(evaluateHouseholdOwnership(person, ctx)).toMatchObject({ value: true, countedHomes: 0 })
+    expect(evaluateHouseholdOwnership({ ...person, ownershipFactsKnown: false }, ctx).value).toBe(true)
+  })
+
+  it('does not grant one-home exceptions from one row when another declared home is missing', () => {
+    setEvaluationToday(today)
+    const missing = { ...person, ownershipPropertyCounts: { applicant: '2' } }
+    expect(ownershipInventoryComplete(missing)).toBe(false)
+    expect(evaluateHouseholdOwnership(missing, ctx)).toMatchObject({ value: null, profileField: 'ownershipFacts' })
+    expect(evaluateHouseholdOwnership({ ...missing, ownershipFactsKnown: true }, ctx).value).toBeNull()
+    expect(evaluateHouseholdOwnership({ ...missing, ownershipFacts: [person.ownershipFacts[0], { ...person.ownershipFacts[0], id: 'second' }] }, ctx).value).toBe(false)
+  })
+
+  it('reconstructs an earlier owned home from a complete current zero and a real disposal', () => {
+    setEvaluationToday(today)
+    const disposed = { ...person, applicantOwnsHome: false, ownershipPropertyCounts: { applicant: '0' }, ownershipFacts: [fact({ disposedDate: '2026-10-05' })] }
+    expect(ownershipInventoryComplete(disposed)).toBe(true)
+    expect(evaluateHouseholdOwnership(disposed, { ...ctx, criterionDate: '2026-10-02' }).value).toBe(false)
+    expect(evaluateHouseholdOwnership(disposed, { ...ctx, criterionDate: today }).value).toBe(true)
+    expect(ownershipMemberInventoryComplete(disposed, 'applicant', '2026-10-02')).toBe(false)
+  })
+
+  it('validates historical snapshot counts on their own day and current counts on today', () => {
+    setEvaluationToday(today)
+    const snapshot = { ...person, ownershipFacts: [fact({ disposedDate: '2026-10-05' })] }
+    expect(evaluateHouseholdOwnership(snapshot, { ...ctx, criterionDate: '2026-10-02', inventoryDate: '2026-10-02' }).value).toBe(false)
+    expect(evaluateHouseholdOwnership(snapshot, { ...ctx, criterionDate: '2026-10-02' }).value).toBeNull()
+  })
+
+  it('keeps another person’s unknown ownership unresolved, even with a declared zero', () => {
+    setEvaluationToday(today)
+    const unknown = { ...person, hasSpouse: true, maritalStatus: 'married' as const, spouseOwnsHome: null, ownershipPropertyCounts: { applicant: '1', spouse: '0' } }
+    expect(ownershipInventoryComplete(unknown)).toBe(false)
+    expect(evaluateHouseholdOwnership(unknown, ctx)).toMatchObject({ value: null, profileField: 'spouseOwnsHome' })
+  })
+
+  it('keeps a shared household dwelling unresolved until physical identity is known', () => {
+    setEvaluationToday(today)
+    const shared = { ...person, hasSpouse: true, maritalStatus: 'married' as const, spouseOwnsHome: true, ownershipPropertyCounts: { applicant: '1', spouse: '1' }, ownershipFacts: [{ ...person.ownershipFacts[0], ownedShare: true }, { ...person.ownershipFacts[0], id: 'spouse-share', ownerRelation: 'spouse' as const, ownerMemberId: 'spouse', ownedShare: true }] }
+    expect(ownershipInventoryComplete(shared)).toBe(true)
+    expect(evaluateHouseholdOwnership(shared, ctx)).toMatchObject({ value: null, countedHomes: null })
   })
 })

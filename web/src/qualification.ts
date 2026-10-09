@@ -1,8 +1,9 @@
 import { EMPTY_PROFILE, type FactChangeGroup, type LocalProfile, type Notice, type NoticeRule, type NoticePrice, type OfferedSupply } from './types'
 import { matchesRegionScope, scopeIsDistrict, parentCityCode, districtName, resolveLegacyRegion, provinceCode } from './regions'
 import { deriveHousehold } from './household'
-import { evaluateHouseholdOwnership, evaluatePropertyOwnership, OWNERSHIP_LAW_URL } from './ownership'
+import { evaluateHouseholdOwnership, evaluatePropertyOwnership, ownershipInventoryComplete, OWNERSHIP_LAW_URL } from './ownership'
 import { contractEvaluationDate, FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, getEvaluationToday } from './factTimeline'
+import { isParentRule, resolveParentSupport } from './parentSupport'
 export { setEvaluationToday } from './factTimeline'
 
 export type EligibilityStatus = 'possible' | 'mismatch' | 'review' | 'unpublished'
@@ -352,9 +353,9 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const status: ReasonStatus = mode === 'any' ? statuses.includes('pass') ? 'pass' : statuses.every((s) => s === 'fail') ? 'fail' : 'review'
       : mode === 'not' && evaluated.length === 1 ? statuses[0] === 'pass' ? 'fail' : statuses[0] === 'fail' ? 'pass' : 'review'
       : mode === 'all' ? statuses.includes('fail') ? 'fail' : statuses.includes('review') ? 'review' : 'pass' : 'review'
-    // A passing alternative explains the branch that was actually met. Other
-    // allowed regions/family routes are alternatives, not personal failures.
-    const explained = mode === 'any' && status === 'pass' ? evaluated.filter((r) => r.status === 'pass') : mode === 'all' && status === 'fail' ? evaluated.filter((r) => r.status === 'fail') : evaluated
+    // Explain the met or unresolved alternative. Failed sibling regions or
+    // family routes cannot close a branch that is still possible.
+    const explained = mode === 'any' ? evaluated.filter((r) => r.status === status) : mode === 'all' && status === 'fail' ? evaluated.filter((r) => r.status === 'fail') : evaluated
     const inputs = [...new Set(explained.map((r) => r.input).filter((input): input is string => !!input))]
     const requirements = [...new Set(evaluated.map((r) => r.requirement).filter((requirement): requirement is string => !!requirement))]
     const requirement = rule.text || requirements.join(mode === 'any' ? ' 또는 ' : ' 및 ') || undefined
@@ -362,25 +363,51 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     return { ...reason(rule, notice, status, typeof rule.label === 'string' ? rule.label : mode === 'any' ? '대체 충족 조건' : '함께 필요한 조건', explained.map((r) => `${r.label}: ${r.detail}`).join(' / '), inputs.length ? inputs.join(' / ') : undefined, requirement), category: status === 'review' ? question?.category || 'source_gap' : 'condition', profileField: status === 'review' ? question?.profileField : undefined, historyGroup: status === 'review' ? question?.historyGroup : undefined }
   }
   const date = criterionDate(rule, notice)
+  if (isParentRule(rule.kind)) {
+    const parent = resolveParentSupport(profile, date || getEvaluationToday())
+    if (parent.mode !== 'legacy') {
+      if (!date) return unsupported(rule, notice, '부모 부양 사실을 비교할 공식 기준일이 확인되지 않았습니다.', '공고 기준일의 사실')
+      if (parent.mode === 'selection') return missingInput(rule, notice, '부양 대상 부모·조부모', '가족 목록에서 실제 부양 대상 한 명을 선택하세요. 여러 부모의 생년월일·보유 답변을 섞어 비교하지 않습니다.', '비교할 부양 대상', 'parentSupportMemberId')
+      const entry = parent.facts[rule.kind]
+      if (!entry.temporalKnown && entry.value != null && entry.value !== '') return pastFact(rule, notice, entry.historyGroup || 'household', `${parent.label}의 ${date} 당시 사실을 저장된 가족·주택 이력에서 확인할 수 없습니다. 해당 사실의 기존 변경일 입력을 사용하며 부모 부양 전체의 변경일을 다시 묻지 않습니다.`)
+      let compared: EligibilityReason
+      if (rule.kind === 'parent_age_min') compared = numeric(rule, notice, ageAt(String(entry.value || ''), date), '부모 만 나이', '세')
+      else if (rule.kind === 'parent_support_months_min') {
+        const start = typeof entry.value === 'string' ? entry.value : ''
+        const same = parent.facts.parent_same_register
+        const months = start && parseDate(start) ? start > date ? 0 : fullMonths(start, date) : same.temporalKnown && same.value === false ? 0 : null
+        compared = numeric(rule, notice, months, '부모 연속 부양 기간', '개월')
+        if (compared.category === 'missing_input') compared = { ...compared, label: '부양 시작일', detail: '선택한 가족이 본인과 같은 등본에서 연속 등재된 시작일을 입력하세요. 가점과 다른 공고에도 같은 날짜를 사용합니다.' }
+      } else {
+        const label = { parent_same_register: '부모 동일 등본', parent_owns_home: '부모 주택 보유', parent_spouse_owns_home: '부양 대상 부모의 배우자 주택 보유' }[rule.kind]
+        compared = factualBoolean(rule, notice, typeof entry.value === 'boolean' ? entry.value : null, label)
+      }
+      return { ...compared, profileField: compared.status === 'review' ? entry.profileField : undefined, detail: `${parent.label} · ${compared.detail}${entry.detail ? ` ${entry.detail}` : ''}` }
+    }
+  }
   if (rule.kind === 'overseas_residence' && rule.currently_abroad_only === true) {
     const domestic = evaluateRule({ ...rule, kind: 'domestic_residence', value: true, overseas_residence_equivalence: undefined, conditions: undefined, exceptions: undefined }, profile, notice, unitType)
     if (domestic.status === 'review') return domestic
     if (domestic.status === 'pass') return reason(rule, notice, 'pass', '해외 연속 체류', '공고 기준일에 국내로 귀국해 거주한다고 입력했습니다. 완료된 과거 해외 체류만으로 현재 해외 장기체류자로 제외하지 않습니다.', '기준일 국내 거주', '기준일 현재 연속 해외 체류 90일 초과 아님')
   }
   const group = factGroupForRule(rule), currentField = profileFieldForRule(rule, notice)
+  let ownershipInventoryDate: string | undefined
   const currentValue = rule.kind === 'marriage_months_max' ? profile.maritalStatus : group === 'ownership' ? profile.applicantOwnsHome : currentField ? profile[currentField] : undefined
-  if (!['children_min', 'newborn_children_min'].includes(rule.kind) && group && currentValue != null && currentValue !== '' && currentValue !== 'unknown') {
+  const savedOwnership = group === 'ownership' && profile.factSnapshots?.some((snapshot) => snapshot.group === 'ownership' && snapshot.date === date && Object.keys(snapshot.values).length > 0)
+  if (!['children_min', 'newborn_children_min'].includes(rule.kind) && group && (savedOwnership || currentValue != null && currentValue !== '' && currentValue !== 'unknown')) {
     const legacy = legacyFactObservation(profile, group)
     const temporal = factsAtDate(profile, group, date, legacy)
     const actualMarriage = group === 'marital' && profile.maritalStatus === 'married' && parseDate(profile.marriageDate) && date && profile.marriageDate <= date && !profile.factChanges?.marital
     const actualSupport = ['parent_support_months_min', 'parent_same_register'].includes(rule.kind) && parseDate(profile.parentSupportSince) && date && profile.parentSupportSince <= date && (rule.kind !== 'parent_same_register' || profile.parentSameRegister === true)
-    const actualOwnership = group === 'ownership' && profile.ownershipFactsKnown === true && profile.ownershipFacts.length > 0 && profile.ownershipFacts.every((fact) => parseDate(fact.acquiredDate))
+    const actualOwnership = group === 'ownership' && ownershipInventoryComplete(profile) && profile.ownershipFacts.length > 0 && profile.ownershipFacts.every((fact) => parseDate(fact.acquiredDate))
     if (!date) return unsupported(rule, notice, '이 사실을 비교할 공식 기준일이 확인되지 않았습니다.', '공고 기준일의 사실')
     if (!temporal.known && !actualMarriage && !actualSupport && !actualOwnership) return pastFact(rule, notice, group)
+    if (group === 'ownership' && temporal.source === 'snapshot') ownershipInventoryDate = date || undefined
     profile = temporal.profile
   }
   if (['residence_months', 'residence_region', 'residence_area', 'region'].includes(rule.kind)) {
     const match = matchesRegionScope(profile, rule, date)
+    if (rule.residence_union === true && match === null && !profile.districtCode) return missingInput(rule, notice, '해당지역 범위', '공고가 정한 여러 구 중 현재 거주하는 구를 선택하세요.', rule.region_name || undefined, 'districtCode')
     if (match === null || profile.regionNeedsReview) return !profile.regionCode && !profile.region ? missingInput(rule, notice, '거주지역', '현재 거주 시도와 시·군·구를 선택하세요.', rule.region_name || rule.region_code || undefined, 'regionCode') : unsupported(rule, notice, '선택한 행정구역과 공고의 공식 거주 범위·시행일을 확인해야 합니다.', '거주지역')
     const historical = residenceCutoffReview(rule, profile, notice, rule.region_name || rule.region_code || undefined)
     if (historical) return historical
@@ -389,8 +416,12 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const start = residenceStartDate(rule, profile)
     const months = date && start ? fullMonths(start, date) : null
     const r = numeric(rule, notice, months, '거주기간', '개월')
+    // Staying in one mapped district proves residence in the wider union.
+    // A shorter district stay alone cannot disprove continuous residence
+    // across the other districts in that same official territory.
+    if (rule.residence_union === true && r.status === 'fail') return { ...reason(rule, notice, 'review', '공식 해당지역 연속 거주 이력', `현재 구의 거주기간만으로는 공고가 정한 여러 구 사이의 이동 전 기간을 확인할 수 없습니다. 공식 해당지역 범위에서 ${rule.value}개월간 연속 거주한 이력을 추가 대조해야 합니다.`), category: 'past_fact' }
     if (r.category === 'missing_input' && residenceScopeIsDistrict(rule)) {
-      if (residenceParentCity(rule, profile)) r.profileField = 'cityMovedInDate'
+      r.profileField = residenceParentCity(rule, profile) ? 'cityMovedInDate' : 'districtMovedInDate'
     }
     r.detail = `${residenceScopeIsDistrict(rule) ? '시·군·구' : '시도'} 연속 거주 시작일 ${start || '미입력'} · ${r.detail}`
     return r
@@ -460,7 +491,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     return numeric(rule, notice, household.legalCount, '계산된 주택 보유 확인 가족 수', '명')
   }
   if (rule.kind === 'homeless') {
-    const facts = evaluateHouseholdOwnership(profile, { criterionDate: date, supplyType: rule.supply_type || undefined, publicRental: notice.category === 'public_rental' })
+    const facts = evaluateHouseholdOwnership(profile, { criterionDate: date, inventoryDate: ownershipInventoryDate, supplyType: rule.supply_type || undefined, publicRental: notice.category === 'public_rental' })
     if (typeof rule.value !== 'boolean') return unsupported(rule, notice, '무주택 세대구성원에 대한 공식 요구값을 아직 정리하지 못했습니다.', '무주택 세대구성원')
     if (facts.value === null) {
       const field = facts.profileField
@@ -469,7 +500,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     return { ...reason(rule, notice, facts.value === rule.value ? 'pass' : 'fail', '무주택 세대구성원', facts.detail, facts.value ? '미보유 또는 법정 예외 적용' : '주택·권리 보유', rule.value ? '무주택 세대구성원' : '주택 보유'), evidenceUrl: facts.properties.some((p) => p.clause) ? OWNERSHIP_LAW_URL : rule.evidence_url || law53 }
   }
   if (rule.kind === 'ownership_count_max') {
-    const facts = evaluateHouseholdOwnership(profile, { criterionDate: date, supplyType: rule.supply_type || undefined, publicRental: notice.category === 'public_rental' })
+    const facts = evaluateHouseholdOwnership(profile, { criterionDate: date, inventoryDate: ownershipInventoryDate, supplyType: rule.supply_type || undefined, publicRental: notice.category === 'public_rental' })
     const assessed = numeric(rule, notice, facts.countedHomes, '법정 주택 소유 수', '호', '<=')
     assessed.detail = `${facts.detail} · ${assessed.detail}`
     assessed.evidenceUrl = OWNERSHIP_LAW_URL
@@ -513,7 +544,9 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const serving = profile.militaryCurrentlyServing
     if (serving === null) return missingInput(rule, notice, '장기복무 군인 예외', '현재 군 복무 중인지 입력하세요.', undefined, 'militaryCurrentlyServing')
     if (serving === false) return reason(rule, notice, 'fail', '장기복무 군인 예외', '현재 군 복무 중이 아니라고 입력했습니다.', '현재 군 복무 아님', '공고의 장기복무 군인 예외')
-    return numeric(rule, notice, numberFrom(profile.militaryServiceYears), '군 복무 기간', '년')
+    const compared = numeric(rule, notice, numberFrom(profile.militaryServiceYears), '군 복무 기간', '년')
+    if (compared.status === 'pass' && rule.recommendation_required === true) return unsupported(rule, notice, `복무 기간은 충족하지만 공식 ${String(rule.recommendation_authority || '추천기관')} 추천이 있어야 해당지역 예외가 적용됩니다. 이 추천 사실을 대조할 입력 항목은 아직 지원하지 않습니다.`, '장기복무군인 해당지역 추천 요건')
+    return compared
   }
   if (['subscription_months', 'private_rank_months', 'national_rank_months'].includes(rule.kind)) {
     const kind = rule.kind === 'private_rank_months' ? 'private' : rule.kind === 'national_rank_months' ? 'national' : rule.housing_kind || notice.housing_kind
@@ -1042,14 +1075,24 @@ export function regionDecision(notice: Notice, profile: LocalProfile, selection:
   const objectScope = (value: unknown): Record<string, unknown> | null => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
   const local = objectScope(metadata.local_priority)
   const priorityRules = (notice.rules || []).filter((rule) => rule.verification === 'official' && rule.effect === 'priority' && scopedRule(rule, selection.unitType, selection.supplyType) && ['residence_months', 'residence_region', 'residence_area', 'region'].includes(rule.kind))
-  const localRules: NoticeRule[] = local ? [{ ...metadata, ...local, effect: 'priority', kind: local.min_months == null ? 'residence_region' : 'residence_months', value: typeof local.min_months === 'number' ? local.min_months : null, region_code: typeof local.region_code === 'string' ? local.region_code : null, region_name: typeof (local.region_name || local.name) === 'string' ? String(local.region_name || local.name) : null }]
+  // Admission exceptions may allocate "other"; compare local exceptions
+  // separately rather than inheriting them into the ordinary local rule.
+  const localRules: NoticeRule[] = local ? [{ ...metadata, ...local, exceptions: undefined, effect: 'priority', kind: local.min_months == null ? 'residence_region' : 'residence_months', value: typeof local.min_months === 'number' ? local.min_months : null, region_code: typeof local.region_code === 'string' ? local.region_code : null, region_name: typeof (local.region_name || local.name) === 'string' ? String(local.region_name || local.name) : null }]
     : priorityRules.filter((rule) => !['other', 'other_gyeonggi'].includes(String(rule.value)))
+  const mapping = objectScope(local?.mapping_evidence)
+  if (local && Array.isArray(local.regions) && local.regions.length && metadata.document_hash && mapping?.document_hash === metadata.document_hash && typeof mapping.evidence_url === 'string' && typeof mapping.evidence_text === 'string' && mapping.evidence_text) {
+    const mapped = local.regions.map(objectScope)
+    if (mapped.every((scope) => scope && typeof scope.region_code === 'string' && typeof scope.region_name === 'string')) {
+      const base = localRules[0]
+      localRules.splice(0, localRules.length, { ...base, kind: 'any', label: '공식 해당지역의 지역·거주기간', conditions: mapped.map((scope) => ({ ...base, ...scope, effect: undefined, residence_union: mapped.length > 1 && Number(local.min_months) > 0 })) })
+    }
+  }
   if (!localRules.length) return finish('source_gap', '신청 지역 요건은 충족합니다. 해당지역 우선권·기타지역 배정 조건은 아직 대조하지 못했습니다.')
   const militaryLocal = regionMilitaryException(metadata, profile, notice, 'local')
   if (militaryLocal?.status === 'pass') return finish('local', '공고가 명시한 장기복무군인 해당지역 배정 예외를 충족합니다.', [admitted, militaryLocal])
   const compared = localRules.map((rule): EligibilityReason => {
     const effective = { ...rule, criterion_date: rule.criterion_date || date, effect: undefined }
-    const provenance = residenceCutoffReview(effective, home, notice)
+    const provenance = effective.kind === 'any' ? null : residenceCutoffReview(effective, home, notice)
     if (provenance) return provenance
     return evaluateRule(effective, home, notice, selection.unitType)
   })

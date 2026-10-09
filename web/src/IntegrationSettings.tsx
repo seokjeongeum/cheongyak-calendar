@@ -33,7 +33,7 @@ export function integrationKeyStatus(service: IntegrationService, common: Integr
   if (service.configured && !service.uses_shared_key) return '기관별 키 연결됨'
   if (commonDraft === '') return '공통 키 삭제 예정'
   if (commonDraft) return '공통 키 사용 예정'
-  return service.uses_shared_key || commonAvailable ? '공통 키 사용' : '키 미설정'
+  return service.uses_shared_key || commonAvailable ? '공통 키 연결됨' : '키 미설정'
 }
 
 /** Consume the private entry credential before loading settings or following links. */

@@ -113,6 +113,7 @@ export interface ContractSchedule {
 }
 
 export interface Notice {
+  document_hash?: string | null
   selection_methods?: NoticeRule[]
   winning_scores?: WinningScore[]
   contract_schedule?: ContractSchedule | null
@@ -295,6 +296,8 @@ export interface LocalProfile {
   applicantOnRegister: boolean | null
   householdMembers: HouseholdMember[]
   householdMembersComplete: boolean | null
+  /** Whether anyone besides applicant/spouse is on their registers; asked only for an empty roster. */
+  additionalFamilyPresence?: boolean | null
   householdSnapshotDate: string
   householdCompositionUnchanged: boolean | null
   householdHistoryConfirmations: HouseholdHistoryConfirmation[]
@@ -310,6 +313,8 @@ export interface LocalProfile {
   ownershipException: boolean | null
   ownershipFactsKnown: boolean | null
   ownershipFacts: OwnershipFact[]
+  /** Actual current dwelling/right count per person; shared dwelling counts once per owner. */
+  ownershipPropertyCounts?: Record<string, string>
   applicantPreviouslyOwnedHome: boolean | null
   spousePreviouslyOwnedHome: boolean | null
   spousePremarriageOwnershipDisposed?: boolean | null
@@ -362,6 +367,8 @@ export interface LocalProfile {
   incomeTaxFactsAsOfDate?: string
   incomeTaxFactsHistoryConfirmations?: HouseholdHistoryConfirmation[]
   parentDateOfBirth: string
+  /** Stable family identity whose common facts are reused for elder-parent supply. */
+  parentSupportMemberId?: string
   parentSupportSince: string
   parentSameRegister: boolean | null
   parentOwnsHome: boolean | null
@@ -383,17 +390,17 @@ export interface LocalProfile {
 
 export const EMPTY_PROFILE: LocalProfile = {
   version: 5, pointsFamily: {}, pointsFamilyComplete: null, pointsHomelessSince: '', spouseAccountPresent: null, spouseAccountBaseDate: '', factChanges: {}, factSnapshots: [], applicationHistoryPresence: null, applicationHistoryComplete: null, applicationHistoryPeople: [], applicationHistoryEvents: [], region: '', district: '', regionCode: '', districtCode: '', districtScopeSpecific: false, regionNeedsReview: false,
-  movedInDate: '', districtMovedInDate: '', cityMovedInDate: '', residenceHistory: [], intendedContractDate: '', currentlyDomesticResident: null, domesticResidenceFactsAsOfDate: '', domesticResidenceHistoryConfirmations: [], providerEmployeeOrRelatedFamily: null, providerPurchaseApproval: null, householdSize: '', incomeHouseholdSize: '', applicantOnRegister: null, householdMembers: [], householdMembersComplete: null, householdSnapshotDate: '', householdCompositionUnchanged: null, householdHistoryConfirmations: [], dateOfBirth: '',
+  movedInDate: '', districtMovedInDate: '', cityMovedInDate: '', residenceHistory: [], intendedContractDate: '', currentlyDomesticResident: null, domesticResidenceFactsAsOfDate: '', domesticResidenceHistoryConfirmations: [], providerEmployeeOrRelatedFamily: null, providerPurchaseApproval: null, householdSize: '', incomeHouseholdSize: '', applicantOnRegister: null, householdMembers: [], householdMembersComplete: null, additionalFamilyPresence: null, householdSnapshotDate: '', householdCompositionUnchanged: null, householdHistoryConfirmations: [], dateOfBirth: '',
   isHouseholdHead: null, hasSpouse: null, spouseSameRegister: null, familyOnRegister: null,
   householdScopeKnown: null, applicantOwnsHome: null, spouseOwnsHome: null, familyOwnsHome: null,
-  ownershipException: null, ownershipFactsKnown: null, ownershipFacts: [], applicantPreviouslyOwnedHome: null, spousePreviouslyOwnedHome: null, spousePremarriageOwnershipDisposed: null,
+  ownershipException: null, ownershipFactsKnown: null, ownershipFacts: [], ownershipPropertyCounts: {}, applicantPreviouslyOwnedHome: null, spousePreviouslyOwnedHome: null, spousePremarriageOwnershipDisposed: null,
   familyPreviouslyOwnedHome: null, accountType: 'unknown', privateRankBaseDate: '', nationalRankBaseDate: '',
   privateDepositKrw: '', privateDepositAsOfDate: '', privateDepositMaintained: null, nationalRecognizedPayments: '', nationalRecognizedAmountKrw: '', nationalPaymentsAsOfDate: '',
   accountConversionUnclear: null, previousWinning: null, previousWinningDate: '',
   restrictedFromApplying: null, projectApplicationHistory: {}, citizenship: 'unknown', overseasContinuousDays: '', overseasFactsAsOfDate: '', overseasOnlyApplicantForLivelihood: null, overseasFactsHistoryConfirmations: [], ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, applicationRestrictionFacts: {}, applicationRestrictionsAsOfDate: '', applicationRestrictionsHistoryConfirmations: [], specialWinning: null,
   annualIncomeKrw: '', assetsKrw: '', monthlyIncomeKrw: '', officialNetAssetsKrw: '', plannedMarriage: null, raisesChildWithoutSpouse: null, hasDeFactoPartner: null, realEstateKrw: '', vehicleKrw: '',
   dualIncome: null, maritalStatus: 'unknown', marriageDate: '', hasChildren: null, children: [], pregnant: null,
-  expectedChildren: '', taxYears: '', employed: null, incomeTaxPaidWithinPastYear: null, incomeTaxFactsAsOfDate: '', incomeTaxFactsHistoryConfirmations: [], parentDateOfBirth: '', parentSupportSince: '',
+  expectedChildren: '', taxYears: '', employed: null, incomeTaxPaidWithinPastYear: null, incomeTaxFactsAsOfDate: '', incomeTaxFactsHistoryConfirmations: [], parentDateOfBirth: '', parentSupportMemberId: '', parentSupportSince: '',
   parentSameRegister: null, parentOwnsHome: null, parentSpouseOwnsHome: null, recommendationReason: '', recommendationStatus: 'unknown',
   relocatedWorker: null, militaryCurrentlyServing: null, militaryServiceYears: '', militaryFactsAsOfDate: '', militaryFactsHistoryConfirmations: [],
 }

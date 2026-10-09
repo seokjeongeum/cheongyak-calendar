@@ -27,10 +27,11 @@ import httpx
 from pypdf import PdfReader
 
 from .official_rules import PARSER_VERSION, parse_official_rules
-from .reviewed_sources import reviewed_document_url
+from .reviewed_sources import reviewed_document_urls
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v10"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 TRUSTED_HOSTS = (
@@ -87,7 +88,8 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
 def _diagnostics_rule(entries: list[dict], status: str, digest: str | None = None) -> dict:
     return {"kind": "document_diagnostics", "effect": "metadata", "verification": "official",
             "source": "official_document_parser", "parser_version": PARSER_VERSION,
-            "document_hash": digest, "status": status, "diagnostics": entries}
+            "document_hash": digest, "pipeline_version": DOCUMENT_PIPELINE_VERSION,
+            "status": status, "diagnostics": entries}
 
 
 def _with_diagnostics(payload: dict, entries: list[dict], status: str) -> dict:
@@ -96,6 +98,12 @@ def _with_diagnostics(payload: dict, entries: list[dict], status: str) -> dict:
     payload["local_extraction_status"] = status
     payload["condition_parser_version"] = PARSER_VERSION
     return payload
+
+
+def _has_reviewed_geography(rules: list[dict]) -> bool:
+    return any(rule.get("kind") == "applicant_regions" and rule.get("verification") == "official"
+               and rule.get("scope_complete") is True and (rule.get("regions") or rule.get("unrestricted"))
+               for rule in rules)
 
 
 class ExtractionDeferred(Exception):
@@ -364,9 +372,23 @@ def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
 
 
 async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload: dict | None = None) -> dict:
-    data, content_type = await _download(url, client)
     diagnostics = []
     fallback = applyhome_attachment_fallback_url(url)
+    try:
+        data, content_type = await _download(url, client)
+    except (httpx.HTTPError, ValueError) as exc:
+        if not fallback:
+            raise
+        # A provider HTTP failure can be specific to its static host, just as
+        # an HTTP-200 HTML error can. The fallback has exactly the same four
+        # attachment identifiers and is validated by _download as usual.
+        data, content_type = await _download(fallback, client)
+        if not data.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
+            raise exc
+        diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
+            "previous_url": url,
+            **({"previous_http_status": exc.response.status_code} if isinstance(exc, httpx.HTTPStatusError) else {})})
+        url, fallback = fallback, None
     if fallback and not data.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
         original_url = url
         try:
@@ -402,7 +424,7 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
                 result = {"rules": [], "offered_supply_types": [], "status": "error"}
                 diagnostics.append(document_diagnostic("interpretation", "parser_failed", url, source_format=source_format))
             else:
-                has_conditions = any(r.get("effect") != "metadata" for r in result.get("rules", []))
+                has_conditions = any(r.get("effect") != "metadata" for r in result.get("rules", [])) or _has_reviewed_geography(result.get("rules", []))
                 diagnostics.append(document_diagnostic("interpretation", "conditions_parsed" if has_conditions else "context_not_supported", url, status="ok" if has_conditions else "partial", source_format=source_format))
     if not result.get("rules"):
         result["rules"] = [{"kind": "condition_coverage", "effect": "metadata", "verification": "official",
@@ -562,9 +584,23 @@ async def enrich_notice(
                 code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
                 diagnostics.append(document_diagnostic("discovery", "announcement_download_failed", official_url, http_status=code))
                 links = []
-            reviewed_link = reviewed_document_url(official_url)
-            if not links and reviewed_link:
-                links = [reviewed_link]
+            reviewed_links = reviewed_document_urls(official_url, announcement_date=payload.get("announcement_date"))
+            # Official discovery stays first. Exact reviewed copies remain
+            # available if the current page or its attachment host is down.
+            links = list(dict.fromkeys([*links, *reviewed_links]))
+            seen_attachments = set()
+            unique_links = []
+            for link in links:
+                identity = applyhome_attachment_fallback_url(link) or link
+                if identity not in seen_attachments:
+                    seen_attachments.add(identity)
+                    unique_links.append(link)
+            links = unique_links
+            # Reserve the final bounded attempt for an exact reviewed copy.
+            # Ancillary files must not fill all three slots before it is tried.
+            preferred = next((link for link in reversed(reviewed_links) if link in links), None)
+            if preferred and preferred not in links[:MAX_DOCUMENT_LINKS]:
+                links = [*links[:MAX_DOCUMENT_LINKS - 1], preferred]
         if not links:
             diagnostics.append(document_diagnostic("discovery", "attachment_not_found", official_url))
             return _with_diagnostics(enriched, diagnostics, "unreadable")
@@ -576,7 +612,7 @@ async def enrich_notice(
             try:
                 local = await extract_local_document(link, client, payload=payload)
                 diagnostics.extend(local["diagnostics"])
-                conditions = sum(r.get("effect") != "metadata" for r in local.get("rules", []))
+                conditions = sum(r.get("effect") != "metadata" for r in local.get("rules", [])) + int(_has_reviewed_geography(local.get("rules", [])))
                 # A readable unsupported PDF is more useful than a broken HWP
                 # copy. Only a better interpretation can replace its hash.
                 readable = any(d["code"] == "document_read" for d in local["diagnostics"])
@@ -606,7 +642,7 @@ async def enrich_notice(
         changed = bool(known_document_hash and digest != known_document_hash)
         existing_rules = list(enriched.get("rules") or [])
         existing_prices = list(payload.get("prices") or [])
-        has_facts = any(r.get("effect") != "metadata" for r in best.get("rules", []))
+        has_facts = any(r.get("effect") != "metadata" for r in best.get("rules", [])) or _has_reviewed_geography(best.get("rules", []))
         if changed:
             diagnostics.append(document_diagnostic("identity", "document_changed", link, status="partial"))
             existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser" and r.get("verification") not in {"ai_unverified", "auto_unverified"}]
@@ -617,6 +653,12 @@ async def enrich_notice(
         # A successful parse replaces local facts, rather than appending copies.
         if has_facts or changed or not any(r.get("source") == "official_document_parser" and r.get("effect") != "metadata" for r in existing_rules):
             parsed_rules = best.get("rules", []) if changed else _retain_same_hash_regions(existing_rules, best.get("rules", []), digest)
+            if not changed and _has_reviewed_geography(parsed_rules) and not any(r.get("effect") != "metadata" for r in parsed_rules):
+                # A geographic-only review cannot discard already reviewed
+                # admission facts belonging to those same document bytes.
+                parsed_rules = [*parsed_rules, *(r for r in existing_rules
+                    if r.get("source") == "official_document_parser" and r.get("verification") == "official"
+                    and r.get("document_hash") == digest and r.get("effect") != "metadata")]
             existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser"] + parsed_rules
             enriched["replace_rules"] = True
             coverage = next((r for r in best.get("rules", []) if r.get("kind") == "condition_coverage"), {})

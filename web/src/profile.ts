@@ -32,6 +32,9 @@ export function migrateProfile(value: unknown): LocalProfile {
   const next: LocalProfile = { ...EMPTY_PROFILE, factChanges: {}, applicationHistoryPeople: [], applicationHistoryEvents: [], factSnapshots: [], children: [], ownershipFacts: [], householdMembers: [], householdHistoryConfirmations: [], applicationRestrictionsHistoryConfirmations: [], overseasFactsHistoryConfirmations: [], projectApplicationHistory: {}, applicationRestrictionFacts: {}, residenceHistory: [], militaryFactsHistoryConfirmations: [], incomeTaxFactsHistoryConfirmations: [], domesticResidenceHistoryConfirmations: [] }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return next
   const stored = value as Record<string, unknown>
+  if (stored.version === 5 && stored.ownershipPropertyCounts && typeof stored.ownershipPropertyCounts === 'object' && !Array.isArray(stored.ownershipPropertyCounts)) {
+    next.ownershipPropertyCounts = Object.fromEntries(Object.entries(stored.ownershipPropertyCounts).filter(([id, value]) => id.length > 0 && id.length <= 120 && !/[\u0000-\u001f]/.test(id) && typeof value === 'string' && (/^\d+$/.test(value) && Number.isSafeInteger(Number(value)) || value === '')))
+  }
   if (stored.version === 2 || stored.version === 3 || stored.version === 4 || stored.version === 5) {
     for (const key of Object.keys(EMPTY_PROFILE) as (keyof LocalProfile)[]) {
       const candidate = stored[key]
@@ -123,6 +126,8 @@ export function migrateProfile(value: unknown): LocalProfile {
     if (Array.isArray(stored.factSnapshots)) next.factSnapshots = stored.factSnapshots.filter((snapshot) => snapshot && typeof snapshot === 'object' && groups.includes(snapshot.group) && typeof snapshot.date === 'string' && parseDate(snapshot.date) && snapshot.values && typeof snapshot.values === 'object' && !Array.isArray(snapshot.values)).map((snapshot) => ({ group: snapshot.group, date: snapshot.date, values: Object.fromEntries(Object.entries(snapshot.values).filter(([key]) => Object.hasOwn(EMPTY_PROFILE, key))) }))
   }
   if (stored.pointsFamily && typeof stored.pointsFamily === 'object' && !Array.isArray(stored.pointsFamily)) next.pointsFamily = Object.fromEntries(Object.entries(stored.pointsFamily).filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value)).map(([id, value]) => { const row = value as Record<string, unknown>; return [id, { registeredSince: typeof row.registeredSince === 'string' && parseDate(row.registeredSince) ? row.registeredSince : '', unmarried: bool(row.unmarried), spouseOwnsHome: bool(row.spouseOwnsHome), overseasExcluded: bool(row.overseasExcluded), grandchildrenParentsAbsent: bool(row.grandchildrenParentsAbsent) }] }))
+  // A stale identity stays unresolved rather than silently selecting another parent.
+  if (next.parentSupportMemberId && (next.parentSupportMemberId.length > 128 || /[\u0000-\u001f]/.test(next.parentSupportMemberId))) next.parentSupportMemberId = ''
   if (next.factChanges.children && !next.factChanges.pregnancy) next.factChanges.pregnancy = { ...next.factChanges.children }
   next.factSnapshots = [...(next.factSnapshots || []), ...(next.factSnapshots || []).filter((snapshot) => snapshot.group === 'children' && Object.hasOwn(snapshot.values, 'pregnant') && !next.factSnapshots?.some((existing) => existing.group === 'pregnancy' && existing.date === snapshot.date)).map((snapshot) => ({ ...snapshot, group: 'pregnancy' as const, values: Object.fromEntries(['pregnant', 'expectedChildren'].filter((key) => Object.hasOwn(snapshot.values, key)).map((key) => [key, snapshot.values[key]])) }))]
   for (const key of MONEY_FIELDS) next[key] = normalizeMoney(next[key] ?? '') ?? ''
@@ -184,7 +189,7 @@ export function updateProfileFacts(profile: LocalProfile, part: Partial<LocalPro
     factChanges[group] = part.factChanges?.[group] && part.factChanges[group] !== profile.factChanges?.[group] ? part.factChanges[group]! : { mode: 'unknown', date: '' }
     if (snapshotField) Object.assign(changed, { [snapshotField]: today })
   }
-  const compositionChanged = (['hasSpouse', 'spouseSameRegister', 'applicantOnRegister', 'maritalStatus', 'householdMembers'] as const).some((key) => changedKeys.includes(key))
+  const compositionChanged = (['hasSpouse', 'spouseSameRegister', 'applicantOnRegister', 'maritalStatus', 'householdMembers', 'additionalFamilyPresence'] as const).some((key) => changedKeys.includes(key))
   if (!compositionChanged) return { ...profile, ...changed, factChanges, factSnapshots }
   const applicationRestrictionFacts = { ...profile.applicationRestrictionFacts }
   for (const scope of ['household', 'applicant_spouse'] as const) {

@@ -16,7 +16,7 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .reviewed_sources import REVIEWED_SOURCES
+from .reviewed_sources import REVIEWED_SOURCES, reviewed_source_for_document
 from .unranked_rules import parse_unranked_conditions
 
 PARSER_VERSION = "official-sections-2026-10-07-v9"
@@ -221,7 +221,7 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
         result["contract_schedule"] = {k: contract.get(k) for k in (
             "status", "start_date", "end_date", "verification", "source", "evidence_url", "evidence_text", "evidence_page", "document_hash")}
     from .selection_rules import parse_selection_rules
-    from .application_regions import explicit_applicant_regions
+    from .application_regions import explicit_applicant_regions, reviewed_applicant_regions
     if not any(r.get("kind") == "applicant_regions" and r.get("scope_complete") for r in result.get("rules", [])):
         cutoff = next((r.get("criterion_date") for r in result.get("rules", []) if r.get("criterion_date")), None)
         if cutoff:
@@ -231,7 +231,12 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
                     "evidence_text": quote, "evidence_page": page, "criterion_date": cutoff,
                     "criterion_basis": "announcement", **fields}
             method = next((r.get("value") for r in result.get("rules", []) if r.get("kind") == "application_method"), None)
-            result["rules"].extend(explicit_applicant_regions(pages[:8], cutoff=cutoff, make=regional_make, provinces=PROVINCES, method=method))
+            regions = reviewed_applicant_regions(pages[:8], url=url, digest=digest, cutoff=cutoff, make=regional_make)
+            result["rules"].extend(regions or explicit_applicant_regions(pages[:8], cutoff=cutoff, make=regional_make, provinces=PROVINCES, method=method))
+            if regions and result.get("status") == "unsupported":
+                # The geographic clause is reviewed; admission coverage still
+                # retains its own missing topics and cannot become complete.
+                result["status"] = "partial"
     # The independent EXCLUSE_AR API field remains usable when a PDF's visual
     # supply table separates the dwelling code and area into different columns.
     # Stale document interpretations cannot supplement a corrected attachment.
@@ -253,8 +258,8 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     cutoff, cutoff_evidence = document_cutoff(pages, method=method)
     text = "\n".join(p["text"] for p in pages)
     flat = compact(text)
-    reviewed = next((s for s in REVIEWED_SOURCES.values() if s["document_hash"] == digest and s["document_url"] == url), None)
-    if cutoff is None and reviewed and reviewed.get("regional_review"):
+    reviewed = reviewed_source_for_document(url, digest)
+    if cutoff is None and reviewed and (reviewed.get("regional_review") or reviewed.get("applicant_region_review")):
         # Reviewed qualification table: the current date can be drawn after
         # the weekday or after a second-round label in the PDF stream.
         expected = reviewed["announcement_date"]
@@ -280,14 +285,14 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     # while its source record's publication date changes. Only the exact
     # reviewed document identity/hash can resolve that disagreement.
     if context_conflict and not original:
-        known = next((s for s in REVIEWED_SOURCES.values() if s["document_hash"] == digest and s["document_url"] == url and s["announcement_date"] == cutoff), None)
+        known = reviewed if reviewed and reviewed["announcement_date"] == cutoff else None
         if known and "정정" in str(payload.get("title", "")):
             context_conflict = False
     manage_no = (parse_qs(urlparse(str(payload.get("official_url", ""))).query).get("houseManageNo") or [None])[0]
     if manage_no and manage_no not in flat and not reviewed:
         context_conflict = True
     official_kind = next((r.get("housing_kind") for r in payload.get("rules", []) if r.get("kind") == "housing_classification" and r.get("verification") == "official"), None)
-    private = bool(re.search(r"민영주택으로|민영주택입주자모집공고", flat)) or bool(nonrank_apt and reviewed and reviewed.get("housing_kind") == "private" and re.search(r"주택유형[^■]{0,100}민영|주택구분[^■]{0,300}민영", flat[:15000]))
+    private = bool(re.search(r"민영주택으로|민영주택입주자모집공고", flat)) or bool(reviewed and reviewed.get("housing_kind") == "private" and re.search(r"주택유형[^■]{0,100}민영|주택구분[^■]{0,300}민영", flat[:15000]))
     national = bool(re.search(r"「주택법」에의한국민주택|주택유형국민|국민주택입주자모집공고", flat))
     kind = "private" if private and not national else "national" if national and not private else official_kind if official_kind in ("private", "national") else "unknown"
     office = payload.get("category") in {"officetel", "living_accommodation"} or bool(re.search(r"오피스텔(?:분양광고|분양공고)", flat[:5000])) or ("오피스텔" in str(payload.get("title", "")) and "오피스텔" in flat[:1000])

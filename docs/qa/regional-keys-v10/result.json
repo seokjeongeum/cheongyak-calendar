@@ -1,0 +1,23 @@
+{
+  "fixture_data_only": true,
+  "official_source_hash": "09d15961d3307e8c0fb398bd3d60fc7818e441e18f907afc0b77bd273a832600",
+  "backend_parser_version": "official-sections-2026-10-07-v9",
+  "checks_passed": 14,
+  "checks": [
+    "exact-source mapped current district 12210 동구 has Hanyang local priority",
+    "exact-source mapped current district 12240 서구 has Hanyang local priority",
+    "exact-source mapped current district 12270 남구 has Hanyang local priority",
+    "exact-source mapped current district 12300 북구 has Hanyang local priority",
+    "exact-source mapped current district 12330 광산구 has Hanyang local priority",
+    "former Jeonnam county remains other-region despite merged province admission",
+    "Hwaseong outside the Hanyang source union stays outside when military is false",
+    "recent mapped-district stay shows historical residence gap without an invented input button",
+    "all five configured common-key provider rows use identical saved-key wording",
+    "all five provider approval links retain their exact service URLs",
+    "saved statuses expose no raw key or administrator credential",
+    "375px regional and common-key displays have no page overflow",
+    "regional/key fixture uses only public GETs and sends no residence facts",
+    "real Chromium region/key pages have no JavaScript exceptions"
+  ],
+  "javascript_errors": []
+}

@@ -356,6 +356,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .term-explanation a,.help-link{color:#2464c8;text-decoration:underline;font-size:11px;line-height:1.7}
 .question-group,.additional-questions{border:1px solid #e0e7f1;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:14px;background:#fbfcfe}
 .question-group h4{margin:0;color:#245fb4;font-size:13px}
+.income-scope-source{border-top:1px solid #e0e7f1;padding-top:12px;min-width:0}
+.income-scope-source h5{margin:0 0 7px;font-size:12px;color:#334b6a}
+.income-scope-source blockquote{margin:8px 0;padding:9px 11px;border-left:3px solid #c8daf3;background:#f0f5fc;font-size:12px;line-height:1.75;overflow-wrap:anywhere}
+.income-scope-source a{font-size:11px;color:#2464c8;text-decoration:underline}
 .additional-questions summary{font-size:12px;font-weight:700;cursor:pointer;color:#385779}
 .additional-questions[open] summary{margin-bottom:15px}
 .additional-questions label{margin-bottom:14px}

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.models import CompetitionRevision, CompetitionState, Notice, NoticeEvent, NoticeRevision, SourceStatus, UnitCompetition, UnitPrice, utc_now
 from app.schemas import CompetitionPublic, CompetitionStatePublic, EventPublic, NoticeDetail, NoticePublic, PricePublic, RevisionPublic
+from app.supply_classification import reviewed_supply_classification
 from app.qualification import public_selection_methods, public_winning_scores, is_metadata, merge_poll_rules, public_application_method, public_classification, public_contract_schedule, public_offered_supplies, public_rank_applicability, requirements_complete
 
 
@@ -633,6 +634,9 @@ def notice_public(
                    for child in rule.get(key, []) if isinstance(child, dict))
 
     canonical = related[0]
+    reviewed_supply = reviewed_supply_classification(
+        official_url=canonical.official_url, announcement_date=canonical.announcement_date,
+        title=canonical.title, provider=canonical.provider) if canonical.source == "cheongyak_home" else None
     seen_events: set[tuple] = set()
     events: list[EventPublic] = []
     price_by_key: dict[tuple, PricePublic] = {}
@@ -700,6 +704,10 @@ def notice_public(
         if raw is not None:
             setattr(competition_state, field, competition_time(raw))
     housing_kind, housing_kind_evidence, qualification_context = public_classification(rules)
+    if reviewed_supply and reviewed_supply not in rules:
+        # Existing public source rows retain their originals and revisions;
+        # the exact provider cross-link also corrects the read projection.
+        rules.append(reviewed_supply)
     application_method, application_method_evidence = public_application_method(rules)
     data = {
         "id": canonical.id,
@@ -709,7 +717,7 @@ def notice_public(
         "correction_of_id": canonical.correction_of_id,
         "provider": canonical.provider,
         "title": canonical.title,
-        "category": canonical.category,
+        "category": reviewed_supply["category"] if reviewed_supply else canonical.category,
         "housing_kind": housing_kind,
         "housing_kind_evidence": housing_kind_evidence,
         "rank_applicability": public_rank_applicability(rules),
@@ -730,7 +738,7 @@ def notice_public(
         "announcement_date": canonical.announcement_date,
         "official_url": canonical.official_url,
         "document_hash": canonical.document_hash,
-        "price_cap_status": next((item.price_cap_status for item in related if item.price_cap_status in {"yes", "no"}), canonical.price_cap_status),
+        "price_cap_status": "not_applicable" if reviewed_supply and reviewed_supply["category"] == "public_rental" else next((item.price_cap_status for item in related if item.price_cap_status in {"yes", "no"}), canonical.price_cap_status),
         "events": events,
         "prices": prices,
         "competitions": competition_rows,

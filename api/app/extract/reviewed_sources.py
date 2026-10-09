@@ -7,6 +7,8 @@ The hashes/validation pages are recorded for reproducible source comparison.
 
 from urllib.parse import parse_qs, urlparse
 
+from .current_regional_sources import CURRENT_REGIONAL_SOURCES
+
 UNRANKED_RESTRICTIONS = [
     {"restriction": "prior_project_contract", "scope": "applicant", "label": "이 단지의 기존 계약·추가입주자 선정",
      "pattern": r"동\s*주택에\s*당첨되어\s*계약을\s*체결한\s*분\s*또는\s*예비입주자\s*중\s*추가입주자로\s*선정된\s*분"},
@@ -126,7 +128,43 @@ def reviewed_document_url(official_url: str) -> str | None:
     number = (params.get("houseManageNo") or [""])[0]
     if (params.get("pblancNo") or [""])[0] != number:
         return None
-    return REVIEWED_SOURCES.get(number, {}).get("document_url")
+    return {**REVIEWED_SOURCES, **CURRENT_REGIONAL_SOURCES}.get(number, {}).get("document_url")
+
+
+def reviewed_document_urls(official_url: str, *, announcement_date: str | None = None) -> list[str]:
+    """Fallbacks retain the current official notice number and reviewed date.
+
+    A project-hosted corrected copy is an independent source with its own
+    reviewed hash. It is never substituted for a different notice or date.
+    The parser still verifies the downloaded document's identity and bytes.
+    """
+    primary = reviewed_document_url(official_url)
+    if not primary:
+        return []
+    number = parse_qs(urlparse(official_url).query)["houseManageNo"][0]
+    sources = [source for key, source in {**REVIEWED_SOURCES, **CURRENT_REGIONAL_SOURCES}.items()
+               if key == number or key.startswith(number + "-")]
+    if announcement_date:
+        sources = [source for source in sources if source.get("announcement_date") == str(announcement_date)[:10]]
+    return list(dict.fromkeys(source["document_url"] for source in sources))
+
+
+def reviewed_source_for_document(url: str, digest: str) -> dict | None:
+    """Recognize the same hash-bound Applyhome attachment on its www host."""
+    parsed = urlparse(url)
+    for source in {**REVIEWED_SOURCES, **CURRENT_REGIONAL_SOURCES}.values():
+        if source.get("document_hash") != digest:
+            continue
+        reviewed = urlparse(source["document_url"])
+        if url == source["document_url"]:
+            return source
+        if (parsed.scheme == reviewed.scheme == "https"
+                and parsed.hostname == "www.applyhome.co.kr"
+                and reviewed.hostname == "static.applyhome.co.kr"
+                and parsed.path == reviewed.path == "/ai/aia/getAtchmnfl.do"
+                and parsed.query == reviewed.query and not parsed.fragment):
+            return source
+    return None
 
 # Exclusive areas are columns checked in each reviewed supply table.
 for _review in REVIEWED_SOURCES.values():

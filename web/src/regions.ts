@@ -139,7 +139,7 @@ function identityFromName(name: string, homeProvinceCode: string): ScopeIdentity
     if (alias) { matchedProvince = province; tail = normalized.slice(alias.length); break }
   }
   if (matchedProvince && (!tail || ['전체', '전지역'].includes(tail))) return { provinceCode: matchedProvince.code }
-  if (/^(광주광역시|전라남도|전남)/.test(normalized) || normalized === '광주') return null
+  if (!matchedProvince && (/^(광주광역시|전라남도|전남)/.test(normalized) || normalized === '광주')) return null
   const candidates = districtsByName.get(`${matchedProvince?.code || homeProvinceCode}:${tail}`) || []
   if (candidates.length !== 1) return null
   return { provinceCode: candidates[0].provinceCode, districtCode: candidates[0].code }

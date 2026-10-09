@@ -37,11 +37,12 @@ export function noticeRegionGroups(notice: Notice, profile: LocalProfile): { dec
 export function NoticeRegionDecision({ notice, profile, onProfile, groups: prepared }: { notice: Notice; profile: LocalProfile; onProfile: ProfileAction; groups?: NoticeEvaluation['regions'] }) {
   const groups = prepared || noticeRegionGroups(notice, profile)
   return <section className="notice-region-decisions" aria-label="내 지역 판정"><strong className="notice-region-heading"><MapPin size={14} />내 지역 판정</strong>{groups.map(({ decision, scopes }, index) => {
-    const question = decision.reasons.find((item) => ['missing_input', 'past_fact'].includes(item.category || ''))
+    const question = decision.reasons.find((item) => item.profileField && ['missing_input', 'past_fact'].includes(item.category || ''))
+    const label = decision.status === 'source_gap' && decision.reasons.some((item) => item.status === 'review' && item.category === 'past_fact') ? '과거 거주 이력 확인 필요' : REGION_DECISION_LABEL[decision.status]
     const priorityComparison = ['other', 'other_gyeonggi'].includes(decision.status) ? decision.reasons.find((item) => item.status === 'fail' && item.input && item.requirement) : undefined
     return <div className={`notice-region-decision${groups.length > 1 ? ' notice-region-scope' : ''}`} data-region-status={decision.status} key={index}>
       {groups.length > 1 && <small className="notice-region-scope-label">{scopes.join(' / ')}</small>}
-      <div className="notice-region-result"><strong>{REGION_DECISION_LABEL[decision.status]}</strong><span>{decision.reason}</span></div>
+      <div className="notice-region-result"><strong>{label}</strong><span>{decision.reason}</span></div>
       {priorityComparison && <p className="notice-region-comparison">내 입력 {priorityComparison.input} · 공고 요구 {priorityComparison.requirement}</p>}
       {decision.criterionDate && <small className="notice-region-date">지역 판정 기준일 {decision.criterionDate}</small>}
       {question && <button type="button" className="qualification-input-action" onClick={() => onProfile(question.profileField, question.historyGroup)}>{question.label} 입력하기</button>}
