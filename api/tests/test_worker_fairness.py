@@ -11,6 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.db import init_db, make_engine
+from app.extract.pipeline import _diagnostics_rule
+from app.extract.official_rules import PARSER_VERSION
 from app.ingest import worker
 from app.ingest.common import FeedError
 from app.models import CompetitionRevision, DocumentExtractionState, IntegrationSetting, Notice, SourceStatus
@@ -53,7 +55,7 @@ def rows_for(source: str, count: int = 1) -> list[dict]:
 
 def mock_feeds(monkeypatch, rows: dict[str, list[dict]], observed: list[str]) -> None:
     def collector(source):
-        async def collect(*args):
+        async def collect(*args, **kwargs):
             observed.append(source)
             return copy.deepcopy(rows[source])
         return collect
@@ -204,6 +206,169 @@ async def test_slow_collector_does_not_gate_other_sources_or_their_durable_docum
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["cancel", "failure", "success"])
+async def test_reb_current_batch_is_durable_and_starts_rates_before_archival_models(store, monkeypatch, outcome):
+    factory, engine = store
+    rows = {source: rows_for(source) for source in SOURCES}
+    current = rows_for("cheongyak_home", 2)
+    current[0]["ingest_warning"] = "공식 상세 일부 미확보"
+    archive = rows_for("cheongyak_home")[0]
+    archive["external_id"] = "historical-reb"
+    archive["announcement_date"] = "2026-05-01"
+    archive["events"] = [{"kind": "general", "label": "접수", "start_date": "2026-05-10"}]
+    archive_started = asyncio.Event()
+    release_archive = asyncio.Event()
+    archive_cancelled = asyncio.Event()
+    mock_feeds(monkeypatch, rows, [])
+    audited = []
+    competition_calls = []
+
+    async def reb_collect(client, key, start, end, *, today, on_current_rows):
+        assert today == TODAY
+        original = copy.deepcopy(current)
+        await on_current_rows(current)
+        assert current == original  # Worker cannot mutate the eventual full feed.
+        archive_started.set()
+        try:
+            await release_archive.wait()
+        finally:
+            if not release_archive.is_set():
+                archive_cancelled.set()
+        if outcome == "failure":
+            raise FeedError("공식 과거 주택형 가격 조회 실패")
+        return copy.deepcopy([*current, archive])
+
+    async def competition(**kwargs):
+        competition_calls.append(True)
+        with factory() as session:
+            assert session.scalar(select(Notice).where(Notice.source == "cheongyak_home")) is not None
+        return {"status": "ok", "count": 0}
+
+    async def enrich(payload, **kwargs):
+        audited.append(payload["external_id"])
+        document_hash = f"reviewed-{payload['external_id']}"
+        reviewed = {"kind": "applicant_regions", "effect": "metadata", "verification": "official",
+                    "source": "official_document_parser", "parser_version": PARSER_VERSION,
+                    "document_hash": document_hash, "regions": [{"region_code": "11", "region_name": "서울특별시"}],
+                    "scope_complete": True}
+        await asyncio.sleep(0)
+        return {**payload, "document_hash": document_hash,
+                "rules": [*payload.get("rules", []), reviewed, _diagnostics_rule([], "complete", document_hash)]}
+
+    monkeypatch.setattr(worker.reb, "collect", reb_collect)
+    monkeypatch.setattr(worker.competition, "run_once", competition)
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        cycle = asyncio.create_task(worker.run_once(today=TODAY, client=client))
+        await asyncio.wait_for(archive_started.wait(), timeout=5)
+        with factory() as session:
+            state = session.get(SourceStatus, "cheongyak_home")
+            assert state.status == "running" and state.record_count == 2
+            assert state.last_success_at.replace(tzinfo=timezone.utc) == BEFORE
+            assert state.message == "현재 접수 공고 2건 저장 · 과거 공고 가격 조회 중"
+            for current_row in current:
+                notice = session.scalar(select(Notice).where(Notice.external_id == current_row["external_id"]))
+                assert notice.document_hash == f"reviewed-{current_row['external_id']}"
+                assert any(rule.get("kind") == "applicant_regions" for rule in notice.rules)
+                assert notice.prices[0].amount_krw == current_row["prices"][0]["amount_krw"]
+            assert session.scalar(select(Notice).where(Notice.external_id == archive["external_id"])) is None
+        assert competition_calls == [True] and engine.pool.checkedout() == 0
+        if outcome == "cancel":
+            cycle.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await cycle
+            assert archive_cancelled.is_set()
+            expected_count, expected_status = 2, "running"
+        else:
+            release_archive.set()
+            result = await asyncio.wait_for(cycle, timeout=5)
+            expected_count, expected_status = (2, "error") if outcome == "failure" else (3, "partial")
+            assert result["cheongyak_home"]["count"] == expected_count
+            assert result["cheongyak_home"]["status"] == expected_status
+        with factory() as session:
+            state = session.get(SourceStatus, "cheongyak_home")
+            assert state.record_count == expected_count and state.status == expected_status
+            assert (state.last_success_at.replace(tzinfo=timezone.utc) > BEFORE) == (outcome == "success")
+            for current_row in current:
+                assert audited.count(current_row["external_id"]) == 1
+                notice = session.scalar(select(Notice).where(Notice.external_id == current_row["external_id"]))
+                assert notice.document_hash == f"reviewed-{current_row['external_id']}"
+                assert any(rule.get("kind") == "applicant_regions" for rule in notice.rules)
+    assert competition_calls == [True] and engine.pool.checkedout() == 0
+
+
+@pytest.mark.asyncio
+async def test_empty_current_callback_releases_rates_while_archival_models_wait(store, monkeypatch):
+    factory, _ = store
+    mock_feeds(monkeypatch, {source: rows_for(source) for source in SOURCES}, [])
+    archival_started = asyncio.Event()
+    rates_started = asyncio.Event()
+
+    async def reb_collect(client, key, start, end, *, today, on_current_rows):
+        await on_current_rows([])
+        archival_started.set()
+        await asyncio.Event().wait()
+
+    async def competition(**kwargs):
+        rates_started.set()
+        return {"status": "ok", "count": 0}
+
+    async def enrich(payload, **kwargs):
+        await asyncio.sleep(0)
+        return payload
+
+    monkeypatch.setattr(worker.reb, "collect", reb_collect)
+    monkeypatch.setattr(worker.competition, "run_once", competition)
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        cycle = asyncio.create_task(worker.run_once(today=TODAY, client=client))
+        await asyncio.wait_for(archival_started.wait(), timeout=5)
+        await asyncio.wait_for(rates_started.wait(), timeout=5)
+        with factory() as session:
+            state = session.get(SourceStatus, "cheongyak_home")
+            assert state.status == "running" and state.record_count == 0
+            assert state.last_success_at.replace(tzinfo=timezone.utc) == BEFORE
+            assert "과거 공고 가격 조회 중" in state.message
+        cycle.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cycle
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [asyncio.CancelledError, RuntimeError])
+async def test_final_repeat_prefix_cannot_lower_already_durable_current_count(store, monkeypatch, failure):
+    factory, _ = store
+    current = rows_for("cheongyak_home", 2)
+    with factory() as session:
+        for row in current:
+            row["document_hash"] = f"known-{row['external_id']}"
+            upsert_notice(session, row)
+            session.add(DocumentExtractionState(source=row["source"], external_id=row["external_id"], audited_on=TODAY))
+        record_source_status(session, "cheongyak_home", "running", "현재 접수 공고 2건 저장", record_count=2)
+        session.commit()
+    attempted = []
+
+    async def enrich(payload, **kwargs):
+        attempted.append(payload["external_id"])
+        return payload
+
+    def stop_after_first_repeat(payload):
+        raise failure()
+
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        with pytest.raises(failure):
+            await worker._save_rows("cheongyak_home", copy.deepcopy(current), client, TODAY,
+                persist_before_audit=True, progress_floor=2, on_raw_saved=stop_after_first_repeat)
+    assert not attempted
+    with factory() as session:
+        state = session.get(SourceStatus, "cheongyak_home")
+        assert state.record_count == 2 and state.last_success_at.replace(tzinfo=timezone.utc) == BEFORE
+        assert "공식 공고 2건 저장" in state.message
+        assert len(session.scalars(select(Notice).where(Notice.source == "cheongyak_home")).all()) == 2
+
+
+@pytest.mark.asyncio
 async def test_stop_during_first_pdf_keeps_its_raw_row_and_all_feed_attempts_without_fake_success(store, monkeypatch):
     factory, engine = store
     rows = {source: rows_for(source, 4 if source == "cheongyak_home" else 1) for source in SOURCES}
@@ -269,7 +434,7 @@ async def test_competition_gate_finishes_without_any_valid_reb_row(store, monkey
     if reb_state == "disabled":
         monkeypatch.setattr(worker, "_api_key", lambda source: "" if source == "cheongyak_home" else "mock-key")
     if reb_state == "failed":
-        async def failed(*args):
+        async def failed(*args, **kwargs):
             observed.append("cheongyak_home")
             raise FeedError("공식 API 수집 실패")
         monkeypatch.setattr(worker.reb, "collect", failed)

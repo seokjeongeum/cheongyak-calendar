@@ -1,5 +1,6 @@
 """Official source excerpts pin units, dates, and layout-sensitive parsing."""
 
+import asyncio
 from datetime import date
 from datetime import datetime, timezone, timedelta
 
@@ -13,7 +14,7 @@ from app.ingest.boards import link_board_corrections, normalize_gh_apply, table_
 from app.ingest.myhome import parse_sale_detail
 from app.ingest.reb import PAIRS, normalize as normalize_reb
 from app.ingest import worker
-from app.ingest import ih
+from app.ingest import ih, reb
 from app.ingest.common import FeedError, get_json
 from app.models import DocumentExtractionState, Notice, SourceStatus
 from app.repository import record_source_status
@@ -112,6 +113,110 @@ def test_reb_context_preserves_unknown_and_distinguishes_public_housing_district
     assert context["public_housing_special_law"] is True
     assert context["rule_effective_date"] is None
     assert normalize_reb({"HOUSE_MANAGE_NO": "1", "PBLANC_NO": "2", "HOUSE_NM": "자료 미공개"}, [], PAIRS[0])["rules"][1]["value"]["capital_region"] is None
+
+
+@pytest.mark.asyncio
+async def test_reb_delivers_current_all_pair_models_before_blocked_archive_models():
+    def detail(number, **events):
+        return {"HOUSE_MANAGE_NO": str(number), "PBLANC_NO": str(number),
+                "HOUSE_NM": f"공식 공고 {number}", "RCRIT_PBLANC_DE": "20260501", **events}
+    per_pair = {
+        PAIRS[0].detail: [detail(1, GNRL_RCEPT_BGNDE="20260510"),
+                         detail(2, GNRL_RNK1_CRSPAREA_RCPTDE="20261013"),
+                         detail(7, PRZWNER_PRESNATN_DE="20261020", CNTRCT_CNCLS_BGNDE="20261025"),
+                         {**detail(8), "RCRIT_PBLANC_DE": "20261008", "HOUSE_NM": "접수 예정 문구만 있는 공고"}],
+        PAIRS[1].detail: [detail(3, SUBSCRPT_RCEPT_BGNDE="20261014")],
+        PAIRS[2].detail: [detail(4, RCEPT_BGNDE="20261010")],
+        PAIRS[3].detail: [detail(5, GNRL_RCEPT_BGNDE="20261008", GNRL_RCEPT_ENDDE="20261011")],
+        PAIRS[4].detail: [detail(6, SUBSCRPT_RCEPT_BGNDE="20261015")],
+    }
+    requests = []
+    batches = []
+    archive_blocked = asyncio.Event()
+    release_archive = asyncio.Event()
+
+    async def handler(request):
+        operation = request.url.path.rsplit("/", 1)[-1]
+        if operation in per_pair:
+            requests.append((operation, None))
+            rows = per_pair[operation]
+            return httpx.Response(200, json={"matchCount": len(rows), "data": rows})
+        number = request.url.params["cond[HOUSE_MANAGE_NO::EQ]"]
+        requests.append((operation, number))
+        if number in {"1", "7", "8"}:
+            assert batches  # No archival model request precedes the callback.
+        if number == "1":
+            archive_blocked.set()
+            await release_archive.wait()
+        return httpx.Response(200, json={"matchCount": 1, "data": [{
+            "HOUSE_TY": "084.0000A", "LTTOT_TOP_AMOUNT": "10000", "SUPLY_AMOUNT": "10000",
+        }]})
+
+    async def current_batch(rows):
+        assert [operation for operation, number in requests if number is None] == [pair.detail for pair in PAIRS]
+        assert all(row.get("prices") for row in rows)
+        assert "fictional-feed-key" not in str(rows)
+        batches.append([row["external_id"].rsplit(":", 1)[-1] for row in rows])
+        # Saving/normalizing a callback copy cannot change the final full feed.
+        rows[0]["title"] = "callback changed its copy"
+        rows[0]["prices"].clear()
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        task = asyncio.create_task(reb.collect(client, "fictional-feed-key", date(2026, 5, 1), date(2026, 10, 31),
+            today=date(2026, 10, 9), on_current_rows=current_batch))
+        try:
+            await asyncio.wait_for(archive_blocked.wait(), timeout=2)
+            assert batches == [["5", "4", "2", "3", "6"]]
+            assert not task.done()
+        finally:
+            release_archive.set()
+        rows = await task
+    assert len(rows) == 8 and len({row["external_id"] for row in rows}) == 8
+    assert len(requests) == 5 + 8  # One header/model request each; no refetch.
+    assert all(row.get("prices") and row["title"] != "callback changed its copy" for row in rows)
+    assert next(row for row in rows if row["external_id"].endswith(":2"))["prices"][0]["amount_krw"] == 100_000_000
+
+
+@pytest.mark.asyncio
+async def test_reb_empty_current_callback_precedes_archive_models():
+    callbacks = []
+    def handler(request):
+        operation = request.url.path.rsplit("/", 1)[-1]
+        if operation == PAIRS[0].detail:
+            return httpx.Response(200, json={"matchCount": 1, "data": [{
+                "HOUSE_MANAGE_NO": "1", "PBLANC_NO": "1", "HOUSE_NM": "지난 접수",
+                "GNRL_RCEPT_BGNDE": "20260901", "CNTRCT_CNCLS_BGNDE": "20261020",
+            }]})
+        if operation in {pair.detail for pair in PAIRS}:
+            return httpx.Response(200, json={"matchCount": 0, "data": []})
+        assert callbacks == [[]]
+        return httpx.Response(200, json={"matchCount": 1, "data": [{"HOUSE_TY": "59A", "LTTOT_TOP_AMOUNT": "10000"}]})
+    async def callback(rows):
+        callbacks.append(rows)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rows = await reb.collect(client, "fictional-feed-key", date(2026, 5, 1), date(2026, 10, 31),
+            today=date(2026, 10, 9), on_current_rows=callback)
+    assert callbacks == [[]] and len(rows) == 1
+
+
+@pytest.mark.asyncio
+async def test_reb_without_callback_keeps_legacy_pair_and_model_order():
+    requests = []
+    def handler(request):
+        operation = request.url.path.rsplit("/", 1)[-1]
+        requests.append(operation)
+        if operation == PAIRS[0].detail:
+            return httpx.Response(200, json={"matchCount": 1, "data": [{
+                "HOUSE_MANAGE_NO": "1", "PBLANC_NO": "1", "HOUSE_NM": "지난 접수",
+                "GNRL_RCEPT_BGNDE": "20260901",
+            }]})
+        if operation == PAIRS[0].model:
+            return httpx.Response(200, json={"matchCount": 1, "data": [{"HOUSE_TY": "59A", "LTTOT_TOP_AMOUNT": "10000"}]})
+        return httpx.Response(200, json={"matchCount": 0, "data": []})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rows = await reb.collect(client, "fictional-feed-key", date(2026, 5, 1), date(2026, 10, 31))
+    assert requests == [PAIRS[0].detail, PAIRS[0].model, *(pair.detail for pair in PAIRS[1:])]
+    assert len(rows) == 1 and rows[0]["prices"][0]["amount_krw"] == 100_000_000
 
 
 def test_gh_apply_board_handles_missing_closing_cells_and_links_official_detail():
@@ -228,7 +333,7 @@ async def test_running_status_is_committed_before_request_and_error_retains_succ
         session.commit()
 
     observed_running = False
-    async def reb_collect(client, key, start, end):
+    async def reb_collect(client, key, start, end, **kwargs):
         nonlocal observed_running
         with factory() as session:
             status = session.get(SourceStatus, "cheongyak_home")

@@ -67,6 +67,15 @@ distinguishes stored rows and pending review from a successful completed source.
 Pending document state is durable across cancellation/restart. Previous
 hash-bound rules, prices, rates, revisions and integration settings are retained.
 
+Cheongyak collects the five detail headers first, then requests the models for
+current or upcoming receipt dates. That batch is saved and reviewed before any
+archival model request. Announcement dates, contract dates and title text alone
+do not establish receipt priority. The subsequent archival pass still returns
+every original row and price without repeating model requests; a later failure
+retains the current batch and its accurate source progress. An empty current
+batch releases the competition gate. This also removes the provider's internal
+barrier that previously waited for all 434 model requests before saving a notice.
+
 On a rolling deployment the new API can observe the old owner's running job
 before that owner records shutdown. A bounded, cancellable watcher observes
 that exact job and uses the existing compare-and-swap claim only after it is
@@ -88,9 +97,10 @@ and an external scheduler are separate from these lifecycle safeguards.
 
 ## Verification
 
-- Full API suite: **499 passed**, including list/detail projection,
+- Full API suite: **508 passed**, including list/detail projection,
   interruption/lease races, cancellation, source fairness, persistent pending
-  audits and concurrent competition revisions.
+  audits, current-batch delivery before blocked archival models, preserved
+  current counts during cancellation/failure and concurrent competition revisions.
 - Full web suite: **531 passed**; TypeScript and production Vite build passed.
 - Offline diagnosis against the current Hangang/Yongin/Hyangnam source
   snapshots: **33 checks passed**, including current account and nomination
@@ -110,6 +120,7 @@ The first rollout (`d422766`) deployed and resumed that collection, but live
 progress exposed a slow global save barrier across 434 archival feed rows.
 The second rollout removed that barrier; a slow MyHome list response then
 demonstrated why collection must proceed independently for each provider too.
-The final per-source/per-row refinement above removes both barriers. This report
+The per-source/per-row refinement removes both global barriers, and the current
+receipt batch removes the remaining Cheongyak archival-model barrier. This report
 records local verified behavior; production activation and live source
 processing require checking the final deployed public APIs.

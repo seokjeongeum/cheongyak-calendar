@@ -105,12 +105,12 @@ def _failed_document_needs_new_pipeline(existing: Notice | None) -> bool:
 
 def _save_progress(
     session: Session, state: SourceStatus | None, source: str, saved: int, total: int,
-    stored_count: int | None = None,
+    stored_count: int | None = None, progress_floor: int = 0,
 ) -> SourceStatus:
     """Commit progress with its notice, retaining the source attempt/success times."""
-    message = (f"공식 공고 {stored_count}건 저장 · 문서 확인 {saved}/{total}건"
-               if stored_count is not None else f"공식 공고 저장 중 · {saved}/{total}건 저장")
-    count = stored_count if stored_count is not None else saved
+    count = stored_count if stored_count is not None else max(saved, progress_floor)
+    message = (f"공식 공고 {count}건 저장 · 문서 확인 {saved}/{total}건"
+               if stored_count is not None or count > saved else f"공식 공고 저장 중 · {saved}/{total}건 저장")
     if state is None:
         return record_source_status(session, source, "running", message, record_count=count)
     state.status = "running"
@@ -136,6 +136,7 @@ async def _save_rows(
     *, audit_documents: bool = True, finalize: bool = True,
     document_semaphore: asyncio.Semaphore | None = None, stored_count: int | None = None,
     persist_before_audit: bool = False, on_raw_saved: Callable[[dict], None] | None = None,
+    progress_floor: int = 0,
 ) -> tuple[int, int, int, int, int, int, str]:
     saved = 0
     invalid = 0
@@ -195,7 +196,7 @@ async def _save_rows(
                             extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
                             session.add(extraction_state)
                         extraction_state.audited_on = None
-                        source_state = _save_progress(session, source_state, source, saved + 1, len(rows))
+                        source_state = _save_progress(session, source_state, source, saved + 1, len(rows), progress_floor=progress_floor)
                         session.commit()
                         if on_raw_saved:
                             on_raw_saved(payload)
@@ -267,7 +268,7 @@ async def _save_rows(
                             extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
                             session.add(extraction_state)
                         extraction_state.audited_on = None
-                    source_state = _save_progress(session, source_state, source, saved + 1, len(rows), stored_count)
+                    source_state = _save_progress(session, source_state, source, saved + 1, len(rows), stored_count, progress_floor)
                     session.commit()
                     if on_raw_saved:
                         on_raw_saved(payload)
@@ -305,10 +306,10 @@ async def _save_rows(
             message_parts.append("조회 범위 0건; 공고 누락 여부 확인 필요")
         resolve_pending_corrections(session, source)
         if finalize:
-            record_source_status(session, source, status, ", ".join(message_parts), record_count=saved)
+            record_source_status(session, source, status, ", ".join(message_parts), record_count=max(saved, progress_floor))
         else:
             state = session.get(SourceStatus, source)
-            _save_progress(session, state, source, saved, len(rows))
+            _save_progress(session, state, source, saved, len(rows), progress_floor=progress_floor)
             state = session.get(SourceStatus, source)
             state.message = f"공식 공고 {saved}건 저장 · 문서 확인 대기"
         session.commit()
@@ -327,6 +328,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
     client = client or httpx.AsyncClient(headers={"User-Agent": "CheongyakCalendar/1.0 (+public housing notice index)"}, follow_redirects=True)
     results: dict[str, dict] = {}
     pending_documents: dict[str, tuple[list[dict], str | None]] = {}
+    current_saved_counts: dict[str, int] = {}
     competition_ready = asyncio.Event()
 
     def failed_source(source: str, exc: Exception) -> None:
@@ -347,6 +349,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 source, rows, client, today, warning,
                 document_semaphore=semaphore, persist_before_audit=True,
                 on_raw_saved=(lambda payload: competition_ready.set()) if source == "cheongyak_home" else None,
+                progress_floor=current_saved_counts.get(source, 0),
             )
             results[source] = {
                 "status": status, "count": saved, "invalid": invalid, "deferred": deferred,
@@ -389,7 +392,29 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 session.commit()
             source_warning = None
             if source == "cheongyak_home":
-                rows = await reb.collect(client, key, start, end)
+                async def save_current_rows(current_rows: list[dict]) -> None:
+                    # Preserve a partial durable result if a later archival
+                    # model request fails, without mutating the complete feed.
+                    current_rows = copy.deepcopy(current_rows)
+                    pending_documents[source] = (current_rows, None)
+                    if not current_rows:
+                        competition_ready.set()
+                    await asyncio.sleep(0)
+                    saved, *_ = await _save_rows(
+                        source, current_rows, client, today,
+                        finalize=False, document_semaphore=semaphore,
+                        persist_before_audit=True,
+                        on_raw_saved=lambda payload: competition_ready.set(),
+                    )
+                    current_saved_counts[source] = saved
+                    with SessionLocal() as session:
+                        state = session.get(SourceStatus, source)
+                        state.message = f"현재 접수 공고 {saved}건 저장 · 과거 공고 가격 조회 중"
+                        session.commit()
+                    competition_ready.set()
+
+                rows = await reb.collect(client, key, start, end,
+                                         today=today, on_current_rows=save_current_rows)
             elif source == "myhome":
                 rows = await myhome.collect(client, key, start, end)
             elif source == "lh":

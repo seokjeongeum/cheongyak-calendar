@@ -8,9 +8,12 @@ not interpreted as deposits unless the official announcement supplies that unit.
 
 from __future__ import annotations
 
+import copy
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -286,9 +289,30 @@ async def _pages(client: httpx.AsyncClient, url: str, params: dict[str, Any], *,
     raise FeedError("청약홈 페이지 상한 초과")
 
 
-async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -> list[dict[str, Any]]:
-    """Fetch nationwide notices published in the inclusive announcement window."""
+def _current_receipt_date(detail: dict[str, Any], today: date) -> str | None:
+    """Only published receipt dates establish current/upcoming collection priority."""
+    current = today.isoformat()
+    return min((max(event["start_date"], current) for event in _events(detail)
+                if event["kind"] in {"special", "first_priority", "second_priority", "general"}
+                and (event["end_date"] or event["start_date"]) >= current), default=None)
+
+
+async def collect(
+    client: httpx.AsyncClient, key: str, start: date, end: date, *, today: date | None = None,
+    on_current_rows: Callable[[list[dict[str, Any]]], Awaitable[None]] | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch every notice, optionally delivering current rows before archival models."""
     all_notices: list[dict[str, Any]] = []
+    pending: list[tuple[Pair, dict[str, Any]]] = []
+
+    async def model_row(pair: Pair, detail: dict[str, Any]) -> dict[str, Any] | None:
+        models = await _pages(client, f"{BASE}/{pair.model}", {
+            "serviceKey": key,
+            "cond[HOUSE_MANAGE_NO::EQ]": value(detail, "HOUSE_MANAGE_NO"),
+            "cond[PBLANC_NO::EQ]": value(detail, "PBLANC_NO"),
+        }, max_pages=20)
+        return normalize(detail, models, pair)
+
     for pair in PAIRS:
         details = await _pages(client, f"{BASE}/{pair.detail}", {
             "serviceKey": key,
@@ -300,12 +324,25 @@ async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -
             notice_no = value(detail, "PBLANC_NO")
             if house_no is None or notice_no is None:
                 continue
-            models = await _pages(client, f"{BASE}/{pair.model}", {
-                "serviceKey": key,
-                "cond[HOUSE_MANAGE_NO::EQ]": house_no,
-                "cond[PBLANC_NO::EQ]": notice_no,
-            }, max_pages=20)
-            normalized = normalize(detail, models, pair)
+            if on_current_rows is not None:
+                pending.append((pair, detail))
+                continue
+            normalized = await model_row(pair, detail)
+            if normalized:
+                all_notices.append(normalized)
+    if on_current_rows is not None:
+        today = today or datetime.now(ZoneInfo("Asia/Seoul")).date()
+        current = [(pair, detail) for pair, detail in pending if _current_receipt_date(detail, today) is not None]
+        archival = [(pair, detail) for pair, detail in pending if _current_receipt_date(detail, today) is None]
+        for pair, detail in sorted(current, key=lambda entry: _current_receipt_date(entry[1], today)):
+            normalized = await model_row(pair, detail)
+            if normalized:
+                all_notices.append(normalized)
+        # A consumer may normalize/save its copy without changing the final
+        # complete feed. Empty current batches also release its waiting gate.
+        await on_current_rows(copy.deepcopy(all_notices))
+        for pair, detail in archival:
+            normalized = await model_row(pair, detail)
             if normalized:
                 all_notices.append(normalized)
     return all_notices
