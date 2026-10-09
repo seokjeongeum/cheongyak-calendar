@@ -157,7 +157,7 @@ def test_exact_hash_complete_page_set_and_original_identity_are_required_for_rev
     assert parse(url=SOURCE["document_url"].replace("2026000468", "2026000463"))["identity_status"] == "mismatch"
     for rule in parse()["rules"]:
         assert rule["document_hash"] == HANGANG_HASH
-        assert rule["criterion_date"] == (None if rule["kind"] == "account_unused_after_winning" else "2026-10-02")
+        assert rule["criterion_date"] == (None if rule.get("criterion_basis") == "application_date" else "2026-10-02")
         assert rule["parser_version"] == PARSER_VERSION
 
 
@@ -167,3 +167,4 @@ def test_procedure_guidance_and_compatible_previous_parser_facts_remain_availabl
     assert {r["phase"] for r in instructions["instructions"]} == {"application", "post_selection"}
     assert all("서류" not in topic for scope in scopes(parse()).values() for topic in scope["missing_topics"])
     assert parser_version_usable({"source": "official_document_parser", "parser_version": "official-sections-2026-10-07-v9"})
+    assert parser_version_usable({"source": "official_document_parser", "parser_version": "official-sections-2026-10-09-v10"})

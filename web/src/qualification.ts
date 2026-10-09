@@ -5,6 +5,7 @@ import { evaluateHouseholdOwnership, evaluatePropertyOwnership, ownershipInvento
 import { contractEvaluationDate, FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, getEvaluationToday } from './factTimeline'
 import { isParentRule, resolveParentSupport } from './parentSupport'
 import { accountWinningUsageAtDate } from './accountUsage'
+import { applicationHistoryCoveredPeople, applicationHistoryEventComplete } from './applicationHistoryFacts'
 export { setEvaluationToday } from './factTimeline'
 
 export type EligibilityStatus = 'possible' | 'mismatch' | 'review' | 'unpublished'
@@ -219,7 +220,8 @@ function legacyFactObservation(profile: LocalProfile, group: Parameters<typeof f
   return observations[group as keyof typeof observations]
 }
 function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notice: Notice, scope = 'household', project?: string): EligibilityReason | null {
-  if (profile.applicationHistoryPresence == null && !profile.applicationHistoryEvents?.length) return null
+  const coveredPeople = applicationHistoryCoveredPeople(profile)
+  if (profile.applicationHistoryPresence == null && !profile.applicationHistoryEvents?.length && !coveredPeople.size) return null
   const date = criterionDate(rule, notice)
   const label = project ? `${project} 사업 ${rule.restriction === 'prior_project_contract' ? '계약' : '당첨·예비당첨'} 이력` : rule.kind === 'special_winning' ? '특별공급 당첨 이력' : '당첨 이력'
   if (!date) return unsupported(rule, notice, '사건 날짜를 비교할 공식 기준일이 확인되지 않았습니다.', label)
@@ -230,7 +232,7 @@ function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notic
     people = household.members.filter((person) => person.included && (scope !== 'applicant_spouse' || ['applicant', 'spouse'].includes(person.id))).map((person) => person.id)
   }
   const contract = rule.restriction === 'prior_project_contract'
-  const events = (profile.applicationHistoryEvents || []).filter((event) => people.includes(event.personId) && (!project || event.projectId === project) && parseDate(event.eventDate) && event.eventDate <= date && event.eventDate <= getEvaluationToday() &&
+  const events = (profile.applicationHistoryEvents || []).filter((event) => applicationHistoryEventComplete(event) && people.includes(event.personId) && (!project || event.projectId === project) && event.eventDate <= date &&
     (contract ? ['contract', 'additional_resident_contract'].includes(event.eventKind) : project ? ['winning', 'reserve_winning'].includes(event.eventKind) : event.eventKind === 'winning'))
   const window = numberFrom(rule.window_months ?? rule.months, true)
   const applicable = events.filter((event) => {
@@ -241,9 +243,12 @@ function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notic
   })
   const matched = rule.kind === 'special_winning' ? applicable.filter((event) => event.specialSupply === true) : applicable
   if (matched.length) return { ...factualBoolean(rule, notice, true, label), detail: matched.map((event) => `${event.personId} · ${event.projectId} · ${event.eventDate} ${event.eventKind}`).join(' / ') }
-  const covered = people.every((person) => profile.applicationHistoryPeople?.includes(person))
-  const complete = profile.applicationHistoryPresence === false || profile.applicationHistoryComplete === true
-  if (!covered || !complete || rule.kind === 'special_winning' && applicable.some((event) => event.specialSupply == null)) return missingInput(rule, notice, label, '공고의 확인 대상 사람들의 당첨·계약 이력과 입력 완료 여부를 확인하세요. 다른 사업의 이력은 이 사업의 이력으로 적용하지 않습니다.', '확인 대상 전체의 공통 이력', 'applicationHistoryEvents')
+  const covered = people.every((person) => coveredPeople.has(person))
+  if (!covered || rule.kind === 'special_winning' && applicable.some((event) => event.specialSupply == null)) {
+    const rows = profile.applicationHistoryEvents || []
+    const unansweredPerson = !rows.some((event) => !event.personId) && people.find((person) => !coveredPeople.has(person) && !rows.some((event) => event.personId === person))
+    return missingInput(rule, notice, label, '이력이 있는 확인 대상은 사업번호·사건 종류·날짜를 입력하고, 이력이 없는 사람은 해당 사람의 이력 없음 사실을 입력하세요. 다른 사업의 이력은 이 사업의 이력으로 적용하지 않습니다.', '확인 대상의 실제 당첨·계약 사건 또는 이력 없음', unansweredPerson ? 'applicationHistoryAbsencePeople' : 'applicationHistoryEvents')
+  }
   return { ...factualBoolean(rule, notice, false, label), detail: `확인 대상 ${people.length}명의 공통 이력에서 ${date}까지${project ? ` 사업 ${project}의` : ''} 해당 사건이 없습니다.` }
 }
 function originalProjectContractOwnership(rule: NoticeRule, profile: LocalProfile, notice: Notice): EligibilityReason {
@@ -255,8 +260,7 @@ function originalProjectContractOwnership(rule: NoticeRule, profile: LocalProfil
   const winners = events.filter((event) => event.eventKind === 'winning')
   const contracts = events.filter((event) => event.eventKind === 'contract' && winners.some((winner) => winner.eventDate <= event.eventDate))
   if (!contracts.length) {
-    const complete = profile.applicationHistoryPresence === false || profile.applicationHistoryComplete === true
-    if (complete && profile.applicationHistoryPeople?.includes('applicant')) return reason(rule, notice, 'pass', label, `사업 ${project}의 공통 이력에서 최초 당첨 후 계약은 없습니다. 최초 당첨 또는 부적격 판정만으로 이 경로를 제외하지 않습니다.`, winners.length ? '최초 당첨 · 계약 없음' : '최초 당첨 후 계약 없음', '최초 당첨 후 계약으로 인한 주택 소유 아님')
+    if (applicationHistoryCoveredPeople(profile).has('applicant')) return reason(rule, notice, 'pass', label, `사업 ${project}의 공통 이력에서 최초 당첨 후 계약은 없습니다. 최초 당첨 또는 부적격 판정만으로 이 경로를 제외하지 않습니다.`, winners.length ? '최초 당첨 · 계약 없음' : '최초 당첨 후 계약 없음', '최초 당첨 후 계약으로 인한 주택 소유 아님')
     return missingInput(rule, notice, '최초 당첨·계약 사건', `최초 공고 ${original}의 사업 ${project}에서 본인이 실제 당첨 후 계약했는지 공통 사건 이력을 확인하세요. 당첨만 있거나 부적격 이력만 있다는 이유로 제외하지 않습니다.`, '본인의 사업별 날짜가 있는 당첨·계약 이력', 'applicationHistoryEvents')
   }
   const dates = contracts.map((event) => event.eventDate)
@@ -308,8 +312,78 @@ function conditionChildren(rule: NoticeRule): NoticeRule[] {
 }
 export function inheritedCondition(parent: NoticeRule, child: NoticeRule): NoticeRule {
   const inherited: Partial<NoticeRule> = {}
-  for (const key of ['verification', 'evidence_url', 'evidence_text', 'document_hash', 'criterion_date', 'reference_date', 'criterion_basis', 'evaluation_mode', 'requires_maintained_until_application', 'supply_type', 'unit_type', 'housing_kind']) if (parent[key] !== undefined && child[key] === undefined) inherited[key] = parent[key]
+  for (const key of ['verification', 'evidence_url', 'evidence_text', 'document_hash', 'criterion_date', 'reference_date', 'criterion_basis', 'evaluation_mode', 'requires_maintained_until_application', 'supply_type', 'supply_types', 'unit_type', 'unit_types', 'housing_kind']) if (parent[key] !== undefined && child[key] === undefined) inherited[key] = parent[key]
   return { ...inherited, ...child }
+}
+function exceptionScopeMatches(parent: NoticeRule, child: NoticeRule, unitType?: string): boolean {
+  if (unitType && !scopedRule({ ...child, supply_type: undefined, supply_types: undefined }, unitType)) return false
+  if (parent.supply_type && !scopedRule({ ...child, unit_type: undefined, unit_types: undefined }, undefined, parent.supply_type)) return false
+  for (const [singular, plural] of [['supply_type', 'supply_types'], ['unit_type', 'unit_types']] as const) {
+    const scopes = (rule: NoticeRule) => {
+      const one = typeof rule[singular] === 'string' ? [compact(rule[singular] as string)] : null
+      const many = Array.isArray(rule[plural]) ? (rule[plural] as unknown[]).filter((item): item is string => typeof item === 'string').map(compact) : null
+      return one && many ? one.filter((item) => many.includes(item)) : one || many
+    }
+    const a = scopes(parent), b = scopes(child)
+    if (a && b && !a.some((item) => b.includes(item))) return false
+  }
+  return true
+}
+function marriageClauseApplicability(rule: NoticeRule, profile: LocalProfile, notice: Notice): boolean | null {
+  const date = criterionDate(rule, notice), state = factsAtDate(profile, 'marital', date)
+  if (!state.known || state.profile.maritalStatus === 'unknown') return null
+  if (state.profile.maritalStatus === 'married') return true
+  // Conflicting spouse facts are unresolved facts, never an exclusion.
+  return state.profile.hasSpouse === true ? null : false
+}
+function birthClauseApplicability(rule: NoticeRule, profile: LocalProfile, notice: Notice): boolean | null {
+  if (rule.supply_type && !['multi_child', 'newlywed', 'elder_parent', 'newborn'].includes(specialType(rule.supply_type))) return false
+  const date = criterionDate(rule, notice)
+  if (!date) return null
+  const pregnancy = factsAtDate(profile, 'pregnancy', date)
+  if (pregnancy.known && pregnancy.profile.pregnant === true) return true
+  const childState = factsAtDate(profile, 'children', date), children = childState.profile.children
+  if (!childState.known || childState.profile.hasChildren == null) return null
+  if (childState.profile.hasChildren === false && (children.length || profile.householdMembers.some((member) => ['applicant_child', 'spouse_child'].includes(member.relation)))) return null
+  if (childState.profile.hasChildren === true && !children.length) return null
+  if (!pregnancy.known || pregnancy.profile.pregnant == null) return null
+  if (childState.profile.hasChildren === false) return false
+  // Use only the source's birth-bound date, not an unrelated date elsewhere
+  // in a long excerpt. Older children cannot use a recent-birth waiver.
+  const bound = String(rule.evidence_text || '').match(/[‘’'\"]?(\d{4}|\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*\.?\s*이후\s*출생/)
+  const structured = rule.birth_since || rule.child_relaxation_since
+  const cutoff = typeof structured === 'string' && parseDate(structured) ? structured : bound ? `${bound[1].length === 2 ? `${Number(bound[1]) < 70 ? '20' : '19'}${bound[1]}` : bound[1]}-${bound[2].padStart(2, '0')}-${bound[3].padStart(2, '0')}` : null
+  if (!cutoff || !parseDate(cutoff)) return null
+  let unknown = false
+  for (const child of children) {
+    if (!parseDate(child.dateOfBirth) || child.dateOfBirth > getEvaluationToday()) { unknown = true; continue }
+    if (child.dateOfBirth < cutoff || child.dateOfBirth > date) continue
+    if (child.adopted === false) return true
+    if (child.adopted == null || !parseDate(child.adoptionDate || '')) { unknown = true; continue }
+    if (child.adoptionDate! <= date) return true
+  }
+  return unknown ? null : false
+}
+/** False only when dated facts exclude every recognized route in this clause. */
+export function officialClauseApplicability(rule: NoticeRule, profile: LocalProfile, notice: Notice): boolean | null {
+  // The evidence excerpt may include many unrelated provisions. Classify
+  // only this exact clause's label/text, retaining unsupported alternatives.
+  const clause = compact(`${typeof rule.label === 'string' ? rule.label : ''} ${rule.text || ''}`)
+  if (/제53조|과거주택소유/.test(clause)) return null
+  if (Array.isArray(rule.allowed_recommendation_reasons)) {
+    const allowed = rule.allowed_recommendation_reasons.filter((value): value is string => typeof value === 'string')
+    if (!allowed.length || !profile.recommendationReason || ['unknown', '기타'].includes(profile.recommendationReason)) return null
+    return allowed.includes(profile.recommendationReason)
+  }
+  if (/동일배우자.*재혼|재혼.*혼인기간.*합산/.test(clause)) {
+    if (/예정세대|사전청약|예비신혼/.test(clause)) return null
+    return marriageClauseApplicability(rule, profile, notice)
+  }
+  const alternatives: (boolean | null)[] = []
+  if (/출산특례/.test(clause)) alternatives.push(birthClauseApplicability(rule, profile, notice))
+  if (/배우자혼인전.*당첨|혼인특례/.test(clause)) alternatives.push(marriageClauseApplicability(rule, profile, notice))
+  if (!alternatives.length || /통장면제|세대소득면제|제36조/.test(clause)) return null
+  return alternatives.includes(true) ? true : alternatives.every((value) => value === false) ? false : null
 }
 function allKinds(rules: NoticeRule[]): string[] { return rules.flatMap((r) => [r.kind, ...allKinds(conditionChildren(r))]) }
 function scopeProblem(rule: NoticeRule, notice: Notice): string | null {
@@ -374,10 +448,12 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   const problem = scopeProblem(rule, notice)
   if (problem) return unsupported(rule, notice, problem, '적용 범위')
   if (rule.effect === 'priority') return unsupported(rule, notice, '당첨 우선순위 조건입니다. 신청 가능 여부와 별개로 공고문의 배정 순서를 확인하세요.', '공급 우선순위')
+  if (rule.kind === 'recommendation' && (profile.recommendationReason === 'none' || profile.recommendationStatus === 'none')) return reason(rule, notice, 'fail', '기관추천', profile.recommendationReason === 'none' ? '기관추천 대상 사유에 해당 없음으로 입력했습니다.' : '기관 추천이 없다고 입력했습니다.', profile.recommendationReason === 'none' ? '해당 없음' : '추천 없음', '기관추천 대상 및 기관의 확정 추천')
   if (Array.isArray(rule.exceptions) && rule.exceptions.length) {
     const exceptionRules = rule.exceptions.filter((r): r is NoticeRule => !!r && typeof r === 'object' && typeof r.kind === 'string')
-    const exceptions = exceptionRules.map((r) => evaluateRule(inheritedCondition(rule, r), profile, notice, unitType))
     const base = evaluateRule({ ...rule, exceptions: undefined }, profile, notice, unitType)
+    const exceptions = exceptionRules.filter((child) => exceptionScopeMatches(rule, child, unitType)).map((child) => inheritedCondition(rule, child))
+      .filter((child) => officialClauseApplicability(child, profile, notice) !== false).map((child) => evaluateRule(child, profile, notice, unitType))
     if (exceptions.some((r) => r.status === 'pass')) return reason(rule, notice, 'pass', base.label, `공식 예외 충족: ${exceptions.filter((r) => r.status === 'pass').map((r) => r.detail).join(' / ')}`, base.input, '공식 예외 조건')
     if (base.status === 'fail' && (exceptionRules.length !== rule.exceptions.length || exceptions.some((r) => r.status === 'review'))) {
       const unresolved = exceptions.find((entry) => entry.status === 'review')
@@ -880,7 +956,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const allowed = Array.isArray(rule.allowed_reasons) ? rule.allowed_reasons : typeof rule.value === 'string' ? [rule.value] : []
     const matches = allowed.length > 0 && allowed.includes(profile.recommendationReason)
     if (profile.recommendationStatus === 'confirmed' && !matches && typeof rule.unsupported_reason_label === 'string') return unsupported(rule, notice, `추천 사유 ${profile.recommendationReason}는 확인했으나 이 사유의 공식 추천·통장 면제 분기를 아직 비교에 반영하지 못했습니다.`, rule.unsupported_reason_label)
-    return reason(rule, notice, profile.recommendationStatus === 'confirmed' && matches ? 'pass' : profile.recommendationStatus === 'none' && rule.require_confirmed === true ? 'fail' : 'review', '기관추천', `추천 사유 ${profile.recommendationReason} · 상태 ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, `${profile.recommendationReason} / ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, allowed.length ? `공식 추천 사유 ${allowed.join(', ')}` : '공고의 공식 추천 사유 미확인')
+    return reason(rule, notice, profile.recommendationStatus === 'confirmed' && matches ? 'pass' : 'review', '기관추천', `추천 사유 ${profile.recommendationReason} · 상태 ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, `${profile.recommendationReason} / ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, allowed.length ? `공식 추천 사유 ${allowed.join(', ')}` : '공고의 공식 추천 사유 미확인')
   }
   if (rule.kind === 'first_rank') {
     const derived = deriveRank(notice, profile, unitType)
@@ -957,6 +1033,13 @@ export function evaluateQualification(notice: Notice, profile: LocalProfile = EM
   const inventory = officialOfferedSupplies(notice)
   supplyType ||= singleOfferedSupplyType(notice)
   if (inventory && supplyType && !inventory.some((supply) => compact(supply.supply_type) === compact(supplyType) && (!unitType || !supply.unit_type || supply.unit_type === unitType))) return { status: 'unpublished', reasons: [{ status: 'review', category: 'selection', label: '모집하지 않는 공급유형', detail: `이 공고는 ${supplyType}${unitType ? ` · ${unitType}` : ''} 조합을 모집하지 않습니다.`, evidenceUrl: notice.official_url }] }
+  // Source uncertainty cannot create a referral the applicant explicitly
+  // says they do not have. Other offered paths still compare independently.
+  if (supplyType && specialType(supplyType) === 'institution' && (profile.recommendationReason === 'none' || profile.recommendationStatus === 'none')) return {
+    status: 'mismatch', reasons: [{ status: 'fail', category: 'condition', label: '기관추천 대상·추천 상태',
+      detail: profile.recommendationReason === 'none' ? '기관추천 대상 사유에 해당 없음으로 입력했습니다.' : '기관 추천이 없다고 입력했습니다.',
+      input: profile.recommendationReason === 'none' ? '해당 없음' : '추천 없음', requirement: '기관추천 대상 및 기관의 확정 추천' }],
+  }
   const coverage = conditionCoverage(notice, unitType, supplyType)
   // Standalone extraction candidates remain available in the collapsed source
   // panel. Once this exact scope has complete official conditions, candidates

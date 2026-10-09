@@ -678,6 +678,7 @@ export function MiniCalendar({ month, today, selectedDate, notices, profile = EM
 
 export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, today, viewStart, viewEnd, decision, override, onOverride, onOverrideId, now, onProfile, evaluation: prepared, deferEvaluation = false, resultsMode = false }: { notice: Notice; profile: LocalProfile; demoMode: boolean; today: string; viewStart: string; viewEnd: string; decision: CompetitionDecision; override?: ResidenceArea; onOverride?: (area: ResidenceArea | 'automatic') => void; onOverrideId?: (id: string, area: ResidenceArea | 'automatic') => void; now: number; onProfile: (field?: keyof LocalProfile, historyGroup?: FactChangeGroup) => void; evaluation?: NoticeEvaluation; deferEvaluation?: boolean; resultsMode?: boolean }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [cardOpen, setCardOpen] = useState(false)
   const evaluation = useMemo(() => prepared || (deferEvaluation ? undefined : evaluateNotice(notice, profile, today, now, override, resultsMode ? 'results' : 'schedule', decision)), [prepared, deferEvaluation, notice, profile, today, now, override, resultsMode, decision])
   const effectiveDecision = evaluation?.decision || decision || { area: 'unknown', closedUnits: [], reason: null } as CompetitionDecision
   decision = effectiveDecision
@@ -685,7 +686,9 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
   const mainResult = evaluation?.summary || { status: 'review' as const, reasons: [] }
   const changeOverride = useCallback((area: ResidenceArea | 'automatic') => { if (onOverrideId) onOverrideId(notice.id, area); else onOverride?.(area) }, [notice.id, onOverrideId, onOverride])
   const unavailable = mainResult.status === 'mismatch' || decision.allApplicationsUnavailable === true
+  useEffect(() => { setCardOpen(false) }, [notice.id, unavailable])
   const officialLink = demoMode ? undefined : safeHref(notice.official_url)
+  const hogangnonoLink = demoMode ? undefined : hogangnonoSearchUrl(notice.title)
   const categoryLabel = categoryDisplay(notice.category)
   const methodLabel = officialApplicationMethodLabel(notice)
   const visibleEvents = (notice.events || []).filter((event) =>
@@ -694,9 +697,12 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
   const sources = [...new Set(notice.sources?.length ? notice.sources : [notice.source])].map((source) => sourceName(source)).join(' · ')
   const unitCount = new Set(notice.prices.map((price) => price.unit_type)).size
 
-  return <article className={`notice-card${isLocal ? ' local-notice' : ''}${resultsMode ? ' result-card' : ''}${unavailable ? ' notice-unavailable' : ''}`} data-unavailable={unavailable || undefined} data-evaluation-ready={!!evaluation || undefined}>
+  return <article className={`notice-card${isLocal ? ' local-notice' : ''}${resultsMode ? ' result-card' : ''}${unavailable ? ' notice-unavailable' : ''}`} data-unavailable={unavailable || undefined} data-evaluation-ready={!!evaluation || undefined} data-content-expanded={!unavailable || cardOpen}>
     <div className="notice-head"><div className="notice-tags">{!resultsMode && activeApplicationEvents(notice, today).length > 0 && <span className="ongoing-badge">현재 접수 중</span>}{unavailable && <span className="unavailable-badge">내 조건으로 신청 불가</span>}{methodLabel && <span className="application-method-tag">{methodLabel}</span>}<span className={`type-tag type-${categoryGroup(notice.category)}`}>{categoryLabel}</span>{notice.housing_kind !== 'not_applicable' && <span className="unknown-tag">{notice.housing_kind === 'private' ? '민영주택' : notice.housing_kind === 'national' ? '국민주택' : '주택 종류 확인 중'}</span>}{notice.rank_applicability?.status === 'not_applicable' && <span className="unknown-tag">아파트 1·2순위 적용 없음</span>}{notice.rank_applicability?.account_required === false && <span className="local-tag">청약통장 불필요</span>}{isLocal && <span className="local-tag"><MapPin size={12} /> {evaluation?.candidateLabel}</span>}{notice.price_cap_status === 'yes' && <span className="cap-tag"><Sparkles size={13} /> 분양가상한제 적용</span>}{notice.price_cap_status === 'unknown' && <span className="unknown-tag">상한제 확인 필요</span>}{resultsMode && <span className="result-status-tag">{(notice.application_end_date || '') >= today ? '접수 중 결과' : '접수 종료'}</span>}</div><div className="notice-provider"><span>{notice.provider ? `${notice.provider} · ` : ''}출처 {sources}</span>{(notice.correction_of_id || notice.correction_of_external_id) && <span className="revision-tag">정정 공고</span>}{notice.version > 1 && <span className="revision-tag">자료 갱신 {notice.version}판</span>}</div></div>
-    <div className="notice-title-line"><div><h4>{notice.title}</h4><div className="notice-address"><MapPin size={14} />{notice.address || notice.region_name || '지역 미공개'}<span className="address-separator" />모집공고 {formatShortDate(notice.announcement_date)}</div></div>{officialLink && <a className="official-link" href={officialLink} target="_blank" rel="noopener noreferrer" aria-label={`${notice.title} 공식 공고 보기`}>원문 <ArrowUpRight size={16} /></a>}</div>
+    <div className="notice-title-line"><div><h4>{notice.title}</h4><div className="notice-address"><MapPin size={14} />{notice.address || notice.region_name || '지역 미공개'}<span className="address-separator" />모집공고 {formatShortDate(notice.announcement_date)}</div></div><div className="notice-external-links">{officialLink && <a className="official-link" href={officialLink} target="_blank" rel="noopener noreferrer" aria-label={`${notice.title} 공식 공고 보기`}>원문 <ArrowUpRight size={16} /></a>}{hogangnonoLink && <a className="official-link" href={hogangnonoLink} target="_blank" rel="noopener noreferrer" aria-label={`${notice.title} 호갱노노 검색`}>호갱노노 <ArrowUpRight size={16} /></a>}</div></div>
+
+    <details className="notice-content-fold" data-collapsible={unavailable || undefined} open={!unavailable || cardOpen} onToggle={(event) => { if (unavailable) setCardOpen(event.currentTarget.open) }}>
+      <summary className="notice-content-toggle"><span>{cardOpen ? '공고 내용 접기' : '접수 일정·가격·근거 펼치기'}</span><ChevronDown size={16} className={cardOpen ? 'chevron-up' : undefined} /></summary>
 
     {evaluation && <NoticeRegionDecision notice={notice} profile={profile} onProfile={onProfile} groups={evaluation.regions} />}
 
@@ -722,8 +728,15 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
     {evaluation && <EligibilityBrief sourceDetailsOpen={detailsOpen} snapshot={evaluation} result={mainResult} notice={notice} profile={profile} decision={decision} onProfile={onProfile} onDetails={() => setDetailsOpen(true)} candidateReason={isLocal ? evaluation?.candidateReason : undefined} />}
     {detailsOpen && evaluation && <EligibilityDetails snapshot={evaluation} notice={notice} profile={profile} decision={decision} demoMode={demoMode} onProfile={onProfile}><div className="official-schedule"><strong>원문 일정 · 지난 일정 포함</strong>{notice.events.length ? <ul>{notice.events.map((event, index) => <li key={`${event.kind}-${event.start_date}-${index}`}><span>{event.label || event.kind}</span><time>{formatFullShortDate(event.start_date)}{event.end_date && event.end_date !== event.start_date ? ` – ${formatFullShortDate(event.end_date)}` : ''}</time>{event.audience && <small>{event.audience}</small>}</li>)}</ul> : <p>원문 일정 미공개</p>}{officialLink && <a href={officialLink} target="_blank" rel="noopener noreferrer">공식 공고문 <ExternalLink size={12} /></a>}</div></EligibilityDetails>}
     </>}
+    </details>
   </article>
 }, (a, b) => a.notice === b.notice && a.evaluation === b.evaluation && a.decision === b.decision && a.override === b.override && a.demoMode === b.demoMode && a.today === b.today && a.viewStart === b.viewStart && a.viewEnd === b.viewEnd && a.resultsMode === b.resultsMode && a.onProfile === b.onProfile && a.onOverride === b.onOverride && a.onOverrideId === b.onOverrideId && a.deferEvaluation === b.deferEvaluation && (a.deferEvaluation || a.profile === b.profile && a.now === b.now))
+
+export function hogangnonoSearchUrl(title: string): string | undefined {
+  const query = title.replace(/\s*\((?:\d+회차|조합원 취소분|계약취소주택|무순위|임의공급)\)\s*$/u, '').trim()
+  if (!query) return undefined
+  return `https://hogangnono.com/search?q=${encodeURIComponent(query)}`
+}
 
 function applicationFee(notice: Notice, unit: string): number | undefined {
   for (const rule of notice.rules) {

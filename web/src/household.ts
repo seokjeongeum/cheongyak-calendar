@@ -61,7 +61,7 @@ export function deriveHousehold(profile: LocalProfile, criterionDate?: string | 
   if (profile.hasSpouse === true) members.push({ id: 'spouse', label: '배우자', included: true, reason: '법률상 배우자는 주소·등본이 달라도 확인 대상에 포함됩니다.', ownerRelation: 'spouse', dateOfBirth: '', ownsHome: profile.spouseOwnsHome, previouslyOwnedHome: profile.spousePreviouslyOwnedHome })
   members.push(...(profile.householdMembers || []).map((member, index) => familyMember(profile, member, index)))
   const incomplete = (reviewDetail: string, profileField: keyof LocalProfile): HouseholdScope => ({ complete: false, members, legalCount: null, reviewDetail, profileField })
-  if (profile.applicantOnRegister !== true) return incomplete(profile.applicantOnRegister === false ? '본인이 주민등록등본에 등재되어 있지 않다고 입력했습니다. 이 공고에서 인정하는 세대 구성과 신청 조건을 확인해야 합니다.' : '본인이 주민등록등본에 등재되어 있는지 입력하세요.', 'applicantOnRegister')
+  if (profile.applicantOnRegister === false) return incomplete('주민등록 말소·등본 없음 상태가 저장되어 있습니다. 이 공고에서 인정하는 예외 신청·세대 증빙 범위를 확인해야 합니다.', 'applicantOnRegister')
   if (profile.hasSpouse === null) return incomplete('현재 법률상 배우자가 있는지 입력하세요. 배우자는 별도 주소여도 함께 확인합니다.', 'hasSpouse')
   if (profile.maritalStatus === 'married' && profile.hasSpouse === false || profile.maritalStatus === 'single' && profile.hasSpouse === true) return incomplete('혼인 상태와 배우자 유무가 서로 다릅니다. 현재 가족 구성에 맞게 수정하세요.', 'hasSpouse')
   if (!profile.householdMembers?.length) {

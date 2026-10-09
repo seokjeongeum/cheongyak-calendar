@@ -8,6 +8,15 @@ const render = (value: LocalProfile, historyNeeded = false) => renderToStaticMar
 const relative = { ...createHouseholdMember('parent'), relation: 'applicant_parent' as const, register: 'applicant' as const, ownsHome: false }
 
 describe('factual household questions', () => {
+  it('omits the baseline applicant-registration question and keeps actual exceptions editable', () => {
+    const normal = render(profile({ applicantOnRegister: null, additionalFamilyPresence: false }))
+    expect(normal).not.toContain('본인이 주민등록등본에 등재되어 있나요?')
+    expect(normal).toContain('주택 보유를 함께 확인할 사람 · 1명')
+    const exceptional = render(profile({ applicantOnRegister: false, additionalFamilyPresence: false }))
+    expect(exceptional).toContain('type="checkbox" checked=""')
+    expect(exceptional).toContain('주민등록 말소 또는 본인 등본 없음')
+    expect(exceptional).toContain('이 공고에서 인정하는 예외 신청·세대 증빙 범위')
+  })
   it('asks whether another family member exists instead of asking to confirm completeness', () => {
     const html = render(profile())
     expect(html).toContain('본인·배우자 외 등본에 함께 있는 가족이 있나요?')

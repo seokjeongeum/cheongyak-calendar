@@ -85,14 +85,24 @@ describe('common person and project application history', () => {
     expect(evaluateRule(restriction('prior_project_contract'), p, notice()).status).toBe('pass')
     expect(evaluateRule(restriction('prior_project_contract'), { ...p, applicationHistoryEvents: [{ ...event, eventKind: 'additional_resident_contract' }] }, notice()).status).toBe('fail')
   })
-  it('does not conclude no history for an uncovered spouse or incomplete list', () => {
+  it('does not conclude no history for an uncovered spouse or unanswered substantive history', () => {
     const p = history({ hasSpouse: true, maritalStatus: 'married', spouseOwnsHome: false })
-    expect(evaluateRule({ ...restriction(), scope: 'applicant_spouse' }, p, notice()).status).toBe('review')
+    expect(evaluateRule({ ...restriction(), scope: 'applicant_spouse' }, p, notice())).toMatchObject({ status: 'review', profileField: 'applicationHistoryAbsencePeople' })
     expect(evaluateRule(restriction(), history({ applicationHistoryPresence: true, applicationHistoryComplete: false }), notice()).status).toBe('review')
+  })
+  it('reuses actual dated events and person-specific absence without asking for completeness', () => {
+    const p = history({ applicationHistoryPresence: true, applicationHistoryComplete: false, applicationHistoryPeople: [], applicationHistoryEvents: [{ id: 'event', personId: 'applicant', projectId: '2026000999', eventKind: 'winning', eventDate: past }] })
+    expect(evaluateRule(restriction(), p, notice()).status).toBe('pass')
+    expect(evaluateRule(restriction(), profile({ applicationHistoryAbsencePeople: ['applicant'] }), notice()).status).toBe('pass')
+    expect(evaluateRule(restriction(), { ...p, applicationHistoryEvents: [{ ...p.applicationHistoryEvents[0], eventDate: '' }] }, notice()).status).toBe('review')
   })
   it('can establish a known event before all other events are entered', () => {
     const p = history({ applicationHistoryPresence: true, applicationHistoryComplete: false, applicationHistoryEvents: [{ id: 'event', personId: 'applicant', projectId: '2026000323', eventKind: 'winning', eventDate: past }] })
     expect(evaluateRule(restriction(), p, notice()).status).toBe('fail')
+  })
+  it('does not treat a default winning row with an unknown project as a real general win', () => {
+    const p = history({ applicationHistoryPresence: true, applicationHistoryComplete: false, applicationHistoryEvents: [{ id: 'event', personId: 'applicant', projectId: '', eventKind: 'winning', eventDate: past }] })
+    expect(evaluateRule(rule('previous_winning', { value: false, scope: 'applicant' }), p, notice())).toMatchObject({ status: 'review', profileField: 'applicationHistoryEvents' })
   })
   it('does not turn a legacy project answer into a dated common event', () => {
     const p = profile({ projectApplicationHistory: { '2026000323': { winning: true, contract: false, additionalResident: false, winningScope: 'applicant', contractScope: 'applicant', asOfDate: past, historyConfirmations: [] } } })

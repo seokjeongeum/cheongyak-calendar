@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlparse
 from .reviewed_sources import REVIEWED_SOURCES, reviewed_source_for_document
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-09-v10"
+PARSER_VERSION = "official-sections-2026-10-09-v11"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -35,7 +35,7 @@ def parser_version_usable(rule: dict, *, category: str = "", title: str = "", ru
         return True
     # Later reviewed geography/admission supplements add source-bound facts.
     # Prior valid facts remain available until their document is reparsed.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -358,7 +358,11 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
         if outside_apt and office_review:
             qualification = next((p for p in pages if p["page"] == office_review["qualification_page"]), None)
             if qualification and all(term in qualification["text"] for term in ("대한민국에 거주", "19", "이상인 자")):
-                quote = normal(qualification["text"]).split("■ 청약일정")[0][:900]
+                body = normal(qualification["text"])
+                # Payment notes can occupy the beginning of this same page.
+                # Keep the actual applicant clause as the visible evidence.
+                start = body.index("대한민국에 거주")
+                quote = body[max(0, start - 100):start + 550]
                 rules.append(make("age_min", office_review["adult_age"], supply="일반공급", operator=">=", unit="years", quote=quote, page=qualification["page"]))
                 rules.append(make("domestic_residence", True, supply="일반공급", quote=quote, page=qualification["page"]))
                 rules.append(make("applicant_regions", effect="metadata", scope_complete=True, unrestricted=True, domestic_only=True, priority_applicable=False, quote=quote, page=qualification["page"]))
@@ -563,11 +567,17 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             if m and "태아" in m.group(3) and "입양" in m.group(3):
                 rules.append(make("children_min", int(m.group(2)), supply=supply, quote=m.group(0), page=start_page, child_age_max=int(m.group(1)), child_age_inclusive=False, include_pregnancy=True, include_adoption=True, operator=">=", unit="children"))
         if supply.startswith("신혼부부"):
-            m = re.search(r"혼인기간(?:이)?\s*(\d+)년\s*이내", qualified)
+            m = re.search(r"혼인기간(?:\([^■]{0,700}?\))?(?:이)?\s*(\d+)년\s*이내", qualified)
             if m:
-                marriage = make("marriage_months_max", int(m.group(1)) * 12, quote=m.group(0), page=start_page, operator="<=", unit="months", anniversary_limit=True)
+                marriage = make("marriage_months_max", int(m.group(1)) * 12, **condition_anchor(m), operator="<=", unit="months", anniversary_limit=True)
                 if "재혼" in qualified:
-                    marriage = exceptional(marriage, "동일 배우자와 재혼한 경우 전체 혼인기간 합산 확인", "동일 배우자와 재혼한 경우 이전 혼인기간을 합산하는 공고의 요구가 있습니다.")
+                    # A previous multi-child scoring table may mention
+                    # remarriage first. Only this applicant section supplies
+                    # the marriage-duration condition and its tightening.
+                    remarriage = re.search(r"동일인과의\s*재혼.{0,120}?이전\s*혼인기간을\s*포함", qualified)
+                    if remarriage:
+                        marriage["exceptions"] = [make("unparsed", label="동일 배우자와 재혼한 경우 전체 혼인기간 합산 확인",
+                            text="동일 배우자와 재혼한 경우 이전 혼인기간을 합산해야 합니다.", **condition_anchor(remarriage, before=0, after=0))]
                 child_alternative = kind == "national" and re.search(r"(?:또는|이거나)\s*6세\s*이하", qualified) and "만7세미만" in compact(qualified)
                 if child_alternative:
                     child = make("children_min", 1, quote=qualified[:700], page=start_page, child_age_max=7, child_age_inclusive=False, include_pregnancy=True, include_adoption=True, operator=">=")
@@ -598,8 +608,11 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             owned = re.search(r"세대구성원[^■]{0,180}?과거[^■]{0,120}?주택[^■]{0,90}?소유", qualified)
             if owned:
                 r = make("never_owned_home", True, supply=supply, **condition_anchor(owned))
-                if "혼인신고" in qualified or "혼인신고" in flat:
-                    r = exceptional(r, "배우자 혼인 전 주택 소유·처분의 공식 예외 확인", qualified)
+                spouse_exception = re.search(r"청약신청자의\s*배우자가\s*혼인\s*전\s*주택을\s*소유하였다가\s*혼인\s*전\s*처분한\s*이력은\s*배제합니다", qualified)
+                if spouse_exception:
+                    r["exceptions"] = [make("unparsed", supply=supply, label="배우자 혼인 전 주택 소유·처분의 공식 예외 확인",
+                        text="배우자가 혼인 전에 소유하고 혼인 전에 처분한 주택 이력은 배제합니다.",
+                        **condition_anchor(spouse_exception, before=0, after=0))]
                 rules.append(r)
             m = re.search(r"(\d+)년\s*이상\s*소득세", qualified)
             if m:
@@ -689,6 +702,9 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
 
     from .hangang_admission import hangang_admission
     admission_review = hangang_admission(pages, digest=digest, reviewed=reviewed, rules=rules, make=make)
+    if not admission_review:
+        from .current_private_admission import current_private_admission
+        admission_review = current_private_admission(pages, digest=digest, reviewed=reviewed, rules=rules, offered=offered, make=make)
     if admission_review:
         rules = admission_review["rules"]
 

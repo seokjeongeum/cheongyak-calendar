@@ -273,6 +273,7 @@ export interface LocalProfile {
   applicationHistoryPresence: boolean | null
   applicationHistoryComplete: boolean | null
   applicationHistoryPeople: string[]
+  applicationHistoryAbsencePeople: string[]
   applicationHistoryEvents: ApplicationHistoryEvent[]
   region: string
   district: string
@@ -392,7 +393,7 @@ export interface LocalProfile {
 }
 
 export const EMPTY_PROFILE: LocalProfile = {
-  version: 5, pointsFamily: {}, pointsFamilyComplete: null, pointsHomelessSince: '', spouseAccountPresent: null, spouseAccountBaseDate: '', factChanges: {}, factSnapshots: [], applicationHistoryPresence: null, applicationHistoryComplete: null, applicationHistoryPeople: [], applicationHistoryEvents: [], region: '', district: '', regionCode: '', districtCode: '', districtScopeSpecific: false, regionNeedsReview: false,
+  version: 5, pointsFamily: {}, pointsFamilyComplete: null, pointsHomelessSince: '', spouseAccountPresent: null, spouseAccountBaseDate: '', factChanges: {}, factSnapshots: [], applicationHistoryPresence: null, applicationHistoryComplete: null, applicationHistoryPeople: [], applicationHistoryAbsencePeople: [], applicationHistoryEvents: [], region: '', district: '', regionCode: '', districtCode: '', districtScopeSpecific: false, regionNeedsReview: false,
   movedInDate: '', districtMovedInDate: '', cityMovedInDate: '', residenceHistory: [], intendedContractDate: '', currentlyDomesticResident: null, domesticResidenceFactsAsOfDate: '', domesticResidenceHistoryConfirmations: [], providerEmployeeOrRelatedFamily: null, providerPurchaseApproval: null, householdSize: '', incomeHouseholdSize: '', applicantOnRegister: null, householdMembers: [], householdMembersComplete: null, additionalFamilyPresence: null, householdSnapshotDate: '', householdCompositionUnchanged: null, householdHistoryConfirmations: [], dateOfBirth: '',
   isHouseholdHead: null, hasSpouse: null, spouseSameRegister: null, familyOnRegister: null,
   householdScopeKnown: null, applicantOwnsHome: null, spouseOwnsHome: null, familyOwnsHome: null,

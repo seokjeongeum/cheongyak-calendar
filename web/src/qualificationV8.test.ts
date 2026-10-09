@@ -88,8 +88,9 @@ describe('original winner contracts are property facts, not a blanket win ban', 
   it('does not confuse another project, a reserve nomination, or later contract with original ownership', () => {
     for (const events of [[winner, event('contract', '2026-05-01', 'LH-OTHER-PROJECT')], [event('reserve_winning', '2026-04-20'), contract], [winner, event('contract', '2026-10-01')]]) expect(evaluateRule(ownership, p(events), notice([])).status).toBe('pass')
   })
-  it('asks only the missing dated common events rather than adding project booleans', () => {
-    expect(evaluateRule(ownership, p([winner], { applicationHistoryComplete: false }), notice([]))).toMatchObject({ status: 'review', profileField: 'applicationHistoryEvents' })
+  it('reuses dated events without requiring a completion confirmation and asks substantive missing dates', () => {
+    expect(evaluateRule(ownership, p([winner], { applicationHistoryComplete: false }), notice([])).status).toBe('pass')
+    expect(evaluateRule(ownership, p([{ ...winner, eventDate: '' }], { applicationHistoryComplete: false }), notice([]))).toMatchObject({ status: 'review', profileField: 'applicationHistoryEvents' })
   })
 })
 

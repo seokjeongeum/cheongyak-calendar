@@ -3,6 +3,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -162,6 +163,17 @@ def test_failed_spawn_is_safe_and_retryable(store, monkeypatch, caplog):
     assert collection.claim_collection("manual")[1]
 
 
+def test_shutdown_between_resume_claim_and_child_start_keeps_interruption(store, monkeypatch):
+    manager = collection.ManualCollector()
+    state, _ = collection.claim_collection("manual")
+    calls = []
+    monkeypatch.setattr(collection.subprocess, "Popen", lambda *args, **kwargs: calls.append(args))
+    manager.shutdown()
+    manager.start(state.job_id)
+    assert calls == []
+    assert collection.collection_state().status == "interrupted"
+
+
 def test_worker_shares_lease_and_records_partial_results(store, monkeypatch):
     calls = []
     async def fake_run():
@@ -286,14 +298,12 @@ def test_startup_resumes_saved_owner_job_once_for_each_code_version(store, monke
     assert claimed and explicit.trigger == "manual"
 
 
-@pytest.mark.parametrize("status", ["idle", "running", "completed", "error"])
+@pytest.mark.parametrize("status", ["idle", "completed", "error"])
 def test_startup_does_not_resume_other_job_states(store, monkeypatch, status):
     interrupted_manual(store)
     with store() as session:
         row = session.get(CollectionRun, collection.NAME)
         row.status = status
-        # Even an expired running lease waits for ordinary lease expiry and
-        # an explicit/scheduled claim; startup resumes interrupted jobs only.
         row.lease_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         session.commit()
     manager = collection.ManualCollector()
@@ -305,17 +315,136 @@ def test_startup_does_not_resume_other_job_states(store, monkeypatch, status):
         assert session.get(CollectionRun, collection.NAME).status == status
 
 
+def test_startup_resumes_when_old_api_records_shutdown_after_new_api_start(store, monkeypatch):
+    interrupted_manual(store)
+    previous, _ = collection.claim_collection("manual")
+    monkeypatch.setattr(collection, "STARTUP_RESUME_POLL_SECONDS", 0.01)
+    starts = []
+    resumed = threading.Event()
+    managers = [collection.ManualCollector(), collection.ManualCollector()]
+    for manager in managers:
+        monkeypatch.setattr(manager, "start", lambda job_id: (starts.append(job_id), resumed.set()))
+
+    try:
+        for manager in managers:
+            manager.startup()
+        # A successor cannot take the predecessor's valid lease.
+        assert not resumed.wait(0.03)
+        assert collection.collection_state().job_id == previous.job_id
+        assert collection.collection_state().status == "running"
+
+        collection.finish_collection(previous.job_id, "interrupted", "fictional old API shutdown")
+        assert resumed.wait(2)
+        for manager in managers:
+            thread = manager.resume_thread
+            if thread:
+                thread.join(timeout=2)
+        state = collection.collection_state()
+        assert starts == [state.job_id]
+        assert state.job_id != previous.job_id
+        assert state.trigger == collection._resume_trigger()
+
+        collection.finish_collection(state.job_id, "interrupted", "fictional repeated shutdown")
+        for manager in managers:
+            manager.startup()
+        assert starts == [state.job_id]
+        assert collection.collection_state().status == "interrupted"
+    finally:
+        for manager in managers:
+            manager.shutdown()
+
+
+@pytest.mark.parametrize("transition", ["completed", "replacement", "cancelled", "watch-expired"])
+def test_startup_running_monitor_stops_without_replacing_uninterrupted_work(store, monkeypatch, transition):
+    interrupted_manual(store)
+    previous, _ = collection.claim_collection("manual")
+    monkeypatch.setattr(collection, "STARTUP_RESUME_POLL_SECONDS", 0.01)
+    monkeypatch.setattr(collection, "STARTUP_RESUME_WATCH_SECONDS", 0.1)
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    try:
+        manager.startup()
+        thread = manager.resume_thread
+        assert thread is not None
+        if transition == "completed":
+            collection.finish_collection(previous.job_id, "completed", "fictional completed collection")
+        elif transition == "replacement":
+            # The singleton changes atomically, as it does when another API
+            # wins a claim before this monitor can observe the interruption.
+            with store() as session:
+                session.get(CollectionRun, collection.NAME).job_id = "fictional-replacement-job"
+                session.commit()
+        elif transition == "cancelled":
+            manager.shutdown()
+            collection.finish_collection(previous.job_id, "interrupted", "fictional old API shutdown")
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+        assert starts == []
+        state = collection.collection_state()
+        assert state.job_id == ("fictional-replacement-job" if transition == "replacement" else previous.job_id)
+        assert state.status == {"completed": "completed", "cancelled": "interrupted"}.get(transition, "running")
+    finally:
+        manager.shutdown()
+
+
+def test_startup_resumes_expired_owner_lease_without_waiting_for_shutdown(store, monkeypatch):
+    interrupted_manual(store)
+    previous, _ = collection.claim_collection("manual")
+    with store() as session:
+        session.get(CollectionRun, collection.NAME).lease_expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        session.commit()
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    manager.startup()
+    state = collection.collection_state()
+    assert starts == [state.job_id]
+    assert state.job_id != previous.job_id
+    assert state.status == "running"
+    assert state.trigger == collection._resume_trigger()
+
+
+def test_startup_running_monitor_cannot_resume_after_saved_feed_key_removed(store, monkeypatch):
+    interrupted_manual(store)
+    previous, _ = collection.claim_collection("manual")
+    monkeypatch.setattr(collection, "STARTUP_RESUME_POLL_SECONDS", 0.01)
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    try:
+        manager.startup()
+        thread = manager.resume_thread
+        with store() as session:
+            session.get(IntegrationSetting, "DATA_GO_KR_API_KEY").value = ""
+            session.commit()
+        collection.finish_collection(previous.job_id, "interrupted", "fictional old API shutdown")
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+        assert starts == []
+        assert collection.collection_state().job_id == previous.job_id
+    finally:
+        manager.shutdown()
+
+
 @pytest.mark.parametrize("trigger", ["scheduled", "manual-resume:invalid", None])
-def test_startup_does_not_resume_non_owner_interruption(store, monkeypatch, trigger):
+@pytest.mark.parametrize("status", ["running", "interrupted"])
+def test_startup_does_not_resume_non_owner_job(store, monkeypatch, trigger, status):
     interrupted_manual(store)
     with store() as session:
-        session.get(CollectionRun, collection.NAME).trigger = trigger
+        row = session.get(CollectionRun, collection.NAME)
+        row.trigger = trigger
+        row.status = status
+        if status == "running":
+            row.lease_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
         session.commit()
     manager = collection.ManualCollector()
     starts = []
     monkeypatch.setattr(manager, "start", starts.append)
     manager.startup()
     assert starts == []
+    assert manager.resume_thread is None
+    assert collection.collection_state().status == status
 
 
 @pytest.mark.parametrize("saved_key", [None, "", "   ", "gemini-only"])

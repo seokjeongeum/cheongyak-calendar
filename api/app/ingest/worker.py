@@ -13,6 +13,7 @@ import copy
 import logging
 import os
 import signal
+from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone
 from time import monotonic
 from urllib.parse import unquote
@@ -101,20 +102,27 @@ def _failed_document_needs_new_pipeline(existing: Notice | None) -> bool:
     return False
 
 
-def _save_progress(session: Session, state: SourceStatus | None, source: str, saved: int, total: int) -> SourceStatus:
+def _save_progress(
+    session: Session, state: SourceStatus | None, source: str, saved: int, total: int,
+    stored_count: int | None = None,
+) -> SourceStatus:
     """Commit progress with its notice, retaining the source attempt/success times."""
-    message = f"공식 공고 저장 중 · {saved}/{total}건 저장"
+    message = (f"공식 공고 {stored_count}건 저장 · 문서 확인 {saved}/{total}건"
+               if stored_count is not None else f"공식 공고 저장 중 · {saved}/{total}건 저장")
+    count = stored_count if stored_count is not None else saved
     if state is None:
-        return record_source_status(session, source, "running", message, record_count=saved)
+        return record_source_status(session, source, "running", message, record_count=count)
     state.status = "running"
     state.message = message
-    state.record_count = saved
+    state.record_count = count
     return state
 
 
 async def _save_rows(
     source: str, rows: list[dict], client: httpx.AsyncClient, today: date,
     source_warning: str | None = None,
+    *, audit_documents: bool = True, finalize: bool = True,
+    document_semaphore: asyncio.Semaphore | None = None, stored_count: int | None = None,
 ) -> tuple[int, int, int, int, int, int, str]:
     saved = 0
     invalid = 0
@@ -123,108 +131,132 @@ async def _save_rows(
     missing_prices = 0
     missing_dates = 0
     with SessionLocal() as session:
-        quota_state = session.get(DocumentExtractionState, QUOTA_STATE_KEY)
-        source_state = session.get(SourceStatus, source)
         for payload in sorted(rows, key=lambda row: _save_priority(row, today)):
-            if payload.get("source") != source:
-                invalid += 1
-                continue
-            identity = (source, str(payload.get("external_id") or ""))
-            if payload.pop("ingest_warning", None):
-                missing += 1
-            existing = session.scalar(select(Notice).where(Notice.source == source, Notice.external_id == identity[1]))
-            extraction_state = session.get(DocumentExtractionState, identity)
-            url_changed = existing is not None and existing.official_url != payload.get("official_url")
-            now = datetime.now(timezone.utc)
-            deferred_until = extraction_state.deferred_until if extraction_state else None
-            if deferred_until is not None and deferred_until.tzinfo is None:
-                # SQLite does not retain DateTime timezone metadata; all new
-                # cooldown timestamps are written as UTC.
-                deferred_until = deferred_until.replace(tzinfo=timezone.utc)
-            quota_until = quota_state.deferred_until if quota_state else None
-            if quota_until is not None and quota_until.tzinfo is None:
-                quota_until = quota_until.replace(tzinfo=timezone.utc)
-            quota_blocked = quota_until is not None and quota_until > now
-            if quota_blocked and extraction_configured() and payload.get("official_url") and _active_notice(payload, today):
-                deferred += 1
-            should_audit = (
-                (existing is None or url_changed or (
-                    (extraction_state is None or extraction_state.audited_on != today
-                     or _failed_document_needs_new_pipeline(existing) or (
-                        extraction_configured() and not quota_blocked
-                        and deferred_until is not None and deferred_until <= now
-                    ))
-                    and _active_notice(payload, today)
-                ))
-            )
-            if should_audit:
-                try:
-                    # Public PDF/HWP/HWPX parsing does not require a model key.
-                    # A Gemini cooldown never blocks local official facts.
-                    allow_gemini = not quota_blocked and (deferred_until is None or deferred_until <= now)
-                    feed_payload = copy.deepcopy(payload)
-                    if existing:
-                        incoming_rules = payload.get("rules", [])
-                        payload["rules"] = merge_poll_rules(existing.rules or [], incoming_rules, metadata_only=all(is_metadata(r) for r in incoming_rules))
-                    known_hash = existing.document_hash if existing else None
-                    # No notice/state lock or read transaction is retained
-                    # during downloading. Reprocessing may commit meanwhile.
+            # Await a fair document turn before opening a read transaction.
+            # Each prior row has already committed, releasing its connection.
+            async with (document_semaphore or nullcontext()):
+                quota_state = session.get(DocumentExtractionState, QUOTA_STATE_KEY, populate_existing=True)
+                source_state = session.get(SourceStatus, source, populate_existing=True)
+                if payload.get("source") != source:
+                    invalid += 1
                     session.commit()
-                    enriched = await enrich_notice(payload, client=client, known_document_hash=known_hash, allow_gemini=allow_gemini)
-                    existing = lock_notice(session, source, identity[1])
-                    extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
-                    stale_document = existing is not None and existing.document_hash not in {known_hash, enriched.get("document_hash")}
-                    if stale_document:
-                        # A concurrent local audit may have seen a corrected
-                        # attachment while this download received stale bytes.
-                        # Keep its hash/facts and apply only this feed's fields.
-                        enriched = {**feed_payload, "document_hash": existing.document_hash,
-                                    "rules": merge_poll_rules(existing.rules or [], feed_payload.get("rules", []),
-                                        metadata_only=all(is_metadata(r) for r in feed_payload.get("rules", [])))}
-                    if extraction_state is None:
-                        extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
-                        session.add(extraction_state)
-                    extraction_status = enriched.get("extraction_status")
-                    if stale_document:
+                    continue
+                identity = (source, str(payload.get("external_id") or ""))
+                if payload.pop("ingest_warning", None):
+                    missing += 1
+                existing = session.scalar(select(Notice).where(Notice.source == source, Notice.external_id == identity[1]))
+                extraction_state = session.get(DocumentExtractionState, identity)
+                url_changed = existing is not None and existing.official_url != payload.get("official_url")
+                now = datetime.now(timezone.utc)
+                deferred_until = extraction_state.deferred_until if extraction_state else None
+                if deferred_until is not None and deferred_until.tzinfo is None:
+                    # SQLite does not retain DateTime timezone metadata; all new
+                    # cooldown timestamps are written as UTC.
+                    deferred_until = deferred_until.replace(tzinfo=timezone.utc)
+                quota_until = quota_state.deferred_until if quota_state else None
+                if quota_until is not None and quota_until.tzinfo is None:
+                    quota_until = quota_until.replace(tzinfo=timezone.utc)
+                quota_blocked = quota_until is not None and quota_until > now
+                if quota_blocked and extraction_configured() and payload.get("official_url") and _active_notice(payload, today):
+                    deferred += 1
+                should_audit = (
+                    (existing is None or url_changed or (extraction_state is not None and extraction_state.audited_on is None) or (
+                        (extraction_state is None or extraction_state.audited_on != today
+                         or _failed_document_needs_new_pipeline(existing) or (
+                            extraction_configured() and not quota_blocked
+                            and deferred_until is not None and deferred_until <= now
+                        ))
+                        and _active_notice(payload, today)
+                    ))
+                )
+                if audit_documents and should_audit:
+                    try:
+                        # Public PDF/HWP/HWPX parsing does not require a model key.
+                        # A Gemini cooldown never blocks local official facts.
+                        allow_gemini = not quota_blocked and (deferred_until is None or deferred_until <= now)
+                        feed_payload = copy.deepcopy(payload)
+                        if existing:
+                            incoming_rules = payload.get("rules", [])
+                            payload["rules"] = merge_poll_rules(existing.rules or [], incoming_rules, metadata_only=all(is_metadata(r) for r in incoming_rules))
+                        known_hash = existing.document_hash if existing else None
+                        # No notice/state lock or read transaction is retained
+                        # during downloading. Reprocessing may commit meanwhile.
+                        session.commit()
+                        enriched = await enrich_notice(payload, client=client, known_document_hash=known_hash, allow_gemini=allow_gemini)
+                        existing = lock_notice(session, source, identity[1])
+                        extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
+                        stale_document = existing is not None and existing.document_hash not in {known_hash, enriched.get("document_hash")}
+                        if stale_document:
+                            # A concurrent local audit may have seen a corrected
+                            # attachment while this download received stale bytes.
+                            # Keep its hash/facts and apply only this feed's fields.
+                            enriched = {**feed_payload, "document_hash": existing.document_hash,
+                                        "rules": merge_poll_rules(existing.rules or [], feed_payload.get("rules", []),
+                                            metadata_only=all(is_metadata(r) for r in feed_payload.get("rules", [])))}
+                        if extraction_state is None:
+                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                            session.add(extraction_state)
+                        extraction_status = enriched.get("extraction_status")
+                        if stale_document:
+                            extraction_state.audited_on = None
+                        elif extraction_status in {"deferred", "quota"}:
+                            extraction_state.audited_on = today
+                            deferred += 1
+                            delay = timedelta(hours=24 if extraction_status == "quota" else 3)
+                            extraction_state.deferred_until = now + delay
+                            if extraction_status == "quota":
+                                if quota_state is None:
+                                    quota_state = DocumentExtractionState(source=QUOTA_STATE_KEY[0], external_id=QUOTA_STATE_KEY[1])
+                                    session.add(quota_state)
+                                quota_state.deferred_until = now + delay
+                        else:
+                            extraction_state.audited_on = today
+                            extraction_state.deferred_until = None
+                        # An unchanged document yields empty extraction arrays. Do
+                        # not erase previously persisted AI candidates on a poll.
+                        if existing and enriched.get("document_hash") == existing.document_hash:
+                            for key in ("prices", "rules"):
+                                if not enriched.get(key) and not payload.get(key):
+                                    enriched.pop(key, None)
+                        payload = enriched
+                    except Exception as exc:  # one bad document cannot block a feed
+                        LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
+                try:
+                    if (not audit_documents and url_changed and existing and existing.document_hash
+                            and payload.get("document_hash") in {None, existing.document_hash}):
+                        # A revised page URL alone proves no byte replacement.
+                        # Keep the known review with its original provenance
+                        # until the pending audit reads the new attachment.
+                        incoming_rules = payload.get("rules", [])
+                        payload = {**payload, "document_hash": existing.document_hash,
+                                   "rules": merge_poll_rules(existing.rules or [], incoming_rules,
+                                       metadata_only=all(is_metadata(r) for r in incoming_rules))}
+                    notice = upsert_notice(session, payload)
+                    if not audit_documents and (existing is None or url_changed):
+                        # Keep a durable pending first/revised-URL audit across
+                        # stops without inventing an attempted or read date.
+                        if extraction_state is None:
+                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                            session.add(extraction_state)
                         extraction_state.audited_on = None
-                    elif extraction_status in {"deferred", "quota"}:
-                        extraction_state.audited_on = today
-                        deferred += 1
-                        delay = timedelta(hours=24 if extraction_status == "quota" else 3)
-                        extraction_state.deferred_until = now + delay
-                        if extraction_status == "quota":
-                            if quota_state is None:
-                                quota_state = DocumentExtractionState(source=QUOTA_STATE_KEY[0], external_id=QUOTA_STATE_KEY[1])
-                                session.add(quota_state)
-                            quota_state.deferred_until = now + delay
-                    else:
-                        extraction_state.audited_on = today
-                        extraction_state.deferred_until = None
-                    # An unchanged document yields empty extraction arrays. Do
-                    # not erase previously persisted AI candidates on a poll.
-                    if existing and enriched.get("document_hash") == existing.document_hash:
-                        for key in ("prices", "rules"):
-                            if not enriched.get(key) and not payload.get(key):
-                                enriched.pop(key, None)
-                    payload = enriched
-                except Exception as exc:  # one bad document cannot block a feed
-                    LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
-            try:
-                notice = upsert_notice(session, payload)
-                source_state = _save_progress(session, source_state, source, saved + 1, len(rows))
-                session.commit()
-                saved += 1
-                if not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices):
-                    missing_prices += 1
-                if not any(event.kind not in NON_APPLICATION_KINDS for event in notice.events):
-                    missing_dates += 1
-            except (ValueError, TypeError) as exc:
-                session.rollback()
-                invalid += 1
-                LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
-            except Exception:
-                session.rollback()
-                raise
+                    source_state = _save_progress(session, source_state, source, saved + 1, len(rows), stored_count)
+                    session.commit()
+                    saved += 1
+                    if not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices):
+                        missing_prices += 1
+                    if not any(event.kind not in NON_APPLICATION_KINDS for event in notice.events):
+                        missing_dates += 1
+                except (ValueError, TypeError) as exc:
+                    session.rollback()
+                    invalid += 1
+                    LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
+                except Exception:
+                    session.rollback()
+                    raise
+            if document_semaphore is not None:
+                # Cached/no-download rows must yield too, rather than letting
+                # one source consume every immediately available turn.
+                await asyncio.sleep(0)
         status = "partial" if invalid or deferred or missing or missing_prices or missing_dates or source_warning or not rows else "ok"
         message_parts = [f"{saved}건 저장"]
         if invalid:
@@ -242,13 +274,19 @@ async def _save_rows(
         if not rows:
             message_parts.append("조회 범위 0건; 공고 누락 여부 확인 필요")
         resolve_pending_corrections(session, source)
-        record_source_status(session, source, status, ", ".join(message_parts), record_count=saved)
+        if finalize:
+            record_source_status(session, source, status, ", ".join(message_parts), record_count=saved)
+        else:
+            state = session.get(SourceStatus, source)
+            _save_progress(session, state, source, saved, len(rows))
+            state = session.get(SourceStatus, source)
+            state.message = f"공식 공고 {saved}건 저장 · 문서 확인 대기"
         session.commit()
     return saved, invalid, deferred, missing_prices, missing_dates, missing, status
 
 
 async def run_once(*, today: date | None = None, client: httpx.AsyncClient | None = None) -> dict[str, dict]:
-    """Run every source once; each source records its own last attempt/result."""
+    """Save all feed schedules before fairly auditing their public documents."""
     # httpx INFO request logs include query strings and therefore serviceKey.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -258,6 +296,45 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
     own_client = client is None
     client = client or httpx.AsyncClient(headers={"User-Agent": "CheongyakCalendar/1.0 (+public housing notice index)"}, follow_redirects=True)
     results: dict[str, dict] = {}
+    pending_documents: dict[str, tuple[list[dict], str | None, int]] = {}
+
+    def failed_source(source: str, exc: Exception) -> None:
+        # Avoid leaking URL query strings containing the service key. Retain
+        # the count already committed before a later document pass failed.
+        LOGGER.error("%s collection failed: %s", source, type(exc).__name__)
+        message = str(exc) if isinstance(exc, FeedError) else f"수집 실패: {type(exc).__name__}"
+        with SessionLocal() as session:
+            record_source_status(session, source, "error", message)
+            session.commit()
+        results[source] = {"status": "error", "count": pending_documents.get(source, ([], None, 0))[2]}
+
+    async def audit_source(source: str, semaphore: asyncio.Semaphore) -> None:
+        rows, warning, stored_count = pending_documents[source]
+        try:
+            saved, invalid, deferred, missing_prices, missing_dates, missing, status = await _save_rows(
+                source, rows, client, today, warning,
+                document_semaphore=semaphore, stored_count=stored_count,
+            )
+            results[source] = {
+                "status": status, "count": saved, "invalid": invalid, "deferred": deferred,
+                "missing_detail": missing, "missing_prices": missing_prices, "missing_dates": missing_dates,
+            }
+        except Exception as exc:
+            failed_source(source, exc)
+
+    async def collect_competition() -> None:
+        # Competition can start from durable feed rows while the single
+        # document turn processes public files; its version guards still reject
+        # any source revision committed during a result request.
+        try:
+            results[competition.SOURCE] = await competition.run_once(today=today, client=client)
+        except Exception as exc:
+            LOGGER.error("Competition collection failed: %s", type(exc).__name__)
+            with SessionLocal() as session:
+                record_source_status(session, competition.SOURCE, "error", "경쟁률 수집 작업 실패 · 다음 수집에서 다시 확인")
+                session.commit()
+            results[competition.SOURCE] = {"status": "error", "count": 0}
+
     try:
         for source in ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh"):
             key = _api_key(source)
@@ -286,31 +363,21 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     rows = await boards.collect_sh(client, start, end)
                 else:
                     rows, source_warning = await boards.collect_gh(client, start, end)
-                saved, invalid, deferred, missing_prices, missing_dates, missing, status = await _save_rows(
-                    source, rows, client, today, source_warning
+                saved, *_ = await _save_rows(
+                    source, copy.deepcopy(rows), client, today, source_warning,
+                    audit_documents=False, finalize=False,
                 )
-                results[source] = {
-                    "status": status, "count": saved, "invalid": invalid, "deferred": deferred,
-                    "missing_detail": missing, "missing_prices": missing_prices, "missing_dates": missing_dates,
-                }
+                pending_documents[source] = (rows, source_warning, saved)
             except Exception as exc:
-                # Avoid leaking URL query strings containing the service key.
-                LOGGER.error("%s collection failed: %s", source, type(exc).__name__)
-                message = str(exc) if isinstance(exc, FeedError) else f"수집 실패: {type(exc).__name__}"
-                with SessionLocal() as session:
-                    record_source_status(session, source, "error", message)
-                    session.commit()
-                results[source] = {"status": "error", "count": 0}
-        # Independent collection after notice feeds: this does not send public
-        # documents to Gemini or touch any applicant profile.
-        try:
-            results[competition.SOURCE] = await competition.run_once(today=today, client=client)
-        except Exception as exc:
-            LOGGER.error("Competition collection failed: %s", type(exc).__name__)
-            with SessionLocal() as session:
-                record_source_status(session, competition.SOURCE, "error", "경쟁률 수집 작업 실패 · 다음 수집에서 다시 확인")
-                session.commit()
-            results[competition.SOURCE] = {"status": "error", "count": 0}
+                failed_source(source, exc)
+        # A fair semaphore permits exactly one document audit at a time. Each
+        # source yields after a committed row, so an archival first source cannot
+        # monopolize every document turn. TaskGroup cancels siblings on stop.
+        semaphore = asyncio.Semaphore(1)
+        async with asyncio.TaskGroup() as tasks:
+            tasks.create_task(collect_competition())
+            for source in pending_documents:
+                tasks.create_task(audit_source(source, semaphore))
         return results
     finally:
         if own_client:

@@ -669,7 +669,11 @@ async def test_actual_hangang_v8_to_current_pipeline_and_duplicate_projection_ro
                 and (not rule.get("supply_types") or "일반공급" in rule["supply_types"]))
 
     expected_general = [rule for rule in parsed["rules"] if general(rule)]
-    assert len(expected_general) == 8
+    active_account = next(rule for rule in expected_general
+                          if rule["kind"] == "account_type" and rule.get("criterion_basis") == "application_date")
+    assert active_account["criterion_date"] is None
+    assert active_account["requires_maintained_until_application"] is True
+    assert "해지한 경우" in active_account["evidence_text"]
     for endpoint in ("/api/notices", f"/api/notices/{notice.id}", f"/api/notices/{duplicate.id}"):
         response = client.get(endpoint).json()
         public = response["items"][0] if "items" in response else response

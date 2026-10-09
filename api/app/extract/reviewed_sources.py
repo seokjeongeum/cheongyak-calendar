@@ -189,7 +189,7 @@ REVIEWED_SOURCES.update({
         "inventory_page": 5, "inventory_columns": _columns,
         "inventory_units": {"074.9845": [7,7,10,2,5,7,32], "084.9947A": [15,14,22,4,10,15,69], "084.8542B": [4,4,6,1,3,4,18], "084.8894C": [3,4,6,1,2,3,18], "123.7781": [0,4,0,1,0,0,30], "146.8598P": [0,0,0,0,0,0,2]},
         "adult_or_minor_page": 4,
-        "admission_review_version": "hangang-admission-2026-10-09-v2",
+        "admission_review_version": "hangang-admission-2026-10-09-v3",
         "admission_reviewed_pages": list(range(1, 63)),
         "admission_reviewed_standard_supply_types": ["일반공급", "기관추천 특별공급", "다자녀가구 특별공급", "노부모부양 특별공급", "생애최초 특별공급", "신생아 특별공급"],
     },
@@ -254,6 +254,13 @@ REVIEWED_SOURCES["2026000463-project-pdf"] = {
 }
 
 REVIEWED_SOURCES.update({
+    "2026950086": {
+        "title": "더샵 오산역아크시티 오피스텔", "announcement_date": "2026-10-07",
+        "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950086&pblancNo=2026950086&atchmnflSeqNo=1988108&atchmnflSn=5",
+        "document_hash": "6ef50fdb5c67dc7a7e9ec8dcb2d558e37438deb0a24300bc419be7063fa06db4",
+        "reviewed_pages": list(range(1, 31)),
+        "office_review": {"qualification_page": 4, "adult_age": 19, "domestic_only": True},
+    },
     "2026950087": {
         "title": "당산역 더클래스 한강", "announcement_date": "2026-10-06",
         "document_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",

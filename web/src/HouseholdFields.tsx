@@ -14,14 +14,14 @@ export function HouseholdFields({ profile, onChange, today, notices, historyNeed
   const resetComposition = (part: Partial<LocalProfile>) => onChange(updateProfileFacts(profile, part, today))
   const patch = (id: string, part: Partial<HouseholdMember>) => resetComposition({ householdMembers: profile.householdMembers.map((member) => member.id === id ? { ...member, ...part } : member) })
   const patchBirthDate = (id: string, dateOfBirth: string) => resetComposition({ householdMembers: profile.householdMembers.map((member) => member.id === id ? { ...member, dateOfBirth } : member), ownershipFacts: profile.ownershipFacts.map((item) => item.ownerMemberId === id ? { ...item, ownerDateOfBirth: dateOfBirth } : item) })
-  const fact = (key: 'applicantOnRegister' | 'hasSpouse' | 'spouseSameRegister', label: string) => <Fact field={key} label={label} value={profile[key]} onChange={(answer) => resetComposition({ [key]: answer })} />
+  const fact = (key: 'hasSpouse' | 'spouseSameRegister', label: string) => <Fact field={key} label={label} value={profile[key]} onChange={(answer) => resetComposition({ [key]: answer })} />
   const memberFacts = (member: HouseholdMember) => <>
     <Fact label="이 가족이 주택·분양권·입주권·공유지분을 보유하나요?" value={member.ownsHome} onChange={(answer) => onChange({ ...profile, ownershipFactsKnown: null, householdMembers: profile.householdMembers.map((other) => other.id === member.id ? { ...other, ownsHome: answer } : other) })} />
     <details className="additional-questions"><summary>과거 주택 보유 이력</summary><Fact label="이 가족이 과거 주택·관련 권리를 소유한 적이 있나요?" value={member.previouslyOwnedHome} onChange={(answer) => onChange({ ...profile, householdMembers: profile.householdMembers.map((other) => other.id === member.id ? { ...other, previouslyOwnedHome: answer } : other) })} /></details>
   </>
   return <section className="question-group household-fields" data-profile-field="householdMembers">
     <h4>등본에 적힌 가족을 알려 주세요</h4><p className="field-help">이름은 입력하지 않습니다. 가족 관계와 어느 등본에 함께 있는지만 입력하면 주택 보유를 함께 확인할 사람을 앱이 계산합니다. 별도 주소의 배우자도 포함합니다.</p>
-    {fact('applicantOnRegister', '본인이 주민등록등본에 등재되어 있나요?')}
+    <details className="additional-questions" open={profile.applicantOnRegister === false || undefined}><summary>주민등록 말소·등본 없음 등 예외 상태</summary><p className="field-help">통상적인 주민등록 세대는 위 가족 관계를 사용합니다. 주민등록이 말소되었거나 등본이 없는 실제 예외 상태에만 입력하세요.</p><label data-profile-field="applicantOnRegister"><input type="checkbox" checked={profile.applicantOnRegister === false} onChange={(event) => resetComposition({ applicantOnRegister: event.target.checked ? false : true })} />주민등록 말소 또는 본인 등본 없음</label></details>
     {profile.maritalStatus === 'unknown' ? fact('hasSpouse', '현재 법률상 배우자가 있나요?') : <p className="field-help">입력한 혼인 상태: {profile.maritalStatus === 'married' ? '혼인 중 · 배우자 함께 확인' : '법률상 배우자 없음'}</p>}
     {profile.hasSpouse === true && fact('spouseSameRegister', '배우자가 본인과 같은 주민등록등본에 있나요?')}
     {profile.householdMembers.map((member, index) => {

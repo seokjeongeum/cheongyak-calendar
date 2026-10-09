@@ -63,6 +63,26 @@ describe('specific remaining clauses and personal facts', () => {
     expect(html).not.toContain('해외 연속체류 예외 입력하기')
     expect(comparedConditionsLabel({ status: 'review', reasons })).toBe('내 입력 1개 필요 · 과거 사실 1개 확인 필요')
   })
+  it('keeps a closed unmarried path’s review gap out of the active first-home source panel', () => {
+    const remarriage = '동일 배우자와 재혼한 경우 이전 혼인기간 합산'
+    const active = '생애최초의 제53조 과거 주택 소유 예외'
+    const item = notice([
+      rule('marriage_months_max', { value: 84, supply_type: '신혼부부 특별공급', criterion_date: '2026-10-02', exceptions: [rule('unparsed', { label: remarriage, text: remarriage })] }),
+      rule('unparsed', { label: active, text: '입력한 과거 소유에 해당하는 법령 예외는 추가 원문 검토가 필요합니다.', supply_type: '생애최초 특별공급' }),
+      rule('condition_coverage', { effect: 'metadata', scopes: [
+        { supply_type: '신혼부부 특별공급', complete: false, topics: [{ topic: remarriage, status: 'missing', required: true }] },
+        { supply_type: '생애최초 특별공급', complete: true, topics: [] },
+      ] }),
+    ])
+    const person = { ...profile, maritalStatus: 'single' as const, hasSpouse: false, factChanges: { marital: { mode: 'never_changed' as const, date: '' } } }
+    const html = renderToStaticMarkup(<EligibilityDetails notice={item} profile={person} onProfile={() => {}} />)
+    const sourcePanel = html.split('class="qualification-source-gap"')[1] || ''
+    expect(html).toContain('신혼부부 특별공급')
+    expect(html).toContain('내 조건으로 신청 불가')
+    expect(sourcePanel).toContain(active)
+    expect(sourcePanel).not.toContain(remarriage)
+    expect(sourcePanel).not.toContain('미확보 공고 조항')
+  })
   it('consolidates an unreviewed clause across actual supplies and exposes its evidence', () => {
     const supplies = ['신혼부부', '예비신혼부부']
     const item = notice([

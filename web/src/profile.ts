@@ -29,7 +29,7 @@ function history(value: unknown): HouseholdHistoryConfirmation[] {
 
 /** Previous self-assessments do not become verified ownership exceptions. */
 export function migrateProfile(value: unknown): LocalProfile {
-  const next: LocalProfile = { ...EMPTY_PROFILE, factChanges: {}, applicationHistoryPeople: [], applicationHistoryEvents: [], factSnapshots: [], children: [], ownershipFacts: [], householdMembers: [], householdHistoryConfirmations: [], applicationRestrictionsHistoryConfirmations: [], overseasFactsHistoryConfirmations: [], projectApplicationHistory: {}, applicationRestrictionFacts: {}, residenceHistory: [], militaryFactsHistoryConfirmations: [], incomeTaxFactsHistoryConfirmations: [], domesticResidenceHistoryConfirmations: [] }
+  const next: LocalProfile = { ...EMPTY_PROFILE, factChanges: {}, applicationHistoryPeople: [], applicationHistoryAbsencePeople: [], applicationHistoryEvents: [], factSnapshots: [], children: [], ownershipFacts: [], householdMembers: [], householdHistoryConfirmations: [], applicationRestrictionsHistoryConfirmations: [], overseasFactsHistoryConfirmations: [], projectApplicationHistory: {}, applicationRestrictionFacts: {}, residenceHistory: [], militaryFactsHistoryConfirmations: [], incomeTaxFactsHistoryConfirmations: [], domesticResidenceHistoryConfirmations: [] }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return next
   const stored = value as Record<string, unknown>
   if (stored.version === 5 && stored.ownershipPropertyCounts && typeof stored.ownershipPropertyCounts === 'object' && !Array.isArray(stored.ownershipPropertyCounts)) {
@@ -105,7 +105,7 @@ export function migrateProfile(value: unknown): LocalProfile {
     if (!['korean', 'foreign', 'unknown'].includes(next.citizenship)) next.citizenship = 'unknown'
   } else {
     // Old broad legal-scope answers cannot establish an exact family roster.
-    next.householdMembersComplete = null; next.householdMembers = []; next.householdSnapshotDate = ''; next.householdCompositionUnchanged = null; next.householdHistoryConfirmations = []; next.applicantOnRegister = null
+    next.householdMembersComplete = null; next.householdMembers = []; next.householdSnapshotDate = ''; next.householdCompositionUnchanged = null; next.householdHistoryConfirmations = []; next.applicantOnRegister = stored.applicantOnRegister === false ? false : null
     next.incomeHouseholdSize = ''; next.householdScopeKnown = null; next.familyOnRegister = null
   }
   if (stored.version === 5) {
@@ -118,7 +118,9 @@ export function migrateProfile(value: unknown): LocalProfile {
     next.applicationHistoryPresence = bool(stored.applicationHistoryPresence)
     next.applicationHistoryComplete = bool(stored.applicationHistoryComplete)
     if (Array.isArray(stored.applicationHistoryPeople)) next.applicationHistoryPeople = [...new Set(stored.applicationHistoryPeople.filter((person): person is string => typeof person === 'string' && !!person))]
+    if (Array.isArray(stored.applicationHistoryAbsencePeople)) next.applicationHistoryAbsencePeople = [...new Set(stored.applicationHistoryAbsencePeople.filter((person): person is string => typeof person === 'string' && !!person && person.length <= 128 && !/[\u0000-\u001f]/.test(person)))]
     if (Array.isArray(stored.applicationHistoryEvents)) next.applicationHistoryEvents = stored.applicationHistoryEvents.filter((event) => event && typeof event === 'object' && typeof event.id === 'string' && typeof event.personId === 'string' && typeof event.projectId === 'string' && ['winning', 'reserve_winning', 'contract', 'additional_resident_contract'].includes(event.eventKind)).map((event) => ({ id: event.id, personId: event.personId, projectId: event.projectId, eventKind: event.eventKind, eventDate: typeof event.eventDate === 'string' && parseDate(event.eventDate) ? event.eventDate : '', specialSupply: bool(event.specialSupply) } as ApplicationHistoryEvent))
+    if (next.applicationHistoryPresence === false || next.applicationHistoryComplete === true && next.applicationHistoryEvents.length > 0) next.applicationHistoryAbsencePeople = [...new Set([...next.applicationHistoryAbsencePeople, ...next.applicationHistoryPeople.filter((person) => !next.applicationHistoryEvents.some((event) => event.personId === person))])]
     if (stored.legacyDistrict && typeof stored.legacyDistrict === 'object' && !Array.isArray(stored.legacyDistrict)) {
       const legacy = stored.legacyDistrict as Record<string, unknown>
       if (typeof legacy.code === 'string' && typeof legacy.name === 'string') next.legacyDistrict = { code: legacy.code, name: legacy.name, movedInDate: typeof legacy.movedInDate === 'string' ? legacy.movedInDate : '' }

@@ -34,6 +34,8 @@ LOGGER = logging.getLogger("cheongyak.collection")
 NAME = "current"
 LEASE_SECONDS = 10 * 60
 HEARTBEAT_SECONDS = 30
+STARTUP_RESUME_POLL_SECONDS = 5
+STARTUP_RESUME_WATCH_SECONDS = LEASE_SECONDS + HEARTBEAT_SECONDS + STARTUP_RESUME_POLL_SECONDS
 PUBLIC_FEED_KEYS = (
     "DATA_GO_KR_API_KEY", "MYHOME_API_KEY", "LH_API_KEY",
     "IH_API_KEY", "CHEONGYAK_COMPETITION_API_KEY",
@@ -143,16 +145,21 @@ def _resume_trigger() -> str:
     return "manual-resume:" + hashlib.sha256(version.encode()).hexdigest()[:16]
 
 
+def _manual_resume_candidate(previous: CollectionPublic, trigger: str) -> bool:
+    return bool(
+        previous.job_id and previous.status in {"running", "interrupted"} and
+        previous.trigger != trigger and (
+            previous.trigger == "manual" or
+            re.fullmatch(r"manual-resume:[0-9a-f]{16}", previous.trigger or "")
+        )
+    )
+
+
 def _claim_interrupted_manual_resume() -> tuple[CollectionPublic, bool]:
-    with SessionLocal() as session:
-        previous = _public(session.get(CollectionRun, NAME))
-    if previous.status != "interrupted" or not previous.job_id:
-        return previous, False
+    # A host killed without a shutdown callback may have left an expired lease.
+    previous = collection_state()
     trigger = _resume_trigger()
-    if previous.trigger == trigger or not (
-        previous.trigger == "manual" or
-        re.fullmatch(r"manual-resume:[0-9a-f]{16}", previous.trigger or "")
-    ):
+    if previous.status != "interrupted" or not _manual_resume_candidate(previous, trigger):
         return previous, False
     return claim_collection(trigger, interrupted_from=previous)
 
@@ -225,6 +232,8 @@ class ManualCollector:
         self.lock = threading.Lock()
         self.processes: dict[str, subprocess.Popen] = {}
         self.stopping = False
+        self.resume_stopped = threading.Event()
+        self.resume_thread: threading.Thread | None = None
 
     def startup(self) -> None:
         with self.lock:
@@ -233,16 +242,58 @@ class ManualCollector:
             state, claimed = _claim_interrupted_manual_resume()
             if claimed:
                 self.start(state.job_id)
+            elif state.status == "running" and _manual_resume_candidate(state, _resume_trigger()):
+                # During a rolling deployment the new API can start before the
+                # old API records its shutdown. Observe only that exact job;
+                # a valid lease belongs to the old process until it ends.
+                with self.lock:
+                    if (not self.stopping and state.job_id not in self.processes and
+                            not (self.resume_thread and self.resume_thread.is_alive())):
+                        self.resume_stopped.clear()
+                        self.resume_thread = threading.Thread(
+                            target=self._resume_after_startup, args=(state.job_id,), daemon=True,
+                        )
+                        self.resume_thread.start()
         except Exception as error:
             # A temporary collection-state failure must not hide the saved
             # calendar or credentials by taking down the entire public API.
             LOGGER.warning("Interrupted collection resume failed: %s", type(error).__name__)
 
+    def _resume_after_startup(self, previous_job_id: str) -> None:
+        deadline = monotonic() + STARTUP_RESUME_WATCH_SECONDS
+        trigger = _resume_trigger()
+        try:
+            while not self.resume_stopped.is_set() and monotonic() < deadline:
+                try:
+                    state = collection_state()
+                    if state.job_id != previous_job_id or not _manual_resume_candidate(state, trigger):
+                        return
+                    if state.status == "interrupted":
+                        with self.lock:
+                            if self.stopping or self.resume_stopped.is_set():
+                                return
+                            resumed, claimed = claim_collection(trigger, interrupted_from=state)
+                        if claimed:
+                            self.start(resumed.job_id)
+                        return
+                except Exception as error:
+                    LOGGER.warning("Interrupted collection resume failed: %s", type(error).__name__)
+                remaining = deadline - monotonic()
+                if remaining <= 0 or self.resume_stopped.wait(min(STARTUP_RESUME_POLL_SECONDS, remaining)):
+                    return
+        finally:
+            with self.lock:
+                if self.resume_thread is threading.current_thread():
+                    self.resume_thread = None
+
     def start(self, job_id: str) -> None:
         try:
             with self.lock:
                 if self.stopping:
-                    raise RuntimeError()
+                    # Shutdown can race the successful resume CAS, before a
+                    # child has been created. Leave a truthful interruption.
+                    finish_collection(job_id, "interrupted", "서버 종료로 수집이 중단되었습니다. 다시 수집할 수 있습니다.")
+                    return
                 process = subprocess.Popen(
                     [sys.executable, "-m", "app.ingest.worker", "--once", "--job-id", job_id],
                     start_new_session=True, stdin=subprocess.DEVNULL,
@@ -272,7 +323,11 @@ class ManualCollector:
     def shutdown(self) -> None:
         with self.lock:
             self.stopping = True
+            self.resume_stopped.set()
+            resume_thread = self.resume_thread
             processes = dict(self.processes)
+        if resume_thread and resume_thread is not threading.current_thread():
+            resume_thread.join(timeout=2)
         for job_id in processes:
             try:
                 finish_collection(job_id, "interrupted", "서버 종료로 수집이 중단되었습니다. 다시 수집할 수 있습니다.")

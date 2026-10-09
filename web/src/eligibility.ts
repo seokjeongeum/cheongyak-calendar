@@ -1,6 +1,6 @@
 import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeEvent, type NoticeCompetition, type OfferedSupply } from './types'
 import { competitionUnitKey, competitionRowUnavailable, generalCompetition, generalPriorityEvent, type CompetitionDecision } from './competition'
-import { evaluateQualification, evaluateRule, offeredSpecialSupplies, isGeneralSupply, officialOfferedSupplies as qualificationInventory, type EligibilityReason, type EligibilityResult } from './qualification'
+import { evaluateQualification, evaluateRule, officialClauseApplicability, offeredSpecialSupplies, isGeneralSupply, officialOfferedSupplies as qualificationInventory, type EligibilityReason, type EligibilityResult } from './qualification'
 import { getEvaluationToday } from './factTimeline'
 export { ELIGIBILITY_LABEL, deriveRank, unitRankResults, specialDiagnostics, specialType, offeredSpecialSupplies, evaluateRule, conditionCoverage } from './qualification'
 export type { EligibilityStatus, ReasonStatus, EligibilityReason, EligibilityResult, RankResult, SpecialDiagnosis, SpecialType } from './qualification'
@@ -193,7 +193,7 @@ export interface RemainingConditionTopic { label: string; scopes: string[]; reas
 function remainingTopicLabel(value: string): string {
   return /^(?:문서의 나머지 신청 제한·예외 검토|기타 공식 조건|신청 제한·연령 예외의 전체 검토)$/.test(value.trim()) ? '신청자격 문단의 필수 조건·면제 검토 기록 미확보' : value
 }
-export function conditionSourceStatus(notice: Notice): { diagnostics: SourceDiagnostic[]; topics: RemainingConditionTopic[] } {
+export function conditionSourceStatus(notice: Notice, profile?: LocalProfile): { diagnostics: SourceDiagnostic[]; topics: RemainingConditionTopic[] } {
   const diagnostics = new Map<string, SourceDiagnostic>()
   const topics = new Map<string, RemainingConditionTopic>()
   for (const rule of notice.rules || []) {
@@ -220,6 +220,9 @@ export function conditionSourceStatus(notice: Notice): { diagnostics: SourceDiag
       const labels: Record<string, unknown>[] = hasTopics ? remaining : (Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((label: unknown): label is string => typeof label === 'string').map((topic: string) => ({ topic })) : [])
       for (const item of labels) {
         if (typeof item.topic !== 'string' || !item.topic.trim()) continue
+        if (profile && officialClauseApplicability({ ...rule, kind: 'unparsed', label: item.topic, text: typeof item.reason === 'string' ? item.reason : item.topic,
+          supply_type: typeof scope.supply_type === 'string' ? scope.supply_type : undefined,
+          evidence_text: typeof item.evidence_text === 'string' ? item.evidence_text : undefined }, profile, notice) === false) continue
         const label = remainingTopicLabel(item.topic)
         const key = JSON.stringify([label, item.reason, item.evidence_text, item.document_hash || rule.document_hash])
         const previous = topics.get(key)

@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 
 HANGANG_HASH = "90a4d4e7e50b205ae45ee27cd7b3b50b5b8e1b3a65f19580f156336308cc1c34"
-HANGANG_REVIEW_VERSION = "hangang-admission-2026-10-09-v2"
+HANGANG_REVIEW_VERSION = "hangang-admission-2026-10-09-v3"
 GENERAL = "일반공급"
 SPECIALS = ("기관추천 특별공급", "다자녀가구 특별공급", "신혼부부 특별공급", "노부모부양 특별공급", "생애최초 특별공급", "신생아 특별공급")
 BIRTH_TYPES = {SPECIALS[1], SPECIALS[2], SPECIALS[3], SPECIALS[5]}
@@ -37,12 +37,13 @@ def hangang_admission(pages, *, digest, reviewed, rules, make):
     illegal = e(3, r"주택법.{0,120}?제64조제1항.{0,180}?10년간\s*입주자로\s*선정될\s*수\s*없습니다")
     ineligible = e(3, r"부적격\s*당첨자로\s*판명된\s*경우.{0,420}?입주자로\s*선정될\s*수\s*없습니다")
     bank_used = e(4, r"당첨\s*된\s*청약통장은\s*계약여부와\s*관계없이\s*재사용이\s*불가합니다")
+    bank_active = e(2, r"입주자모집공고일\s*현재\s*입주자저축\s*순위요건을\s*만족하였으나.{0,150}?청약이\s*불가합니다")
     general_account = e(21, r"2순위[^■]{0,350}?가입한\s*분")
     foreign = e(12, r"외국인은.{0,220}?특별공급\s*청약이\s*불가합니다")
     once = e(12, r"특별공급은\s*무주택세대구성원에게\s*한\s*차례에.{0,250}?횟수\s*제한\s*예외\)")
     account = e(12, r"기관추천\(장애인.{0,1800}?\[\s*청약예금의\s*예치금액\s*\]")
     waivers = e(1, r"소득\s*또는\s*자산기준[^■]{0,350}")
-    if not all((overseas, illegal, ineligible, bank_used, general_account, foreign, once, account, waivers)):
+    if not all((overseas, illegal, ineligible, bank_used, bank_active, general_account, foreign, once, account, waivers)):
         return None
 
     # Replace only the reviewed source's inaccurate or incomplete generic
@@ -69,7 +70,13 @@ def hangang_admission(pages, *, digest, reviewed, rules, make):
         return make("account_unused_after_winning", False, supply=supply,
             criterion_basis="application_date", criterion_date=None, original_announcement_date="2026-10-02",
             evaluation_mode="today_precheck", requires_maintained_until_application=True, **bank_used)
+    def active_account(supply):
+        return make("account_type", supply=supply, allowed_values=["comprehensive", "deposit", "installment"],
+            area_limit_for_installment=85, label="신청 시 유지 중인 청약통장",
+            criterion_basis="application_date", criterion_date=None, original_announcement_date="2026-10-02",
+            evaluation_mode="today_precheck", requires_maintained_until_application=True, **bank_active)
     output.append(unused_account(GENERAL))
+    output.append(active_account(GENERAL))
 
     missing = {GENERAL: []}
     exempt_topics = {}
@@ -94,11 +101,17 @@ def hangang_admission(pages, *, digest, reviewed, rules, make):
         bank = [make("account_type", supply=supply, allowed_values=["comprehensive", "deposit", "installment"], area_limit_for_installment=85, **account),
                 make("private_rank_months", 6 if supply in SPECIALS[:3] else 12, supply=supply, operator=">=", **account),
                 make("deposit_min_krw", supply=supply, deposit_table=DEPOSIT_TABLE, value_basis="residence_region_and_exclusive_area", **e(12, r"\[\s*청약예금의\s*예치금액\s*\].{0,550}?500만원")),
-                unused_account(supply)]
+                unused_account(supply), active_account(supply)]
         if supply == SPECIALS[0]:
             bank_group = make("all", supply=supply, label="기관추천 통장 조건 또는 공식 면제", conditions=bank, **account)
-            bank_group["exceptions"] = [make("unparsed", supply=supply, label="장애인·국가유공자·철거주택 소유자 통장 면제",
-                text="기관의 확정·예비 추천과 장애인·국가유공자·도시재생 부지제공자의 통장 면제 대상 사실을 비교해야 합니다.", **account)]
+            bank_group["exceptions"] = [
+                make("recommendation", supply=supply, label="장애인·국가유공자 통장 면제", require_confirmed=True,
+                     includes_reserve_nomination=True, allowed_reasons=["장애인", "국가유공자·보훈"],
+                     allowed_recommendation_reasons=["장애인", "국가유공자·보훈"], **account),
+                make("unparsed", supply=supply, label="철거주택 소유자·도시재생 부지제공자 통장 면제",
+                     text="공식 추천과 철거주택 소유자·도시재생 부지제공자의 통장 면제 대상 사실을 비교해야 합니다.",
+                     allowed_recommendation_reasons=["철거주택 소유자", "도시재생 부지제공자"], **account),
+            ]
             output.append(bank_group)
             nomination = make("recommendation", supply=supply, require_confirmed=True,
                 allowed_reasons=["장애인", "국가유공자·보훈", "중소기업 장기근속", "장기복무 군인"],

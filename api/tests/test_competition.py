@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
+from app import integration_settings
 from app.db import get_session, init_db, make_engine
 from app.ingest import competition
 from app.ingest.common import FeedError
@@ -286,9 +287,9 @@ async def test_auth_and_public_screen_failure_disable_existing_exclusion(factory
 async def test_inflight_competition_fetch_cannot_certify_a_corrected_notice(factory, monkeypatch):
     monkeypatch.setattr(competition, "SessionLocal", factory)
     monkeypatch.setattr(competition, "init_db", lambda: None)
-    monkeypatch.delenv("CHEONGYAK_COMPETITION_API_KEY", raising=False)
-    monkeypatch.delenv("DATA_GO_KR_API_KEY", raising=False)
+    monkeypatch.setattr(integration_settings, "setting_value", lambda name: "")
     raw = payload()
+    raw["document_hash"] = "fictional-original-bytes"
     with factory() as session:
         notice = upsert_notice(session, raw)
         parsed = competition.parse_popup(fixture(), popup(), expected_unit_types=LOCAL_UNITS, observed_at=NOW)
@@ -297,21 +298,26 @@ async def test_inflight_competition_fetch_cannot_certify_a_corrected_notice(fact
         notice_id = notice.id
         session.commit()
 
+    requests = []
     def handler(request):
-        # Commit a source correction while the worker's public fetch is in
-        # flight. The long-lived collector still has version 1 cached.
+        # Both the original request and its one allowed retry race a real
+        # document replacement. Neither may certify the prior snapshot.
+        requests.append(request)
         with factory() as session:
             upsert_notice(session, {"source": raw["source"], "external_id": raw["external_id"],
-                                    "title": "정정된 모집공고"})
+                                    "title": f"정정된 모집공고 {len(requests)}",
+                                    "document_hash": f"fictional-corrected-bytes-{len(requests)}"})
             session.commit()
         return httpx.Response(200, text=fixture().replace("68.71", "99.99"))
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         result = await competition.run_once(today=date(2026, 10, 1), client=client)
+    assert len(requests) == 2
     assert result["count"] == 0 and result["complete"] == 0 and result["pending"] == 1
     with factory() as session:
         notice = session.get(Notice, notice_id)
-        assert notice.version == 2 and notice.title == "정정된 모집공고"
+        assert notice.version == 3 and notice.title == "정정된 모집공고 2"
+        assert notice.document_hash == "fictional-corrected-bytes-2"
         assert notice.competition_state.status == "pending" and not notice.competition_state.complete
         assert "공고 변경" in notice.competition_state.message
         assert len(notice.competitions) == 16
@@ -326,6 +332,77 @@ async def test_inflight_competition_fetch_cannot_certify_a_corrected_notice(fact
         session.commit()
         assert state.status == "ok" and state.complete
         assert notice.competitions[0].competition_rate == "99.99"
+
+
+@pytest.mark.asyncio
+async def test_inflight_rule_review_refetches_once_and_restores_fresh_closure(factory, monkeypatch):
+    monkeypatch.setattr(competition, "SessionLocal", factory)
+    monkeypatch.setattr(competition, "init_db", lambda: None)
+    monkeypatch.setattr(integration_settings, "setting_value", lambda name: "")
+    raw = payload()
+    raw["document_hash"] = "fictional-unchanged-official-bytes"
+    with factory() as session:
+        notice = upsert_notice(session, raw)
+        parsed = competition.parse_popup(fixture(), popup(), expected_unit_types=LOCAL_UNITS, observed_at=NOW)
+        record_competition_result(session, notice, "ok", rows=parsed.rows,
+            unit_types=parsed.unit_types, complete=True, observed_at=NOW)
+        notice_id = notice.id
+        session.commit()
+
+    versions = []
+    def handler(request):
+        assert request.url.host == "www.applyhome.co.kr"
+        with factory() as session:
+            current = session.get(Notice, notice_id)
+            versions.append(current.version)
+            if len(versions) == 1:
+                upsert_notice(session, {"source": raw["source"], "external_id": raw["external_id"],
+                    "rules": [{"kind": "document_diagnostics", "effect": "metadata",
+                               "status": "complete", "verification": "official"}]})
+                session.commit()
+        # The first result is discarded; only the refetched result is stored.
+        return httpx.Response(200, text=fixture().replace("68.71", "99.99" if len(versions) == 1 else "55.55"))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await competition.run_once(today=date(2026, 10, 1), client=client)
+    assert versions == [1, 2]
+    assert result["count"] == 1 and result["complete"] == 1 and result["pending"] == 0
+    assert result["fallback"] == 1 and result["failed"] == 0
+    with factory() as session:
+        notice = session.get(Notice, notice_id)
+        assert notice.document_hash == raw["document_hash"]
+        assert notice.competition_state.status == "ok" and notice.competition_state.complete
+        assert not notice.competition_state.proof_invalidated
+        assert notice.competitions[0].competition_rate == "55.55"
+        assert session.scalar(select(func.count()).select_from(CompetitionRevision)) == 2
+
+
+@pytest.mark.asyncio
+async def test_failed_inflight_request_is_not_retried_when_notice_version_changes(factory, monkeypatch):
+    monkeypatch.setattr(competition, "SessionLocal", factory)
+    monkeypatch.setattr(competition, "init_db", lambda: None)
+    monkeypatch.setattr(integration_settings, "setting_value", lambda name: "")
+    raw = payload()
+    with factory() as session:
+        upsert_notice(session, raw)
+        session.commit()
+    requests = []
+    def handler(request):
+        requests.append(request)
+        with factory() as session:
+            upsert_notice(session, {"source": raw["source"], "external_id": raw["external_id"],
+                "rules": [{"kind": "document_diagnostics", "effect": "metadata",
+                           "status": "complete", "verification": "official"}]})
+            session.commit()
+        return httpx.Response(503)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await competition.run_once(today=date(2026, 10, 1), client=client)
+    assert len(requests) == 1
+    assert result["count"] == 0 and result["failed"] == 1
+    with factory() as session:
+        notice = session.scalar(select(Notice))
+        assert notice.competition_state.status == "pending"
+        assert notice.competition_state.proof_invalidated
 
 
 def test_failure_preserves_history_and_reopen_replaces_closed_results(factory):

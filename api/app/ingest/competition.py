@@ -13,6 +13,7 @@ import asyncio
 import logging
 import os
 import re
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from html.parser import HTMLParser
@@ -298,8 +299,10 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today - timedelta(days=RESULT_LOOKBACK_DAYS),
                 NoticeEvent.start_date <= today + timedelta(days=90),
             ).exists()
-            notices = session.scalars(select(Notice).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all()
-            for notice in notices:
+            notices = deque(session.scalars(select(Notice).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all())
+            retried: set[str] = set()
+            while notices:
+                notice = notices.popleft()
                 identity = _identity(notice)
                 if identity is None:
                     continue
@@ -323,6 +326,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     continue
                 operation, house_no, notice_no = identity
                 fetched_version = notice.version
+                attempt_counts = counts.copy()
                 api_rows: list[dict] = []
                 api_error: FeedError | None = None
                 if key and not api_auth_failed:
@@ -333,6 +337,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                         if exc.status_code in {401, 403} or exc.result_code in {20, 30, "20", "30"}:
                             api_auth_failed = True
                 result = None
+                request_succeeded = False
                 try:
                     if operation == "getAPTLttotPblancCmpet":
                         try:
@@ -363,6 +368,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     else:
                         result = CompetitionResult(api_rows, list(dict.fromkeys(row["unit_type"] for row in api_rows)), False,
                                                    f"{API_BASE}/{operation}")
+                    request_succeeded = True
                     if not result.rows:
                         record_competition_result(session, notice, "pending", evidence_url=result.evidence_url,
                             message="공식 경쟁률 미공개 · 다음 수집에서 다시 확인", observed_at=now,
@@ -385,6 +391,15 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     counts["failed"] += 1
                     LOGGER.warning("Official competition collection failed: %s", type(exc).__name__)
                 session.commit()
+                if request_succeeded and notice.version != fetched_version and notice.id not in retried:
+                    # Parallel document review can advance the version while
+                    # the public result request is in flight. The recorder has
+                    # rejected that snapshot; fetch anew against its refreshed
+                    # notice once, preserving all existing identity/unit guards.
+                    counts.update(attempt_counts)
+                    retried.add(notice.id)
+                    notices.appendleft(notice)
+                    continue
                 if operation == "getAPTLttotPblancCmpet":
                     from .winning_scores import collect_winning_scores, record_winning_scores
                     table_failed = result is None or "selectAPTCompetitionPopup.do" not in result.evidence_url

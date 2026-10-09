@@ -1,0 +1,342 @@
+{
+  "offline_only": true,
+  "synthetic_profiles_only": true,
+  "public_api_fixtures_only": true,
+  "base": "https://qa.invalid",
+  "build_asset": "/assets/index-DS8qZBM8.js",
+  "build_asset_sha256": "25bc226204480a97597cc067dc30dd7782515246c1b4fa9610a42b50e15192b2",
+  "checks_passed": 76,
+  "checks": [
+    "365px entire unavailable card starts closed with title/address/status retained",
+    "365px closed card retains clickable official source",
+    "365px qa-outside external query contains only apartment title",
+    "365px qa-possible external query contains only apartment title",
+    "365px qa-unknown external query contains only apartment title",
+    "365px qa-mixed external query contains only apartment title",
+    "365px qa-possible remains expanded",
+    "365px qa-unknown remains expanded",
+    "365px qa-mixed remains expanded",
+    "365px one failed supply does not collapse another eligible supply's notice",
+    "365px keyboard expansion reveals schedules/prices/public evidence",
+    "365px keyboard closing hides whole card body again",
+    "365px entire notice disclosures have no horizontal overflow",
+    "365px disclosures/focus issue no API request and no POST",
+    "375px entire unavailable card starts closed with title/address/status retained",
+    "375px closed card retains clickable official source",
+    "375px qa-outside external query contains only apartment title",
+    "375px qa-possible external query contains only apartment title",
+    "375px qa-unknown external query contains only apartment title",
+    "375px qa-mixed external query contains only apartment title",
+    "375px qa-possible remains expanded",
+    "375px qa-unknown remains expanded",
+    "375px qa-mixed remains expanded",
+    "375px one failed supply does not collapse another eligible supply's notice",
+    "375px keyboard expansion reveals schedules/prices/public evidence",
+    "375px keyboard closing hides whole card body again",
+    "375px entire notice disclosures have no horizontal overflow",
+    "375px disclosures/focus issue no API request and no POST",
+    "1280px entire unavailable card starts closed with title/address/status retained",
+    "1280px closed card retains clickable official source",
+    "1280px qa-outside external query contains only apartment title",
+    "1280px qa-possible external query contains only apartment title",
+    "1280px qa-unknown external query contains only apartment title",
+    "1280px qa-mixed external query contains only apartment title",
+    "1280px qa-possible remains expanded",
+    "1280px qa-unknown remains expanded",
+    "1280px qa-mixed remains expanded",
+    "1280px one failed supply does not collapse another eligible supply's notice",
+    "1280px keyboard expansion reveals schedules/prices/public evidence",
+    "1280px keyboard closing hides whole card body again",
+    "1280px entire notice disclosures have no horizontal overflow",
+    "1280px disclosures/focus issue no API request and no POST",
+    "365px applicant registration no longer asks a baseline affirmation",
+    "365px actual registration exception remains editable",
+    "365px application history no longer asks completeness confirmation",
+    "365px stored event remains editable using its actual date",
+    "365px factual profile controls fit inside the viewport",
+    "365px institution-none rules out only institution while general remains expanded",
+    "365px concrete recommendation/history facts persist in browser",
+    "365px profile changes have no horizontal overflow",
+    "365px profile edits and focus remain browser-only with no API request",
+    "375px applicant registration no longer asks a baseline affirmation",
+    "375px actual registration exception remains editable",
+    "375px application history no longer asks completeness confirmation",
+    "375px stored event remains editable using its actual date",
+    "375px factual profile controls fit inside the viewport",
+    "375px institution-none rules out only institution while general remains expanded",
+    "375px concrete recommendation/history facts persist in browser",
+    "375px profile changes have no horizontal overflow",
+    "375px profile edits and focus remain browser-only with no API request",
+    "1280px applicant registration no longer asks a baseline affirmation",
+    "1280px actual registration exception remains editable",
+    "1280px application history no longer asks completeness confirmation",
+    "1280px stored event remains editable using its actual date",
+    "1280px factual profile controls fit inside the viewport",
+    "1280px institution-none rules out only institution while general remains expanded",
+    "1280px concrete recommendation/history facts persist in browser",
+    "1280px profile changes have no horizontal overflow",
+    "1280px profile edits and focus remain browser-only with no API request",
+    "375px adding applicant history retains exact spouse absence",
+    "375px valid dated event does not trigger a completeness question",
+    "375px deleting last applicant event asks only applicant's actual history",
+    "375px new canonical parent alone needs an actual history answer",
+    "375px parent event saves exact canonical parent ID and retains applicant/spouse absence",
+    "375px add/delete/new-parent history interactions remain local without API requests",
+    "all offline Chromium pages have no JavaScript exceptions"
+  ],
+  "api_requests": [
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/coverage",
+      "url": "https://qa.invalid/api/coverage",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/collection",
+      "url": "https://qa.invalid/api/collection",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-10-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    },
+    {
+      "path": "/api/notices",
+      "url": "https://qa.invalid/api/notices?start=2026-10-09&end=2026-12-31&page=1&page_size=100&exclude_public_rental=true&application_only=true",
+      "method": "GET",
+      "body": null
+    }
+  ],
+  "javascript_errors": []
+}

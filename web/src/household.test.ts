@@ -56,8 +56,22 @@ describe('Article 2 family roster scope, effective2026-06-15', () => {
     expect(scope).toMatchObject({ complete: true, legalCount: 1 })
     expect(scope.members.slice(1).every((person) => person.included === false)).toBe(true)
   })
-  it('keeps missing applicant registration, missing scope facts and duplicateIDs incomplete', () => {
-    for (const extra of [{ applicantOnRegister: null }, { applicantOnRegister: false }, { hasSpouse: null }, { householdMembersComplete: null }, { householdSnapshotDate: '' }]) expect(deriveHousehold(profile(extra), cutoff).complete).toBe(false)
+  it('uses ordinary registration by default and preserves actual registration exceptions', () => {
+    expect(deriveHousehold(profile({ applicantOnRegister: null }), cutoff)).toMatchObject({ complete: true, legalCount: 1 })
+    const exceptional = migrateProfile(profile({ applicantOnRegister: false }))
+    expect(exceptional.applicantOnRegister).toBe(false)
+    expect(deriveHousehold(exceptional, cutoff)).toMatchObject({ complete: false, profileField: 'applicantOnRegister' })
+    expect(deriveHousehold(exceptional, cutoff).reviewDetail).toContain('주민등록 말소·등본 없음')
+    expect(updateProfileFacts(exceptional, { additionalFamilyPresence: false }, '2026-10-09').applicantOnRegister).toBe(false)
+    for (const version of [2, 3]) {
+      const oldException = migrateProfile({ ...profile({ applicantOnRegister: false }), version })
+      expect(oldException.applicantOnRegister).toBe(false)
+      expect(deriveHousehold(oldException, cutoff)).toMatchObject({ complete: false, profileField: 'applicantOnRegister' })
+      expect(oldException.householdMembersComplete).toBeNull()
+    }
+  })
+  it('keeps missing substantive scope facts and duplicate IDs incomplete', () => {
+    for (const extra of [{ hasSpouse: null }, { householdMembersComplete: null }, { householdSnapshotDate: '' }]) expect(deriveHousehold(profile(extra), cutoff).complete).toBe(false)
     const relative = member('applicant_parent', 'unknown')
     expect(deriveHousehold(profile({ householdMembers: [relative] }), cutoff)).toMatchObject({ complete: false, profileField: 'householdMembers' })
     expect(deriveHousehold(profile({ householdMembers: [member('applicant_child', 'applicant', 'applicant')] }), cutoff).complete).toBe(false)

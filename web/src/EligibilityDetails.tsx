@@ -63,6 +63,21 @@ export function reasonStatusLabel(reason: EligibilityReason): string {
   return reason.status === 'pass' ? '충족' : reason.status === 'fail' ? '불일치' : reason.category === 'missing_input' ? '내 입력 부족' : reason.category === 'past_fact' ? '과거 사실 미확인' : ['source_gap', 'unverified'].includes(reason.category || '') ? '서비스 원문 검토 부족' : '추가 확인 필요'
 }
 const needsProfile = (reason: EligibilityReason) => ['missing_input', 'past_fact'].includes(reason.category || '') && !!reason.profileField
+
+function sourceForComparedSupplies(notice: Notice, profile: LocalProfile | undefined, compared: { supplyType: string; unitType?: string; result: EligibilityResult }[]) {
+  const source = conditionSourceStatus(notice, profile)
+  if (!compared.length) return source
+  source.topics = source.topics.flatMap((topic) => {
+    if (!topic.scopes.length) return [topic]
+    const scopes = topic.scopes.filter((scope) => {
+      const [supply, unit] = scope.split(' · ')
+      const matches = compared.filter((item) => item.supplyType === supply && (!unit || !item.unitType || item.unitType === unit || item.unitType === '전체 주택형'))
+      return !matches.length || matches.some((item) => item.result.status !== 'mismatch')
+    })
+    return scopes.length ? [{ ...topic, scopes }] : []
+  })
+  return source
+}
 function ReasonIcon({ reason }: { reason: EligibilityReason }) {
   return <span className={`qualification-icon qualification-icon-${reason.status}`} aria-hidden="true">{reason.status === 'pass' ? <Check size={12} /> : reason.status === 'fail' ? <X size={12} /> : <Info size={12} />}</span>
 }
@@ -133,13 +148,13 @@ export function EligibilityBrief({ result, notice, profile, decision, onProfile,
   const selected = selectBriefReasons(fallback.reasons)
   // A scope-free comparison can intentionally request a supply selection.
   // The actual offered scopes already include common requirements.
-  const comparedReasons = supplies.length ? supplies.flatMap((supply) => supply.result.reasons) : fallback.reasons
+  const comparedReasons = supplies.length ? supplies.filter((supply) => supply.result.status !== 'mismatch').flatMap((supply) => supply.result.reasons) : fallback.reasons
   const hasGap = comparedReasons.some((reason) => ['source_gap', 'unverified'].includes(reason.category || ''))
   const rankConfirmed = (rankResult?.reasons || []).filter((reason) => reason.status === 'pass')
   const rankQuestion = (rankResult?.reasons || []).find(needsProfile)
   const rankedUnits = snapshot?.rankedUnits || (notice && profile ? rankGroups(notice, profile) : [])
   const showUnitRanks = rankedUnits.length > 1 || rankedUnits.some((group) => group.result.rank === 'first' && rankResult?.rank !== 'first')
-  const source = notice ? conditionSourceStatus(notice) : { diagnostics: [], topics: [] }
+  const source = notice ? sourceForComparedSupplies(notice, profile, supplies) : { diagnostics: [], topics: [] }
   const officialInventory = notice ? officialOfferedSupplies(notice) : []
   const visibleSupplies = supplies.filter((supply) => supply.result.status === 'mismatch' || actionableReasons(supply.result.reasons).length > 0 || officialInventory.some((item) => item.supply_type === supply.supplyType))
   const sharedReasons = (snapshot?.sharedReasons || uniqueReasons(supplies.flatMap((supply) => actionableReasons(supply.result.reasons))).filter((reason) => supplies.filter((supply) => actionableReasons(supply.result.reasons).some((item) => reasonKey(item) === reasonKey(reason))).length > 1))
@@ -178,10 +193,12 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
   const showUnitRanks = rankedUnits.length > 1 || rankedUnits.some((group) => group.result.rank === 'first' && ranked.rank !== 'first')
   const areaComparisons = snapshot?.rankComparisons || rankUnitComparisons(notice, profile)
   const rankReasons = actionableReasons(ranked.reasons).filter((reason) => !commonKeys.has(reasonKey(reason)))
-  const sourceGaps = uniqueReasons([...commonResult.reasons, ...ranked.reasons, ...combinations.flatMap((combo) => combo.result.reasons)].filter((reason) => reason.category === 'source_gap'))
+  const activeReasons = combinations.filter((combo) => combo.result.status !== 'mismatch').flatMap((combo) => combo.result.reasons)
+  const activeKeys = new Set(activeReasons.map(reasonKey))
+  const sourceGaps = uniqueReasons([...commonResult.reasons.filter((reason) => !combinations.length || activeKeys.has(reasonKey(reason))), ...ranked.reasons, ...activeReasons].filter((reason) => reason.category === 'source_gap'))
   const candidates = (notice.rules || []).filter((rule) => rule.effect !== 'metadata' && rule.verification !== 'official')
   const coverage = conditionCoverage(notice)
-  const source = conditionSourceStatus(notice)
+  const source = sourceForComparedSupplies(notice, profile, combinations)
   const additionalSourceGaps = sourceGaps.filter((reason) =>
     !['공고 조건 정리 중', '나머지 공고 조건'].includes(reason.label) &&
     !(reason.label === '미확보 공고 조항' && source.topics.length > 0) &&
