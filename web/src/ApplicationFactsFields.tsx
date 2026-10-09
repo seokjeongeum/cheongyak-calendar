@@ -3,10 +3,12 @@ import { getProfileQuestionModel } from './profileQuestionModel'
 import { deriveHousehold } from './household'
 import { FactChangeFields } from './FactChangeFields'
 import { applicationHistoryPersonPresence } from './applicationHistoryFacts'
+import { factsAtDate } from './factTimeline'
 import type { ApplicationHistoryEvent, ApplicationRestrictionFacts, LocalProfile, Notice, RestrictionScope } from './types'
 
 const SCOPES: Record<RestrictionScope, string> = { applicant: '본인', applicant_spouse: '본인·배우자', household: '주택 보유를 함께 확인할 가족' }
 const RESTRICTIONS = { ineligible_restriction_active: ['ineligibleRestrictionActive', '부적격 당첨으로 인한 청약 제한'], resale_restriction_active: ['resaleRestrictionActive', '공급질서 교란·전매 위반으로 인한 청약 제한'], rewinning_restriction_active: ['rewinningRestrictionActive', '재당첨 제한'] } as const
+const HISTORY_FACTS = { ineligible_restriction_active: ['ineligibleHistoryPresence', '부적격 당첨자로 판정된 이력'], resale_restriction_active: ['resaleViolationHistoryPresence', '공급질서 교란·전매 위반으로 적발된 이력'] } as const
 const emptyRestrictions = (): ApplicationRestrictionFacts => ({ ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, asOfDate: '', historyConfirmations: [] })
 function Fact({ label, value, onChange }: { label: string; value: boolean | null; onChange: (answer: boolean | null) => void }) { return <fieldset className="radio-field"><legend>{label}</legend><div>{([[true, '예'], [false, '아니요'], [null, '모름']] as const).map(([answer, text]) => <button type="button" key={text} aria-pressed={value === answer} className={value === answer ? 'chosen' : ''} onClick={() => onChange(answer)}>{text}</button>)}</div></fieldset> }
 const EVENT_KINDS = [['winning', '당첨'], ['reserve_winning', '예비당첨'], ['contract', '주택 공급계약'], ['additional_resident_contract', '예비입주자 추가 공급계약']] as const
@@ -48,7 +50,7 @@ export function ApplicationFactsFields({ profile, onChange, today, notices, sect
   }
   return <section className="question-group application-facts"><h4>공통 당첨·계약 이력과 현재 청약 제한</h4><p className="field-help">공고마다 다시 묻지 않습니다. 입력한 사람·최초 사업·사건 날짜를 각 공고의 실제 제한과 비교합니다.</p><a href="https://www.applyhome.co.kr/" target="_blank" rel="noopener noreferrer">청약홈에서 이력·제한사항 확인</a>{projectRules.some(({ rule }) => rule.kind === 'original_project_contract_ownership') && <p className="field-help">최초 공고 당첨 이력만으로 주택 소유를 판단하지 않습니다. 해당 사업의 실제 공급계약과 ‘세대·주택’에 입력한 취득·처분 이력을 함께 비교합니다.</p>}
     {!!projectRules.length || relevant.some(({ rule }) => ['previous_winning', 'special_winning'].includes(rule.kind)) ? <section className="ownership-item" data-profile-field="applicationHistoryPresence">
-      <h5>당첨·계약 이력 한 번 입력</h5><p className="field-help">확인 대상: {people.map((person) => person.label).join(' · ')}. 입력한 사건의 사람·사업번호·날짜와 이력이 없는 사람의 답변을 함께 사용합니다.</p>
+      <h5>당첨·계약 이력 한 번 입력</h5><p className="field-help">확인 대상: {people.map((person) => person.label).join(' · ')}. 입력한 사건의 사람·종류·실제 날짜와 이력이 없는 사람의 답변을 함께 사용합니다. 사업번호는 같은 사업의 당첨·계약인지 비교할 때만 필요합니다.</p>
       {!profile.applicationHistoryEvents.length && currentPeople.every((person) => applicationHistoryPersonPresence(profile, person) === null) ? <Fact label="위 사람 중 당첨·예비당첨 또는 주택 공급계약 이력이 있는 사람이 있나요?" value={profile.applicationHistoryPresence} onChange={(answer) => {
         if (answer === true) { addEvent(); return }
         onChange({ ...profile, applicationHistoryPresence: answer, applicationHistoryComplete: null, applicationHistoryPeople: answer === false ? currentPeople : [], applicationHistoryAbsencePeople: answer === false ? [...new Set([...(profile.applicationHistoryAbsencePeople || []), ...currentPeople])] : (profile.applicationHistoryAbsencePeople || []).filter((person) => !currentPeople.includes(person)) })
@@ -59,7 +61,7 @@ export function ApplicationFactsFields({ profile, onChange, today, notices, sect
       <div data-profile-field="applicationHistoryEvents">
         {profile.applicationHistoryEvents.map((event, index) => <section className="ownership-item" key={event.id}>
           <h5>이력 {index + 1}</h5><label>해당 사람<select value={event.personId} onChange={(input) => patchEvent(event.id, { personId: input.target.value })}><option value="">사람 선택</option>{people.map((person) => <option key={person.id} value={person.id}>{person.label}</option>)}{event.personId && !currentPeople.includes(event.personId) && <option value={event.personId}>기존 이력의 가족</option>}</select></label>
-          <label>최초 사업번호<input type="text" list="application-history-projects" value={event.projectId} onChange={(input) => patchEvent(event.id, { projectId: input.target.value.trim() })} placeholder="청약홈 사업번호 또는 LH 사업번호" /></label>
+          <label>사업번호 · 같은 사업 판정에만 필요<input type="text" list="application-history-projects" value={event.projectId} onChange={(input) => patchEvent(event.id, { projectId: input.target.value.trim() })} placeholder="청약홈 사업번호 또는 LH 사업번호" /></label>
           <label>사건 종류<select value={event.eventKind} onChange={(input) => patchEvent(event.id, { eventKind: input.target.value as ApplicationHistoryEvent['eventKind'] })}>{EVENT_KINDS.map(([kind, label]) => <option key={kind} value={kind}>{label}</option>)}</select></label>
           {['winning', 'reserve_winning'].includes(event.eventKind) && relevant.some(({ rule }) => rule.kind === 'special_winning') && <Fact label="특별공급 당첨·예비당첨인가요?" value={event.specialSupply ?? null} onChange={(answer) => patchEvent(event.id, { specialSupply: answer })} />}
           <label>실제 사건 날짜<input type="date" max={today} value={event.eventDate} onChange={(input) => patchEvent(event.id, { eventDate: input.target.value })} /></label>
@@ -73,8 +75,13 @@ export function ApplicationFactsFields({ profile, onChange, today, notices, sect
       const entry = profile.applicationRestrictionFacts[scope] || emptyRestrictions()
       const patch = (part: Partial<ApplicationRestrictionFacts>) => onChange({ ...profile, applicationRestrictionFacts: { ...profile.applicationRestrictionFacts, [scope]: { ...entry, ...part, asOfDate: today, historyConfirmations: [] } } })
       const kinds = [...new Set(rules.map(({ rule }) => rule.restriction as keyof typeof RESTRICTIONS))]
-      return <section key={scope} className="ownership-item" data-profile-field="applicationRestrictionFacts"><h5>{SCOPES[scope]}의 현재 청약 제한</h5>{kinds.map((kind) => { const [field, label] = RESTRICTIONS[kind]; return <Fact key={kind} label={`현재 청약홈에 ${label}가 표시되나요?`} value={entry[field]} onChange={(answer) => patch({ [field]: answer })} /> })}</section>
+      return <section key={scope} className="ownership-item" data-profile-field="applicationRestrictionFacts"><h5>{SCOPES[scope]}의 청약 제한 관련 사실</h5>{kinds.map((kind) => {
+        const [field, label] = RESTRICTIONS[kind]
+        const history = kind === 'rewinning_restriction_active' ? null : HISTORY_FACTS[kind]
+        const needsHistory = history && (entry[history[0]] != null || rules.some(({ rule, date }) => rule.restriction === kind && !factsAtDate(profile, 'restrictions', date, { date: entry.asOfDate, confirmations: entry.historyConfirmations }).known))
+        return <div key={kind}>{needsHistory && history && <Fact label={`${SCOPES[scope]}에게 ${history[1]}이 있나요?`} value={entry[history[0]] ?? null} onChange={(answer) => patch({ [history[0]]: answer, ...(answer === false ? { [field]: false } : {}) })} />}{(!needsHistory || history && entry[history[0]] === true || entry[field] === true) && <Fact label={`현재 청약홈에 ${label}가 표시되나요?`} value={entry[field]} onChange={(answer) => patch({ [field]: answer })} />}</div>
+      })}</section>
     })}
-    <FactChangeFields profile={profile} onChange={onChange} today={today} group="restrictions" label="청약 제한 상태" needed={scoped.some(({ rules }) => rules.some(({ date }) => !!date && date < today))} />
+    <FactChangeFields profile={profile} onChange={onChange} today={today} group="restrictions" label="청약 제한 상태" needed={scoped.some(({ scope, rules }) => rules.some(({ rule, date }) => { const kind = rule.restriction as keyof typeof RESTRICTIONS; const history = kind === 'rewinning_restriction_active' ? null : HISTORY_FACTS[kind]; const entry = profile.applicationRestrictionFacts[scope]; return !!date && date < today && !factsAtDate(profile, 'restrictions', date, { date: entry?.asOfDate || '', confirmations: entry?.historyConfirmations }).known && (!history || entry?.[history[0]] === true || entry?.[RESTRICTIONS[kind][0]] === true) }))} />
   </section>
 }

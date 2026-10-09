@@ -191,6 +191,21 @@ def reviewed_source_for_document(url: str, digest: str) -> dict | None:
             return source
     return None
 
+
+def focused_review_version(official_url: str, announcement_date: str | None) -> str | None:
+    """Retry only these changed reviews, without reprocessing every notice."""
+    parsed = urlparse(official_url)
+    if parsed.scheme != "https" or parsed.hostname not in {"www.applyhome.co.kr", "applyhome.co.kr"}:
+        return None
+    params = parse_qs(parsed.query)
+    number = (params.get("houseManageNo") or [""])[0]
+    if (params.get("pblancNo") or [""])[0] != number:
+        return None
+    targets = {"2026000458": ("2026-10-08", "current-selection-2026-10-09-v2"),
+               "2026950087": ("2026-10-06", "office-cutoff-2026-10-09-v2")}
+    target = targets.get(number)
+    return target[1] if target and str(announcement_date or "")[:10] == target[0] else None
+
 # Exclusive areas are columns checked in each reviewed supply table.
 for _review in REVIEWED_SOURCES.values():
     if _review.get("regional_review"):
@@ -288,7 +303,7 @@ REVIEWED_SOURCES.update({
     },
     "2026950087": {
         "title": "당산역 더클래스 한강", "announcement_date": "2026-10-06",
-        "document_url": "https://www.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
+        "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950087&pblancNo=2026950087&atchmnflSeqNo=1988261&atchmnflSn=4",
         "document_hash": "99df9ab26e35d6af38b68c4d39f3d2d9b830460c232d77d725868a31dfda9804",
         "reviewed_pages": list(range(1, 12)),
         "office_review": {"qualification_page": 4, "adult_age": 19, "domestic_only": True},

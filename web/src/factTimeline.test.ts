@@ -100,9 +100,10 @@ describe('common person and project application history', () => {
     const p = history({ applicationHistoryPresence: true, applicationHistoryComplete: false, applicationHistoryEvents: [{ id: 'event', personId: 'applicant', projectId: '2026000323', eventKind: 'winning', eventDate: past }] })
     expect(evaluateRule(restriction(), p, notice()).status).toBe('fail')
   })
-  it('does not treat a default winning row with an unknown project as a real general win', () => {
+  it('uses a dated actual winning fact without a project number only for non-project comparisons', () => {
     const p = history({ applicationHistoryPresence: true, applicationHistoryComplete: false, applicationHistoryEvents: [{ id: 'event', personId: 'applicant', projectId: '', eventKind: 'winning', eventDate: past }] })
-    expect(evaluateRule(rule('previous_winning', { value: false, scope: 'applicant' }), p, notice())).toMatchObject({ status: 'review', profileField: 'applicationHistoryEvents' })
+    expect(evaluateRule(rule('previous_winning', { value: false, scope: 'applicant' }), p, notice()).status).toBe('fail')
+    expect(evaluateRule(restriction(), p, notice())).toMatchObject({ status: 'review', profileField: 'applicationHistoryEvents' })
   })
   it('does not turn a legacy project answer into a dated common event', () => {
     const p = profile({ projectApplicationHistory: { '2026000323': { winning: true, contract: false, additionalResident: false, winningScope: 'applicant', contractScope: 'applicant', asOfDate: past, historyConfirmations: [] } } })

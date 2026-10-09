@@ -20,6 +20,7 @@ export interface EligibilityReason {
   criterionDate?: string | null
   evidenceUrl?: string | null
   evidenceText?: string | null
+  legalEvidenceUrl?: string | null
   category?: ReasonCategory
   profileField?: keyof LocalProfile
   profileMemberId?: string
@@ -220,7 +221,7 @@ function legacyFactObservation(profile: LocalProfile, group: Parameters<typeof f
   return observations[group as keyof typeof observations]
 }
 function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notice: Notice, scope = 'household', project?: string): EligibilityReason | null {
-  const coveredPeople = applicationHistoryCoveredPeople(profile)
+  const coveredPeople = applicationHistoryCoveredPeople(profile, getEvaluationToday(), !!project)
   if (profile.applicationHistoryPresence == null && !profile.applicationHistoryEvents?.length && !coveredPeople.size) return null
   const date = criterionDate(rule, notice)
   const label = project ? `${project} 사업 ${rule.restriction === 'prior_project_contract' ? '계약' : '당첨·예비당첨'} 이력` : rule.kind === 'special_winning' ? '특별공급 당첨 이력' : '당첨 이력'
@@ -232,7 +233,7 @@ function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notic
     people = household.members.filter((person) => person.included && (scope !== 'applicant_spouse' || ['applicant', 'spouse'].includes(person.id))).map((person) => person.id)
   }
   const contract = rule.restriction === 'prior_project_contract'
-  const events = (profile.applicationHistoryEvents || []).filter((event) => applicationHistoryEventComplete(event) && people.includes(event.personId) && (!project || event.projectId === project) && event.eventDate <= date &&
+  const events = (profile.applicationHistoryEvents || []).filter((event) => applicationHistoryEventComplete(event, getEvaluationToday(), !!project) && people.includes(event.personId) && (!project || event.projectId === project) && event.eventDate <= date &&
     (contract ? ['contract', 'additional_resident_contract'].includes(event.eventKind) : project ? ['winning', 'reserve_winning'].includes(event.eventKind) : event.eventKind === 'winning'))
   const window = numberFrom(rule.window_months ?? rule.months, true)
   const applicable = events.filter((event) => {
@@ -247,7 +248,9 @@ function commonApplicationHistory(rule: NoticeRule, profile: LocalProfile, notic
   if (!covered || rule.kind === 'special_winning' && applicable.some((event) => event.specialSupply == null)) {
     const rows = profile.applicationHistoryEvents || []
     const unansweredPerson = !rows.some((event) => !event.personId) && people.find((person) => !coveredPeople.has(person) && !rows.some((event) => event.personId === person))
-    return missingInput(rule, notice, label, '이력이 있는 확인 대상은 사업번호·사건 종류·날짜를 입력하고, 이력이 없는 사람은 해당 사람의 이력 없음 사실을 입력하세요. 다른 사업의 이력은 이 사업의 이력으로 적용하지 않습니다.', '확인 대상의 실제 당첨·계약 사건 또는 이력 없음', unansweredPerson ? 'applicationHistoryAbsencePeople' : 'applicationHistoryEvents')
+    return missingInput(rule, notice, label, project
+      ? `사업 ${project}과 같은 사업인지 비교할 사건의 사업번호·종류·날짜를 입력하세요. 사업번호를 모르는 다른 사건은 이 사업의 사건이나 이력 없음으로 단정하지 않습니다.`
+      : '이력이 있는 사람의 사건 종류·실제 날짜를 입력하세요. 특별공급 당첨 여부도 해당 사건에 입력합니다. 사업번호는 같은 사업을 비교할 때만 필요합니다. 이력이 없는 사람은 해당 사람의 이력 없음 사실을 입력하세요.', '확인 대상의 실제 당첨·계약 사건 또는 이력 없음', unansweredPerson ? 'applicationHistoryAbsencePeople' : 'applicationHistoryEvents')
   }
   return { ...factualBoolean(rule, notice, false, label), detail: `확인 대상 ${people.length}명의 공통 이력에서 ${date}까지${project ? ` 사업 ${project}의` : ''} 해당 사건이 없습니다.` }
 }
@@ -260,7 +263,7 @@ function originalProjectContractOwnership(rule: NoticeRule, profile: LocalProfil
   const winners = events.filter((event) => event.eventKind === 'winning')
   const contracts = events.filter((event) => event.eventKind === 'contract' && winners.some((winner) => winner.eventDate <= event.eventDate))
   if (!contracts.length) {
-    if (applicationHistoryCoveredPeople(profile).has('applicant')) return reason(rule, notice, 'pass', label, `사업 ${project}의 공통 이력에서 최초 당첨 후 계약은 없습니다. 최초 당첨 또는 부적격 판정만으로 이 경로를 제외하지 않습니다.`, winners.length ? '최초 당첨 · 계약 없음' : '최초 당첨 후 계약 없음', '최초 당첨 후 계약으로 인한 주택 소유 아님')
+    if (applicationHistoryCoveredPeople(profile, getEvaluationToday(), true).has('applicant')) return reason(rule, notice, 'pass', label, `사업 ${project}의 공통 이력에서 최초 당첨 후 계약은 없습니다. 최초 당첨 또는 부적격 판정만으로 이 경로를 제외하지 않습니다.`, winners.length ? '최초 당첨 · 계약 없음' : '최초 당첨 후 계약 없음', '최초 당첨 후 계약으로 인한 주택 소유 아님')
     return missingInput(rule, notice, '최초 당첨·계약 사건', `최초 공고 ${original}의 사업 ${project}에서 본인이 실제 당첨 후 계약했는지 공통 사건 이력을 확인하세요. 당첨만 있거나 부적격 이력만 있다는 이유로 제외하지 않습니다.`, '본인의 사업별 날짜가 있는 당첨·계약 이력', 'applicationHistoryEvents')
   }
   const dates = contracts.map((event) => event.eventDate)
@@ -369,6 +372,10 @@ export function officialClauseApplicability(rule: NoticeRule, profile: LocalProf
   // The evidence excerpt may include many unrelated provisions. Classify
   // only this exact clause's label/text, retaining unsupported alternatives.
   const clause = compact(`${typeof rule.label === 'string' ? rule.label : ''} ${rule.text || ''}`)
+  if (clause.includes('생애최초의제53조과거주택소유예외')) {
+    const supported = (notice.rules || []).filter((candidate) => candidate.kind === 'never_owned_home' && firstHomeAscendantExceptionAvailable(candidate, notice))
+    if (supported.length && supported.every((candidate) => firstHomeHistoricalOwnersExempt(candidate, profile, notice))) return false
+  }
   if (/제53조|과거주택소유/.test(clause)) return null
   if (Array.isArray(rule.allowed_recommendation_reasons)) {
     const allowed = rule.allowed_recommendation_reasons.filter((value): value is string => typeof value === 'string')
@@ -384,6 +391,29 @@ export function officialClauseApplicability(rule: NoticeRule, profile: LocalProf
   if (/배우자혼인전.*당첨|혼인특례/.test(clause)) alternatives.push(marriageClauseApplicability(rule, profile, notice))
   if (!alternatives.length || /통장면제|세대소득면제|제36조/.test(clause)) return null
   return alternatives.includes(true) ? true : alternatives.every((value) => value === false) ? false : null
+}
+
+// This also understands already stored, source-bound review clauses, so a
+// browser correction does not force every notice/document back across Neon.
+// The reviewed 2026 rule and MOLIT's first-home Q&A both cover an ancestor's
+// past ownership at the notice-date age. Other section 53 routes remain gaps.
+export const FIRST_HOME_ANCESTOR_GUIDANCE_URL = 'https://www.korea.kr/news/policyNewsView.do?newsId=148878382'
+function firstHomeAscendantExceptionAvailable(rule: NoticeRule, notice: Notice): boolean {
+  const date = criterionDate(rule, notice)
+  if (rule.verification !== 'official' || rule.kind !== 'never_owned_home' || specialType(rule.supply_type || '') !== 'first_home' || notice.category !== 'apt' || notice.housing_kind !== 'private' || !date || date < '2026-06-15' || date > getEvaluationToday()) return false
+  if (typeof rule.document_hash !== 'string' || !/^[a-f0-9]{64}$/.test(rule.document_hash)) return false
+  return Array.isArray(rule.exceptions) && rule.exceptions.some((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const child = entry as NoticeRule
+    return child.verification === 'official' && child.document_hash === rule.document_hash && exceptionScopeMatches(rule, child) && /60세이상의직계존속.*주택(?:또는분양권등)?을?소유/.test(compact(child.evidence_text || ''))
+  })
+}
+function firstHomeHistoricalOwnersExempt(rule: NoticeRule, profile: LocalProfile, notice: Notice): boolean {
+  const date = criterionDate(rule, notice)
+  if (!date) return false
+  const household = deriveHousehold(profile, date), members = household.members.filter((member) => member.included === true)
+  if (!household.complete || members.some((member) => member.previouslyOwnedHome === null && !(['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60))) return false
+  return members.filter((member) => member.previouslyOwnedHome === true).every((member) => ['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60 || member.id === 'spouse' && rule.exclude_spouse_pre_marriage_disposed === true && profile.spousePremarriageOwnershipDisposed === true)
 }
 function allKinds(rules: NoticeRule[]): string[] { return rules.flatMap((r) => [r.kind, ...allKinds(conditionChildren(r))]) }
 function scopeProblem(rule: NoticeRule, notice: Notice): string | null {
@@ -449,6 +479,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   if (problem) return unsupported(rule, notice, problem, '적용 범위')
   if (rule.effect === 'priority') return unsupported(rule, notice, '당첨 우선순위 조건입니다. 신청 가능 여부와 별개로 공고문의 배정 순서를 확인하세요.', '공급 우선순위')
   if (rule.kind === 'recommendation' && (profile.recommendationReason === 'none' || profile.recommendationStatus === 'none')) return reason(rule, notice, 'fail', '기관추천', profile.recommendationReason === 'none' ? '기관추천 대상 사유에 해당 없음으로 입력했습니다.' : '기관 추천이 없다고 입력했습니다.', profile.recommendationReason === 'none' ? '해당 없음' : '추천 없음', '기관추천 대상 및 기관의 확정 추천')
+  if (firstHomeAscendantExceptionAvailable(rule, notice)) rule = { ...rule, exclude_article53_ascendants_over_60: true }
   if (Array.isArray(rule.exceptions) && rule.exceptions.length) {
     const exceptionRules = rule.exceptions.filter((r): r is NoticeRule => !!r && typeof r === 'object' && typeof r.kind === 'string')
     const base = evaluateRule({ ...rule, exceptions: undefined }, profile, notice, unitType)
@@ -611,8 +642,20 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const kind = String(rule.restriction) as keyof typeof fields
     if (!fields[kind]) return unsupported(rule, notice, '이 청약 제한의 공식 확인 항목을 아직 지원하지 않습니다.', '청약 제한')
     const [field, label] = fields[kind]
-    if (!entry) return missingInput(rule, notice, label, `${scopeLabel}의 청약홈 ‘청약제한사항 확인’ 조회에 ${label}가 표시되는지 입력하세요.`, rule.value ? '제한 표시 있음' : '제한 표시 없음', 'applicationRestrictionFacts')
+    const history = kind === 'ineligible_restriction_active' ? ['ineligibleHistoryPresence', '부적격 당첨 판정 이력'] as const
+      : kind === 'resale_restriction_active' ? ['resaleViolationHistoryPresence', '공급질서 교란·전매 위반 적발 이력'] as const : null
+    if (!entry) return history ? missingInput(rule, notice, history[1], `${scopeLabel}에게 실제 ${history[1]}이 있었는지 입력하세요. 이력 없음은 다른 공고 기준일에도 재사용합니다.`, '실제 판정·적발 이력 있음 또는 없음', 'applicationRestrictionFacts')
+      : missingInput(rule, notice, label, `${scopeLabel}의 청약홈 ‘청약제한사항 확인’ 조회에 ${label}가 표시되는지 입력하세요.`, rule.value ? '제한 표시 있음' : '제한 표시 없음', 'applicationRestrictionFacts')
     const temporal = factsAtDate(profile, 'restrictions', date, { date: entry.asOfDate, confirmations: entry.historyConfirmations })
+    const recorded = temporal.profile.applicationRestrictionFacts[scope as keyof typeof profile.applicationRestrictionFacts]
+    if (history && entry[history[0]] === false && (entry[field] === true || temporal.known && recorded?.[field] === true)) return missingInput(rule, notice, history[1],
+      `이력 없음과 제한 표시 있음이 함께 저장되어 있습니다. ${scopeLabel}의 실제 판정·적발 이력 또는 저장된 제한 사실을 수정하세요.`, '모순 없는 실제 이력·제한 사실', 'applicationRestrictionFacts')
+    if (history && entry[history[0]] === false && entry[field] !== true) return {
+      ...factualBoolean(rule, notice, false, label),
+      detail: `${scopeLabel}에게 ${history[1]}이 없다는 공통 사실을 ${date}에도 적용합니다. 발생한 사건이 없어 상태 변경일을 추가로 묻지 않습니다.`,
+    }
+    if (!temporal.known && history && entry[history[0]] == null) return missingInput(rule, notice, history[1],
+      `현재 제한이 없다는 사실만으로 ${date} 당시 제한 여부를 알 수는 없습니다. ${scopeLabel}에게 실제 ${history[1]}이 있었는지 한 번 입력하세요. 이력 없음은 다른 기준일에서도 재사용하며 변경일을 묻지 않습니다.`, '실제 판정·적발 이력 있음 또는 없음', 'applicationRestrictionFacts')
     if (temporal.known) profile = temporal.profile
     const datedEntry = profile.applicationRestrictionFacts[scope as keyof typeof profile.applicationRestrictionFacts] || entry
     const observed = factualSnapshotReview(rule, notice, profile, datedEntry.asOfDate, datedEntry.historyConfirmations, 'applicationRestrictionFacts', `${label} 조회 기준일`)
@@ -935,7 +978,14 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   if (rule.kind === 'never_owned_home') {
     const household = deriveHousehold(profile, date)
     if (!household.complete) return missingInput(rule, notice, '과거 주택 소유 확인 가족', household.reviewDetail || '가족 관계와 등본 위치를 입력하세요.', undefined, household.profileField)
-    const members = household.members.filter((member) => member.included === true)
+    const included = household.members.filter((member) => member.included === true)
+    const ancestorException = rule.exclude_article53_ascendants_over_60 === true && notice.category === 'apt' && notice.housing_kind === 'private' && specialType(rule.supply_type || '') === 'first_home'
+    const exemptAncestors = ancestorException && date ? included.filter((member) => ['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60) : []
+    if (ancestorException) {
+      const ageMissing = included.find((member) => ['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && member.previouslyOwnedHome !== false && (!date || ageAt(member.dateOfBirth, date) === null))
+      if (ageMissing) return { ...missingInput(rule, notice, '과거 소유 직계존속의 생년월일', `${ageMissing.label}의 생년월일을 입력하면 공고일의 만 60세 이상 소유 예외를 비교합니다. 취득 당시 나이를 다시 묻지 않습니다.`, '공고일 만 60세 이상 직계존속', 'householdMembers'), profileMemberId: ageMissing.id }
+    }
+    const members = included.filter((member) => !exemptAncestors.includes(member))
     const missing = members.find((member) => member.previouslyOwnedHome === null)
     if (missing) return missingInput(rule, notice, '과거 주택 소유', `${missing.label}의 과거 주택·권리 소유 이력을 입력하세요.`, '공고가 인정하는 과거 주택 미소유', missing.id === 'applicant' ? 'applicantPreviouslyOwnedHome' : missing.id === 'spouse' ? 'spousePreviouslyOwnedHome' : 'householdMembers')
     const owned = members.filter((member) => member.previouslyOwnedHome === true)
@@ -943,12 +993,13 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
       const spouseException = rule.exclude_spouse_pre_marriage_disposed === true && owned.every((member) => member.id === 'spouse')
       if (spouseException) {
         if (profile.spousePremarriageOwnershipDisposed == null) return missingInput(rule, notice, '배우자 혼인 전 소유 예외', '배우자의 과거 소유가 모두 혼인 전에 취득·처분한 주택인지 입력하세요. 현재 소유와 본인 소유 이력에는 이 예외를 적용하지 않습니다.', '배우자의 혼인 전 취득·처분만 있음', 'spousePremarriageOwnershipDisposed')
-        if (profile.spousePremarriageOwnershipDisposed === true) return reason(rule, notice, 'pass', '과거 주택 소유 공식 예외', '배우자의 과거 소유가 모두 혼인 전에 취득·처분한 주택이라고 입력한 사실이 공고의 예외에 해당합니다.', '배우자 혼인 전 취득·처분', '공식 배우자 혼인 전 소유 예외')
+        if (profile.spousePremarriageOwnershipDisposed === true) return { ...reason(rule, notice, 'pass', '과거 주택 소유 공식 예외', `배우자의 과거 소유가 모두 혼인 전에 취득·처분한 주택이라고 입력한 사실이 공고의 예외에 해당합니다.${exemptAncestors.length ? ' 만 60세 이상 직계존속의 현재·과거 소유도 제53조 제6호로 제외했습니다.' : ''}`, '배우자 혼인 전 취득·처분', '공식 배우자 혼인 전 소유 예외'), ...(exemptAncestors.length ? { legalEvidenceUrl: FIRST_HOME_ANCESTOR_GUIDANCE_URL } : {}) }
         return reason(rule, notice, 'fail', '과거 주택 소유', '배우자의 과거 소유가 공고의 혼인 전 취득·처분 예외에 해당하지 않는다고 입력했습니다.', '예외 밖 과거 소유 있음', '공고가 인정하는 과거 주택 미소유 또는 예외')
       }
       if (rule.exclude_spouse_pre_marriage_disposed === true) return reason(rule, notice, 'fail', '과거 주택 소유', '본인 또는 확인 대상 가족의 과거 소유 이력이 있어 배우자 혼인 전 취득·처분 예외를 적용할 수 없습니다.', '과거 소유 있음', '과거 주택 미소유 또는 공식 배우자 예외')
       return unsupported(rule, notice, '과거 소유 이력이 있습니다. 해당 유형의 공식 예외를 확인해야 합니다.', '과거 주택 소유')
     }
+    if (exemptAncestors.length) return { ...reason(rule, notice, 'pass', '과거 주택 소유 공식 예외', `제53조 제6호: ${exemptAncestors.map((member) => `${member.label} · 공고일 만 ${ageAt(member.dateOfBirth, date!)}세`).join(' / ')}의 현재·과거 주택 소유를 제외했습니다. 본인·배우자 등 나머지 확인 대상은 별도로 비교했습니다.`, '공고일 만 60세 이상 직계존속', '과거 주택 미소유 또는 제53조 제6호 예외'), legalEvidenceUrl: FIRST_HOME_ANCESTOR_GUIDANCE_URL }
     return factualBoolean(rule, notice, true, '과거 주택 미소유')
   }
   if (rule.kind === 'recommendation') {

@@ -100,7 +100,7 @@ export function migrateProfile(value: unknown): LocalProfile {
     if (stored.applicationRestrictionFacts && typeof stored.applicationRestrictionFacts === 'object' && !Array.isArray(stored.applicationRestrictionFacts)) for (const [key, raw] of Object.entries(stored.applicationRestrictionFacts)) {
       if (scope(key) === 'unknown' || !raw || typeof raw !== 'object' || Array.isArray(raw)) continue
       const entry = raw as Record<string, unknown>
-      next.applicationRestrictionFacts[key as RestrictionScope] = { ineligibleRestrictionActive: bool(entry.ineligibleRestrictionActive), resaleRestrictionActive: bool(entry.resaleRestrictionActive), rewinningRestrictionActive: bool(entry.rewinningRestrictionActive), asOfDate: typeof entry.asOfDate === 'string' ? entry.asOfDate : '', historyConfirmations: history(entry.historyConfirmations) } satisfies ApplicationRestrictionFacts
+      next.applicationRestrictionFacts[key as RestrictionScope] = { ineligibleHistoryPresence: bool(entry.ineligibleHistoryPresence), resaleViolationHistoryPresence: bool(entry.resaleViolationHistoryPresence), ineligibleRestrictionActive: bool(entry.ineligibleRestrictionActive), resaleRestrictionActive: bool(entry.resaleRestrictionActive), rewinningRestrictionActive: bool(entry.rewinningRestrictionActive), asOfDate: typeof entry.asOfDate === 'string' ? entry.asOfDate : '', historyConfirmations: history(entry.historyConfirmations) } satisfies ApplicationRestrictionFacts
     }
     if (!['korean', 'foreign', 'unknown'].includes(next.citizenship)) next.citizenship = 'unknown'
   } else {
@@ -202,7 +202,7 @@ export function updateProfileFacts(profile: LocalProfile, part: Partial<LocalPro
   const applicationRestrictionFacts = { ...profile.applicationRestrictionFacts }
   for (const scope of ['household', 'applicant_spouse'] as const) {
     const record = applicationRestrictionFacts[scope]
-    if (record) applicationRestrictionFacts[scope] = { ...record, ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, asOfDate: '', historyConfirmations: [] }
+    if (record) applicationRestrictionFacts[scope] = { ...record, ineligibleHistoryPresence: null, resaleViolationHistoryPresence: null, ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, asOfDate: '', historyConfirmations: [] }
   }
   return { ...profile, ...changed, factChanges, factSnapshots, householdMembersComplete: null, householdSnapshotDate: today, householdCompositionUnchanged: null, householdHistoryConfirmations: [], applicationRestrictionFacts }
 }

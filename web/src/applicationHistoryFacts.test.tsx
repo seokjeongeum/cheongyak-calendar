@@ -27,13 +27,13 @@ describe('concrete common application history', () => {
     expect(html).not.toContain('위 사람 중 당첨·예비당첨')
   })
   it('keeps genuinely missing event facts unresolved instead of asking for completeness', () => {
-    for (const part of [{ projectId: '' }, { personId: '' }, { eventDate: '' }, { eventDate: '2026-02-30' }, { eventDate: '2026-10-10' }]) {
+    for (const part of [{ personId: '' }, { eventDate: '' }, { eventDate: '2026-02-30' }, { eventDate: '2026-10-10' }]) {
       const value = profile({ applicationHistoryEvents: [event(part)], applicationHistoryAbsencePeople: ['applicant'] })
       expect(applicationHistoryEventComplete(value.applicationHistoryEvents[0], today)).toBe(false)
       expect(applicationHistoryCoveredPeople(value).has('applicant')).toBe(false)
     }
     const html = render(profile({ applicationHistoryPresence: true, applicationHistoryEvents: [event({ projectId: '', eventDate: '' })] }))
-    expect(html).toContain('최초 사업번호')
+    expect(html).toContain('사업번호 · 같은 사업 판정에만 필요')
     expect(html).toContain('실제 사건 날짜')
     expect(html).not.toContain('입력을 모두')
   })

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Check, ChevronDown, ExternalLink, Info, MapPin, X } from 'lucide-react'
-import { actionableReasons, applicationInstructions, conditionCoverage, conditionSourceStatus, officialOfferedSupplies, deriveRank, unitRankResults, ELIGIBILITY_LABEL, eligibilityCombinations, evaluateEligibility, rankUnitComparisons, reasonKey, uniqueReasons, supplyInventorySummary, supplySummaries, type EligibilityReason, type EligibilityResult, type RankResult } from './eligibility'
+import { actionableReasons, applicationInstructions, comparisonReasonKey, conditionCoverage, conditionSourceStatus, officialOfferedSupplies, deriveRank, unitRankResults, ELIGIBILITY_LABEL, eligibilityCombinations, evaluateEligibility, rankUnitComparisons, reasonKey, uniqueReasons, supplyInventorySummary, supplySummaries, type EligibilityReason, type EligibilityResult, type RankResult } from './eligibility'
 import type { CompetitionDecision } from './competition'
 import type { NoticeEvaluation } from './evaluation'
 import type { FactChangeGroup, LocalProfile, Notice } from './types'
@@ -84,12 +84,14 @@ function ReasonIcon({ reason }: { reason: EligibilityReason }) {
 export function ReasonList({ reasons, demoMode = false, onProfile }: { reasons: EligibilityReason[]; demoMode?: boolean; onProfile?: ProfileAction }) {
   return <ul className="qualification-reasons">{uniqueReasons(reasons).map((reason) => {
     const link = demoMode ? undefined : safeHref(reason.evidenceUrl)
+    const legalLink = demoMode ? undefined : safeHref(reason.legalEvidenceUrl)
     return <li className="qualification-reason" key={reasonKey(reason)}><ReasonIcon reason={reason} /><div className="qualification-reason-body"><strong>{reasonStatusLabel(reason)} · {reason.label}</strong>
       {(reason.input || reason.requirement || reason.criterionDate) && <dl className="qualification-comparison">{reason.input && <div><dt>내 입력</dt><dd>{reason.input}</dd></div>}{reason.requirement && <div><dt>공고 요구값</dt><dd>{reason.requirement}</dd></div>}{reason.criterionDate && <div><dt>{reason.contractPreview || reason.todayPreview ? '오늘 비교일 (한국 시간)' : '기준일'}</dt><dd>{reason.criterionDate}</dd></div>}</dl>}
       <p className="qualification-reason-detail">판단 이유: {reason.detail}</p>
       {needsProfile(reason) && onProfile && <button type="button" className="qualification-input-action" onClick={() => onProfile(reason.profileField, reason.historyGroup)}>{reason.label} 입력하기</button>}
       {reason.evidenceText && <blockquote className="qualification-evidence">{reason.evidenceText}</blockquote>}
       {link && <a href={link} target="_blank" rel="noopener noreferrer">원문 근거 <ExternalLink size={12} /></a>}
+      {legalLink && <a href={legalLink} target="_blank" rel="noopener noreferrer">국토교통부 생애최초 예외 안내 <ExternalLink size={12} /></a>}
     </div></li>
   })}</ul>
 }
@@ -104,7 +106,7 @@ export function selectBriefReasons(reasons: EligibilityReason[]): EligibilityRea
 export function comparedConditionsLabel(result: EligibilityResult): string {
   if (result.status === 'mismatch') return '내 조건으로 신청 불가'
   if (result.status === 'possible') return ELIGIBILITY_LABEL.possible
-  const useful = actionableReasons(result.reasons)
+  const useful = [...new Map(actionableReasons(result.reasons).map((reason) => [comparisonReasonKey(reason), reason])).values()]
   const missing = useful.filter((reason) => reason.category === 'missing_input').length
   const historical = useful.filter((reason) => reason.category === 'past_fact').length
   const passed = useful.filter((reason) => reason.status === 'pass').length

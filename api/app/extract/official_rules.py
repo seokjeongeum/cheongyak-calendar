@@ -259,6 +259,19 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     text = "\n".join(p["text"] for p in pages)
     flat = compact(text)
     reviewed = reviewed_source_for_document(url, digest)
+    if cutoff is None and reviewed and reviewed.get("office_review"):
+        # This exact reviewed PDF emits the date after the applicant sentence
+        # rather than directly after its label. The current applicant clause,
+        # matching date and file hash must all agree; the address is irrelevant.
+        page_number = reviewed["office_review"]["qualification_page"]
+        qualification = next((p for p in pages if p["page"] == page_number), None)
+        if qualification:
+            body = normal(qualification["text"])
+            applicant = re.search(r"(?:분양|모집)광고일.{0,700}", body)
+            expected = reviewed["announcement_date"]
+            if applicant and expected.replace("-", ".") in applicant.group(0) and all(
+                    term in applicant.group(0) for term in ("대한민국에 거주", "19", "신청 가능")):
+                cutoff, cutoff_evidence = expected, {"page": page_number, "text": applicant.group(0)}
     if cutoff is None and reviewed and (reviewed.get("regional_review") or reviewed.get("applicant_region_review")):
         # Reviewed qualification table: the current date can be drawn after
         # the weekday or after a second-round label in the PDF stream.
@@ -690,7 +703,7 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
         inventory, inventory_status = official_supplies(pages,payload,make=make)
         if inventory:
             offered=list(dict.fromkeys(r["supply_type"] for r in inventory))
-            rules.append(make("offered_supplies",effect="metadata",supplies=inventory,inventory_status=inventory_status,quote=inventory[0].get("evidence_text"),page=inventory[0].get("evidence_page")))
+            rules.append(make("offered_supplies",effect="metadata",supplies=inventory,inventory_status=inventory_status,quote=inventory[0].get("evidence_text") or "",page=inventory[0].get("evidence_page")))
             rules=[r for r in rules if r.get("effect")=="metadata" or not r.get("supply_type") or r["supply_type"] in offered]
 
     from .shinhee_rules import a17_conditions

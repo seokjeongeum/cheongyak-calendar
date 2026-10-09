@@ -100,8 +100,13 @@ def _diagnostics_rule(entries: list[dict], status: str, digest: str | None = Non
 
 
 def _with_diagnostics(payload: dict, entries: list[dict], status: str) -> dict:
+    from .reviewed_sources import focused_review_version
+    diagnostic = _diagnostics_rule(entries, status, payload.get("document_hash"))
+    focused = focused_review_version(str(payload.get("official_url") or ""), payload.get("announcement_date"))
+    if focused:
+        diagnostic["focused_review_version"] = focused
     payload["rules"] = [r for r in payload.get("rules", []) if r.get("kind") != "document_diagnostics"] + [
-        _diagnostics_rule(entries, status, payload.get("document_hash"))]
+        diagnostic]
     payload["local_extraction_status"] = status
     payload["condition_parser_version"] = PARSER_VERSION
     return payload

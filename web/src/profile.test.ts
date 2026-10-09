@@ -159,7 +159,7 @@ describe('v4 exact family/profile migration and isolation', () => {
     const next = migrateProfile({ ...EMPTY_PROFILE, projectApplicationHistory: { '2026000323': { winning: false, contract: false, additionalResident: false, winningScope: 'applicant', contractScope: 'applicant', asOfDate: '2026-10-01', historyConfirmations: [], name: 'drop' }, other: { winning: false } }, applicationRestrictionFacts: { applicant: { ineligibleRestrictionActive: false, resaleRestrictionActive: 'false', rewinningRestrictionActive: null, asOfDate: '2026-10-01', historyConfirmations: [{ criterionDate: '2026-09-30', unchanged: true }] }, all: { ineligibleRestrictionActive: false } }, citizenship: 'eligible', overseasContinuousDays: '0' })
     expect(Object.keys(next.projectApplicationHistory)).toEqual(['2026000323'])
     expect(Object.hasOwn(next.projectApplicationHistory['2026000323'], 'name')).toBe(false)
-    expect(next.applicationRestrictionFacts).toEqual({ applicant: { ineligibleRestrictionActive: false, resaleRestrictionActive: null, rewinningRestrictionActive: null, asOfDate: '2026-10-01', historyConfirmations: [{ criterionDate: '2026-09-30', unchanged: true }] } })
+    expect(next.applicationRestrictionFacts).toEqual({ applicant: { ineligibleHistoryPresence: null, resaleViolationHistoryPresence: null, ineligibleRestrictionActive: false, resaleRestrictionActive: null, rewinningRestrictionActive: null, asOfDate: '2026-10-01', historyConfirmations: [{ criterionDate: '2026-09-30', unchanged: true }] } })
     expect(next.citizenship).toBe('unknown')
     next.projectApplicationHistory['2026000323'].winning = true
     expect(EMPTY_PROFILE.projectApplicationHistory).toEqual({})

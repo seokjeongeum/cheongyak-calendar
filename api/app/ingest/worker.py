@@ -81,6 +81,11 @@ def _save_priority(payload: dict, today: date) -> int:
 
 def _failed_document_needs_new_pipeline(existing: Notice | None) -> bool:
     """Retry an outdated failure or incomplete review once per new version."""
+    if existing and existing.source == "cheongyak_home":
+        from app.extract.reviewed_sources import focused_review_version
+        focused = focused_review_version(existing.official_url or "", existing.announcement_date.isoformat() if existing.announcement_date else None)
+        if focused and not any(rule.get("kind") == "document_diagnostics" and rule.get("focused_review_version") == focused for rule in existing.rules or []):
+            return True
     for rule in (existing.rules or []) if existing else []:
         if rule.get("kind") != "document_diagnostics":
             continue

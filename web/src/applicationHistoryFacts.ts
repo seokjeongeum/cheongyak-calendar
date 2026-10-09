@@ -7,8 +7,8 @@ function validDate(value: string): boolean {
   const [y, m, d] = value.split('-').map(Number), parsed = new Date(Date.UTC(y, m - 1, d))
   return parsed.getUTCFullYear() === y && parsed.getUTCMonth() === m - 1 && parsed.getUTCDate() === d
 }
-export function applicationHistoryEventComplete(event: ApplicationHistoryEvent, today = getEvaluationToday()): boolean {
-  return !!event.personId && /^(?:\d{10}|LH-[A-Z0-9-]{1,64})$/.test(event.projectId) && EVENT_KINDS.includes(event.eventKind) && validDate(event.eventDate) && event.eventDate <= today
+export function applicationHistoryEventComplete(event: ApplicationHistoryEvent, today = getEvaluationToday(), requireProject = false): boolean {
+  return !!event.personId && (!requireProject || /^(?:\d{10}|LH-[A-Z0-9-]{1,64})$/.test(event.projectId)) && EVENT_KINDS.includes(event.eventKind) && validDate(event.eventDate) && event.eventDate <= today
 }
 function recordedAbsencePeople(profile: LocalProfile): Set<string> {
   const absent = new Set(profile.applicationHistoryAbsencePeople || [])
@@ -24,12 +24,12 @@ export function applicationHistoryPersonPresence(profile: LocalProfile, personId
   return recordedAbsencePeople(profile).has(personId) ? false : null
 }
 /** Dated events and explicit absence cover exact identities, never new family. */
-export function applicationHistoryCoveredPeople(profile: LocalProfile, today = getEvaluationToday()): Set<string> {
+export function applicationHistoryCoveredPeople(profile: LocalProfile, today = getEvaluationToday(), requireProject = false): Set<string> {
   const covered = recordedAbsencePeople(profile)
   const events = profile.applicationHistoryEvents || []
   if (events.some((event) => !event.personId)) return new Set()
   for (const person of new Set(events.map((event) => event.personId).filter(Boolean))) {
-    if (events.filter((event) => event.personId === person).every((event) => applicationHistoryEventComplete(event, today))) covered.add(person)
+    if (events.filter((event) => event.personId === person).every((event) => applicationHistoryEventComplete(event, today, requireProject))) covered.add(person)
     else covered.delete(person)
   }
   return covered

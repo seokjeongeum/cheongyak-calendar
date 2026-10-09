@@ -50,7 +50,7 @@ export interface SupplySummary { supplyType: string; unitTypes: string[]; result
 export function supplySummaries(notice: Notice, profile: LocalProfile, decision?: CompetitionDecision, combinations?: EligibilityCombination[]): SupplySummary[] {
   const groups = new Map<string, SupplySummary>()
   for (const combo of combinations || eligibilityCombinations(notice, profile, decision)) {
-    const key = JSON.stringify([combo.supplyType, combo.result.status, actionableReasons(combo.result.reasons).map(reasonKey)])
+    const key = JSON.stringify([combo.supplyType, combo.result.status, [...new Set(actionableReasons(combo.result.reasons).map(comparisonReasonKey))].sort()])
     const previous = groups.get(key)
     if (previous) previous.unitTypes.push(combo.unitType)
     else groups.set(key, { supplyType: combo.supplyType, unitTypes: [combo.unitType], result: combo.result })
@@ -180,6 +180,13 @@ export function eligibilityCombinations(notice: Notice, profile: LocalProfile = 
 
 export function reasonKey(reason: EligibilityReason): string {
   return JSON.stringify([reason.status, reason.category, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.evidenceUrl, reason.evidenceText, reason.profileField, reason.contractPreview, reason.todayPreview, reason.historyGroup])
+}
+/** Identical factual comparisons share a card row even when the source repeats
+ * that requirement in separate unit paragraphs. Full evidence remains in the
+ * underlying combinations and expanded reasons, keyed by reasonKey.
+ */
+export function comparisonReasonKey(reason: EligibilityReason): string {
+  return JSON.stringify([reason.status, reason.category, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.profileField, reason.contractPreview, reason.todayPreview, reason.historyGroup])
 }
 export function uniqueReasons(reasons: EligibilityReason[]): EligibilityReason[] {
   return [...new Map(reasons.map((reason) => [reasonKey(reason), reason])).values()]

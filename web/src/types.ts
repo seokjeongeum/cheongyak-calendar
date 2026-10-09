@@ -187,7 +187,7 @@ export interface HouseholdMember {
 export function createHouseholdMember(id = ''): HouseholdMember { return { id, relation: 'unknown', register: 'unknown', dateOfBirth: '', ownsHome: null, previouslyOwnedHome: null } }
 export interface HouseholdHistoryConfirmation { criterionDate: string; unchanged: boolean | null }
 export type RestrictionScope = 'applicant' | 'household' | 'applicant_spouse'
-export interface ApplicationRestrictionFacts { ineligibleRestrictionActive: boolean | null; resaleRestrictionActive: boolean | null; rewinningRestrictionActive: boolean | null; asOfDate: string; historyConfirmations: HouseholdHistoryConfirmation[] }
+export interface ApplicationRestrictionFacts { ineligibleRestrictionActive: boolean | null; resaleRestrictionActive: boolean | null; rewinningRestrictionActive: boolean | null; ineligibleHistoryPresence?: boolean | null; resaleViolationHistoryPresence?: boolean | null; asOfDate: string; historyConfirmations: HouseholdHistoryConfirmation[] }
 export interface ProjectApplicationHistory { winning: boolean | null; contract: boolean | null; additionalResident: boolean | null; winningScope: RestrictionScope | 'unknown'; contractScope: RestrictionScope | 'unknown'; asOfDate: string; historyConfirmations: HouseholdHistoryConfirmation[] }
 
 export type OwnerRelation = 'applicant' | 'spouse' | 'ascendant' | 'spouse_ascendant' | 'descendant' | 'other' | 'unknown'

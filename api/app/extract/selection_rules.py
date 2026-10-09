@@ -71,7 +71,7 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
         general_text = " ".join(general_pages.get(page["page"], []))
         if not sections and inventory_types == {"일반공급"}:
             general_text = text
-        order = re.search(r"(?:■\s*)?①\s*지역\s*[:：]\s*(해당지역\s*거주자.{0,260}?(?:→|⇒|->)\s*기타지역\s*거주자[^■]{0,150})", general_text)
+        order = re.search(r"(?:■\s*)?①\s*지역\s*[:：]\s*(?:(?:입주자)?모집공고일\s*현재\s*)?(해당지역\s*거주자.{0,260}?(?:→|⇒|->)\s*기타지역\s*거주자[^■]{0,150})", general_text)
         general_allocated = any(r.get("kind") == "regional_allocation" and
             (r.get("supply_type") == "일반공급" or not r.get("supply_type") and
              (not r.get("supply_types") or "일반공급" in r["supply_types"])) for r in rules + result)
@@ -83,7 +83,7 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
         normalized = re.sub(r"1\s*/\s*전용면적별\s*순위", "전용면적별 1순위", text)
         normalized = re.sub(r"전용면적\s*(초과|이하)\s*(이하)?\s*(\d+(?:\.\d+)?)\s*(\d+(?:\.\d+)?)?\s*㎡\s*(㎡)?",
             lambda m: f"전용면적 {m[3]}㎡ {m[1]}" + (f" {m[4]}㎡ {m[2]}" if m[2] and m[4] else ""), normalized)
-        table = re.search(r"전용면적별\s*1\s*순위\s*가점제\s*/?\s*추첨제\s*적용비율(.{0,1300}?)(?:가점\s*산정기준|가점항목|■)", normalized)
+        table = re.search(r"전용면적별\s*1\s*순위\s*가점제\s*/?\s*추첨제\s*적용비율(.{0,1300}?)(?:가점\s*산정기준|가점항목|■|$)", normalized)
         if not private or not table or not re.search(r"가점제\s+추첨제", table.group(1)):
             continue
         band = re.compile(r"전용면적\s*(\d+(?:\.\d+)?)\s*(?:㎡|m²|제곱미터)\s*(이하|초과)(?:\s*(\d+(?:\.\d+)?)\s*(?:㎡|m²|제곱미터)\s*(이하))?")

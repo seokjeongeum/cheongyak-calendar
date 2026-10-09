@@ -68,7 +68,7 @@ def special_selection_rules(sections, *, inventory, rules, make):
         for page, text in page_texts.items():
             # A numbered geographic stage may be ①, ②, or ③ depending on
             # whether income and supply-specific rank come before geography.
-            region = re.search(r"[①②③④⑤]\s*지역\s*[:：]\s*해당지역\s*거주자\s*\(([^)]*)\)\s*(?:→|⇒|->)\s*기타지역\s*거주자\s*\([^)]*\)", text)
+            region = re.search(r"[①②③④⑤]\s*지역\s*[:：]\s*(?:(?:입주자)?모집공고일\s*현재\s*)?해당지역\s*거주자\s*\(([^)]*)\)\s*(?:→|⇒|->)\s*기타지역\s*거주자\s*\([^)]*\)", text)
             if region:
                 local_name = re.sub(r"\s*거주자\s*$", "", region[1]).strip()
                 local = (base_regions or {}).get("local_priority")
@@ -84,6 +84,25 @@ def special_selection_rules(sections, *, inventory, rules, make):
                 continue
             first_names = [name for name in PROVINCES if name in quota[2]]
             second_names = [name for name in PROVINCES if name in quota[4]]
+            # Seoul/Incheon use their own explicitly named province bucket.
+            # Do not substitute the different Gyeonggi city/province table.
+            capital = {"서울특별시", "인천광역시", "경기도"}
+            metro_quota = (len(first_names) == 1 and first_names[0] in {"서울특별시", "인천광역시"}
+                           and set(second_names) == capital - set(first_names)
+                           and re.search(re.escape(first_names[0]) + r"\s*거주자", quota[2]))
+            if metro_quota:
+                local_name = first_names[0]
+                advance = re.search(re.escape(local_name) + r"\s*거주자가\s*" + re.escape(quota[1]) + r"%\s*우선공급에서\s*낙첨될\s*경우[^■]{0,650}?다시\s*경쟁[^■]{0,200}?우선공급\s*요건은\s*적용되지\s*않습니다", text)
+                fields = {"regional_shares": [
+                    {"residence_area": "local", "percent": int(quota[1]), "label": quota[2], "region_codes": [PROVINCES[local_name]]},
+                    {"residence_area": "other", "percent": int(quota[3]), "label": quota[4], "region_codes": [PROVINCES[name] for name in second_names]},
+                ], "local_region": {"region_code": PROVINCES[local_name], "region_name": local_name}, **order_fields}
+                if advance:
+                    fields.update(unsuccessful_applicants_advance=True, local_priority_in_remaining_quota=False,
+                                  remaining_quota_evidence_text=advance.group(0), remaining_quota_evidence_page=page)
+                result.append(make("regional_allocation", page, quota.group(0) + (" " + advance.group(0) if advance else ""),
+                    supply_type=supply, unit_types=units, allocation_method="regional_quota", local_share_percent=None, **fields))
+                break
             # The supported 수도권 table explicitly includes all of 경기도,
             # not merely a municipality whose label begins with 경기도.
             if first_names != ["경기도"] or set(second_names) != {"서울특별시", "인천광역시"} or not re.search(r"(?:및\s*)경기도\s*거주자", quota[2]):
