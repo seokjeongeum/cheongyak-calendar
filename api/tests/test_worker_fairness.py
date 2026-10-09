@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db import init_db, make_engine
 from app.ingest import worker
+from app.ingest.common import FeedError
 from app.models import CompetitionRevision, DocumentExtractionState, IntegrationSetting, Notice, SourceStatus
 from app.repository import record_competition_result, record_source_status, upsert_notice
 from test_repository_api import example_notice
@@ -73,12 +74,13 @@ def no_network(request):
 
 
 @pytest.mark.asyncio
-async def test_all_feed_rows_and_competition_start_before_fair_serial_document_turns(store, monkeypatch):
+async def test_all_feeds_are_fetched_and_each_row_is_durable_before_fair_document_turns(store, monkeypatch):
     factory, engine = store
-    rows = {source: rows_for(source, 5 if source == "cheongyak_home" else 1) for source in SOURCES}
+    rows = {source: rows_for(source, 30 if source == "cheongyak_home" else 1) for source in SOURCES}
     # Preserve the old first audit of a newly inserted historical notice too.
-    rows["cheongyak_home"][-1]["announcement_date"] = "2026-05-01"
-    rows["cheongyak_home"][-1]["events"] = [{"kind": "general", "label": "접수", "start_date": "2026-05-10"}]
+    for historical in rows["cheongyak_home"][1:]:
+        historical["announcement_date"] = "2026-05-01"
+        historical["events"] = [{"kind": "general", "label": "접수", "start_date": "2026-05-10"}]
     rows["cheongyak_home"][0]["ingest_warning"] = "공식 상세 일부 미확보"
     observed_feeds = []
     mock_feeds(monkeypatch, rows, observed_feeds)
@@ -90,22 +92,23 @@ async def test_all_feed_rows_and_competition_start_before_fair_serial_document_t
     async def competition(**kwargs):
         nonlocal competition_started
         with factory() as session:
-            assert set(session.scalars(select(Notice.external_id))) == expected_ids
+            assert set(session.scalars(select(Notice.external_id))) == {rows["cheongyak_home"][0]["external_id"]}
         competition_started = True
         await asyncio.sleep(0)
         return {"status": "ok", "count": 0}
 
     async def enrich(payload, **kwargs):
         nonlocal active
-        assert competition_started and observed_feeds == list(SOURCES)
+        assert observed_feeds == list(SOURCES)
         active += 1
         assert active == 1  # One public document request chain, never six.
         documents.append((payload["source"], payload["external_id"]))
         with factory() as session:
-            assert set(session.scalars(select(Notice.external_id))) == expected_ids
+            durable = session.scalar(select(Notice).where(Notice.external_id == payload["external_id"]))
+            assert durable is not None and durable.document_hash is None
             state = session.get(SourceStatus, payload["source"])
             assert state.status == "running"
-            assert state.record_count == len(rows[payload["source"]])
+            assert state.record_count == sum(source == payload["source"] for source, identity in documents)
             assert state.last_success_at.replace(tzinfo=timezone.utc) == BEFORE
         # A transport wait lets all source tasks join the fair semaphore queue.
         await asyncio.sleep(0)
@@ -117,27 +120,31 @@ async def test_all_feed_rows_and_competition_start_before_fair_serial_document_t
     async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
         result = await worker.run_once(today=TODAY, client=client)
     assert [source for source, identity in documents[:len(SOURCES)]] == list(SOURCES)
+    assert competition_started
     assert {identity for source, identity in documents} == expected_ids
-    assert result["cheongyak_home"]["count"] == 5
+    assert result["cheongyak_home"]["count"] == 30
     assert result["cheongyak_home"]["missing_detail"] == 1
     assert result["gh"]["status"] == "partial"
     with factory() as session:
-        assert session.get(SourceStatus, "cheongyak_home").record_count == 5
+        assert set(session.scalars(select(Notice.external_id))) == expected_ids
+        assert session.get(SourceStatus, "cheongyak_home").record_count == 30
         assert "문서 확인" not in session.get(SourceStatus, "cheongyak_home").message
     assert engine.pool.checkedout() == 0
 
 
 @pytest.mark.asyncio
-async def test_stop_during_first_pdf_keeps_all_feed_rows_without_premature_success(store, monkeypatch):
+async def test_stop_during_first_pdf_keeps_its_raw_row_and_all_feed_attempts_without_fake_success(store, monkeypatch):
     factory, engine = store
     rows = {source: rows_for(source, 4 if source == "cheongyak_home" else 1) for source in SOURCES}
     observed_feeds = []
     mock_feeds(monkeypatch, rows, observed_feeds)
     started = asyncio.Event()
     competition_cancelled = asyncio.Event()
+    competition_started = asyncio.Event()
     document_cancelled = asyncio.Event()
 
     async def competition(**kwargs):
+        competition_started.set()
         try:
             await asyncio.Event().wait()
         finally:
@@ -155,6 +162,7 @@ async def test_stop_during_first_pdf_keeps_all_feed_rows_without_premature_succe
     async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
         cycle = asyncio.create_task(worker.run_once(today=TODAY, client=client))
         await asyncio.wait_for(started.wait(), timeout=5)
+        await asyncio.wait_for(competition_started.wait(), timeout=5)
         assert engine.pool.checkedout() == 0  # No connection while awaiting a PDF/turn.
         cycle.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -162,20 +170,58 @@ async def test_stop_during_first_pdf_keeps_all_feed_rows_without_premature_succe
     assert competition_cancelled.is_set() and document_cancelled.is_set()
     assert observed_feeds == list(SOURCES)
     with factory() as session:
-        assert set(session.scalars(select(Notice.external_id))) == {
-            row["external_id"] for source_rows in rows.values() for row in source_rows
-        }
+        assert set(session.scalars(select(Notice.external_id))) == {rows["cheongyak_home"][0]["external_id"]}
         pending = session.scalars(select(DocumentExtractionState)).all()
-        assert len(pending) == sum(len(source_rows) for source_rows in rows.values())
+        assert len(pending) == 1
         assert all(state.audited_on is None and state.deferred_until is None for state in pending)
         for source in SOURCES:
             state = session.get(SourceStatus, source)
             assert state.status == "running"
-            assert state.record_count == len(rows[source])
+            assert state.record_count == (1 if source == "cheongyak_home" else 99)
             assert state.last_success_at.replace(tzinfo=timezone.utc) == BEFORE
             assert state.last_attempt_at.replace(tzinfo=timezone.utc) > BEFORE
-            assert "문서 확인 대기" in state.message
+            assert "1/4건 저장" in state.message if source == "cheongyak_home" else "저장 순서 대기" in state.message
     assert engine.pool.checkedout() == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reb_state", ["disabled", "empty", "failed", "invalid"])
+async def test_competition_gate_finishes_without_any_valid_reb_row(store, monkeypatch, reb_state):
+    factory, _ = store
+    rows = {source: rows_for(source) for source in SOURCES}
+    observed = []
+    if reb_state == "empty":
+        rows["cheongyak_home"] = []
+    if reb_state == "invalid":
+        rows["cheongyak_home"][0]["title"] = ""
+    mock_feeds(monkeypatch, rows, observed)
+    if reb_state == "disabled":
+        monkeypatch.setattr(worker, "_api_key", lambda source: "" if source == "cheongyak_home" else "mock-key")
+    if reb_state == "failed":
+        async def failed(*args):
+            observed.append("cheongyak_home")
+            raise FeedError("공식 API 수집 실패")
+        monkeypatch.setattr(worker.reb, "collect", failed)
+    competition_calls = []
+
+    async def competition(**kwargs):
+        competition_calls.append(True)
+        with factory() as session:
+            assert not session.scalars(select(Notice).where(Notice.source == "cheongyak_home")).all()
+        return {"status": "ok", "count": 0}
+
+    async def enrich(payload, **kwargs):
+        await asyncio.sleep(0)
+        return payload
+
+    monkeypatch.setattr(worker.competition, "run_once", competition)
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        result = await asyncio.wait_for(worker.run_once(today=TODAY, client=client), timeout=5)
+    assert competition_calls == [True]
+    assert result["cheongyak_home"]["status"] == {
+        "disabled": "disabled", "empty": "partial", "failed": "error", "invalid": "partial",
+    }[reb_state]
 
 
 @pytest.mark.asyncio

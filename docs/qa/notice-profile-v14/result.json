@@ -3,8 +3,8 @@
   "synthetic_profiles_only": true,
   "public_api_fixtures_only": true,
   "base": "https://qa.invalid",
-  "build_asset": "/assets/index-DS8qZBM8.js",
-  "build_asset_sha256": "25bc226204480a97597cc067dc30dd7782515246c1b4fa9610a42b50e15192b2",
+  "build_asset": "/assets/index-BQtWgNst.js",
+  "build_asset_sha256": "f6882dd22dd5d9d29d7aae9cf77961ba0daf03717dffa3ee700d5b348881fc44",
   "checks_passed": 76,
   "checks": [
     "365px entire unavailable card starts closed with title/address/status retained",

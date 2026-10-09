@@ -13,6 +13,7 @@ import copy
 import logging
 import os
 import signal
+from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone
 from time import monotonic
@@ -118,11 +119,23 @@ def _save_progress(
     return state
 
 
+def _pending_url_payload(payload: dict, existing: Notice | None, url_changed: bool) -> dict:
+    """Keep the current hash's review until a revised page's file is read."""
+    if (url_changed and existing and existing.document_hash
+            and payload.get("document_hash") in {None, existing.document_hash}):
+        incoming_rules = payload.get("rules", [])
+        return {**payload, "document_hash": existing.document_hash,
+                "rules": merge_poll_rules(existing.rules or [], incoming_rules,
+                    metadata_only=all(is_metadata(r) for r in incoming_rules))}
+    return payload
+
+
 async def _save_rows(
     source: str, rows: list[dict], client: httpx.AsyncClient, today: date,
     source_warning: str | None = None,
     *, audit_documents: bool = True, finalize: bool = True,
     document_semaphore: asyncio.Semaphore | None = None, stored_count: int | None = None,
+    persist_before_audit: bool = False, on_raw_saved: Callable[[dict], None] | None = None,
 ) -> tuple[int, int, int, int, int, int, str]:
     saved = 0
     invalid = 0
@@ -169,6 +182,28 @@ async def _save_rows(
                         and _active_notice(payload, today)
                     ))
                 )
+                if persist_before_audit and should_audit:
+                    try:
+                        # Commit this row before its own PDF wait, rather than
+                        # blocking every source on a full archival DB pass.
+                        existing = lock_notice(session, source, identity[1])
+                        extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
+                        url_changed = existing is not None and existing.official_url != payload.get("official_url")
+                        payload = _pending_url_payload(payload, existing, url_changed)
+                        existing = upsert_notice(session, payload)
+                        if extraction_state is None:
+                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                            session.add(extraction_state)
+                        extraction_state.audited_on = None
+                        source_state = _save_progress(session, source_state, source, saved + 1, len(rows))
+                        session.commit()
+                        if on_raw_saved:
+                            on_raw_saved(payload)
+                    except (ValueError, TypeError) as exc:
+                        session.rollback()
+                        invalid += 1
+                        LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
+                        continue
                 if audit_documents and should_audit:
                     try:
                         # Public PDF/HWP/HWPX parsing does not require a model key.
@@ -222,15 +257,8 @@ async def _save_rows(
                     except Exception as exc:  # one bad document cannot block a feed
                         LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
                 try:
-                    if (not audit_documents and url_changed and existing and existing.document_hash
-                            and payload.get("document_hash") in {None, existing.document_hash}):
-                        # A revised page URL alone proves no byte replacement.
-                        # Keep the known review with its original provenance
-                        # until the pending audit reads the new attachment.
-                        incoming_rules = payload.get("rules", [])
-                        payload = {**payload, "document_hash": existing.document_hash,
-                                   "rules": merge_poll_rules(existing.rules or [], incoming_rules,
-                                       metadata_only=all(is_metadata(r) for r in incoming_rules))}
+                    if not audit_documents:
+                        payload = _pending_url_payload(payload, existing, url_changed)
                     notice = upsert_notice(session, payload)
                     if not audit_documents and (existing is None or url_changed):
                         # Keep a durable pending first/revised-URL audit across
@@ -241,6 +269,8 @@ async def _save_rows(
                         extraction_state.audited_on = None
                     source_state = _save_progress(session, source_state, source, saved + 1, len(rows), stored_count)
                     session.commit()
+                    if on_raw_saved:
+                        on_raw_saved(payload)
                     saved += 1
                     if not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices):
                         missing_prices += 1
@@ -286,7 +316,7 @@ async def _save_rows(
 
 
 async def run_once(*, today: date | None = None, client: httpx.AsyncClient | None = None) -> dict[str, dict]:
-    """Save all feed schedules before fairly auditing their public documents."""
+    """Fetch all sources, then durably save and audit one fair row at a time."""
     # httpx INFO request logs include query strings and therefore serviceKey.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -296,7 +326,8 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
     own_client = client is None
     client = client or httpx.AsyncClient(headers={"User-Agent": "CheongyakCalendar/1.0 (+public housing notice index)"}, follow_redirects=True)
     results: dict[str, dict] = {}
-    pending_documents: dict[str, tuple[list[dict], str | None, int]] = {}
+    pending_documents: dict[str, tuple[list[dict], str | None]] = {}
+    competition_ready = asyncio.Event()
 
     def failed_source(source: str, exc: Exception) -> None:
         # Avoid leaking URL query strings containing the service key. Retain
@@ -304,16 +335,18 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
         LOGGER.error("%s collection failed: %s", source, type(exc).__name__)
         message = str(exc) if isinstance(exc, FeedError) else f"수집 실패: {type(exc).__name__}"
         with SessionLocal() as session:
-            record_source_status(session, source, "error", message)
+            state = record_source_status(session, source, "error", message)
+            saved = (state.record_count or 0) if source in pending_documents else 0
             session.commit()
-        results[source] = {"status": "error", "count": pending_documents.get(source, ([], None, 0))[2]}
+        results[source] = {"status": "error", "count": saved}
 
     async def audit_source(source: str, semaphore: asyncio.Semaphore) -> None:
-        rows, warning, stored_count = pending_documents[source]
+        rows, warning = pending_documents[source]
         try:
             saved, invalid, deferred, missing_prices, missing_dates, missing, status = await _save_rows(
                 source, rows, client, today, warning,
-                document_semaphore=semaphore, stored_count=stored_count,
+                document_semaphore=semaphore, persist_before_audit=True,
+                on_raw_saved=(lambda payload: competition_ready.set()) if source == "cheongyak_home" else None,
             )
             results[source] = {
                 "status": status, "count": saved, "invalid": invalid, "deferred": deferred,
@@ -321,11 +354,16 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
             }
         except Exception as exc:
             failed_source(source, exc)
+        finally:
+            if source == "cheongyak_home":
+                # Empty/invalid/failed sources must not leave the rate task
+                # waiting for a first row that can never be committed.
+                competition_ready.set()
 
     async def collect_competition() -> None:
-        # Competition can start from durable feed rows while the single
-        # document turn processes public files; its version guards still reject
-        # any source revision committed during a result request.
+        # Do not snapshot an empty first-install database before a REB row is
+        # durable. Later fresh rows are picked up in the next normal cycle.
+        await competition_ready.wait()
         try:
             results[competition.SOURCE] = await competition.run_once(today=today, client=client)
         except Exception as exc:
@@ -363,13 +401,15 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     rows = await boards.collect_sh(client, start, end)
                 else:
                     rows, source_warning = await boards.collect_gh(client, start, end)
-                saved, *_ = await _save_rows(
-                    source, copy.deepcopy(rows), client, today, source_warning,
-                    audit_documents=False, finalize=False,
-                )
-                pending_documents[source] = (rows, source_warning, saved)
+                pending_documents[source] = (rows, source_warning)
+                with SessionLocal() as session:
+                    state = session.get(SourceStatus, source)
+                    state.message = f"공식 공고 {len(rows)}건 조회 · 저장 순서 대기"
+                    session.commit()
             except Exception as exc:
                 failed_source(source, exc)
+        if not pending_documents.get("cheongyak_home", ([], None))[0]:
+            competition_ready.set()
         # A fair semaphore permits exactly one document audit at a time. Each
         # source yields after a committed row, so an archival first source cannot
         # monopolize every document turn. TaskGroup cancels siblings on stop.

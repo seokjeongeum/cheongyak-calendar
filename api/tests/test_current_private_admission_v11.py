@@ -66,6 +66,13 @@ def test_nomination_types_are_not_inferred_from_other_project_or_area(row):
     assert "추천 및 인정서류" in rule["evidence_text"]
     assert rule["allowed_reasons"] == (["장애인", "국가유공자·보훈"] if row is YONGIN else ["장애인", "국가유공자·보훈", "중소기업 장기근속", "장기복무 군인"])
     assert "제대군인" in rule["unsupported_reason_label"]
+    assert rule["unsupported_reasons"] == (["장기복무 군인", "기타"] if row is YONGIN else ["기타"])
+    # The exact Yongin table lists only disabled, national-merit and retired
+    # military recommendations. A known SME/refugee category is not a missing
+    # interpretation of one of those listed categories.
+    assert "북한이탈주민" not in rule["allowed_reasons"] + rule["unsupported_reasons"]
+    if row is YONGIN:
+        assert "중소기업 장기근속" not in rule["allowed_reasons"] + rule["unsupported_reasons"]
 
 
 @pytest.mark.parametrize("row", ROWS)

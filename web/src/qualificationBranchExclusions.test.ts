@@ -44,6 +44,20 @@ describe('concrete institution ineligibility', () => {
     expect(evaluateRule(bank, profile({ accountType: 'none', recommendationReason: '장애인', recommendationStatus: 'pending' }), notice([bank])).status).toBe('review')
     expect(evaluateRule(bank, profile({ accountType: 'none' }), notice([bank])).status).toBe('review')
   })
+  it('separates exact Yongin exclusions from its genuinely unmodeled nomination subsets', () => {
+    const nomination = rule('recommendation', { supply_type: institution, allowed_reasons: ['장애인', '국가유공자·보훈'], unsupported_reasons: ['장기복무 군인', '기타'], unsupported_reason_label: '공고에 열거된 장기복무 제대군인·철거주택 소유자의 별도 추천 분기', require_confirmed: true })
+    const bank = rule('account_type', { supply_type: institution, allowed_values: ['comprehensive', 'deposit', 'installment'] })
+    const n = notice([nomination, bank])
+    const p = profile({ accountType: 'comprehensive', recommendationStatus: 'confirmed' })
+    for (const recommendationStatus of ['confirmed', 'pending', 'unknown'] as const) expect(evaluateQualification(n, { ...p, recommendationReason: '중소기업 장기근속', recommendationStatus }, undefined, institution)).toMatchObject({ status: 'mismatch', reasons: [{ status: 'fail', category: 'condition', label: '기관추천 대상 사유' }, { status: 'pass' }] })
+    expect(evaluateQualification(n, { ...p, recommendationReason: '장애인' }, undefined, institution).status).toBe('possible')
+    for (const recommendationReason of ['장기복무 군인', '기타']) expect(evaluateQualification(n, { ...p, recommendationReason }, undefined, institution)).toMatchObject({ status: 'review', reasons: [{ status: 'review', category: 'source_gap', label: nomination.unsupported_reason_label }, { status: 'pass' }] })
+    for (const recommendationReason of ['', 'unknown']) expect(evaluateRule(nomination, { ...p, recommendationReason }, n)).toMatchObject({ status: 'review', category: 'missing_input', profileField: 'recommendationReason' })
+  })
+  it('retains conservative review for old sources without an explicit unsupported subset', () => {
+    const r = rule('recommendation', { allowed_reasons: ['장애인'], unsupported_reason_label: '추천 사유의 별도 공식 분기' })
+    expect(evaluateRule(r, profile({ recommendationReason: '중소기업 장기근속', recommendationStatus: 'confirmed' }), notice([r]))).toMatchObject({ status: 'review', category: 'source_gap', label: r.unsupported_reason_label })
+  })
 })
 
 describe('applicability of exact unresolved legal exceptions', () => {

@@ -952,9 +952,15 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     return factualBoolean(rule, notice, true, '과거 주택 미소유')
   }
   if (rule.kind === 'recommendation') {
-    if (profile.recommendationStatus === 'unknown' || !profile.recommendationReason) return missingInput(rule, notice, '기관추천', '추천 대상 사유와 해당 기관의 추천 상태를 입력하세요.', undefined, !profile.recommendationReason ? 'recommendationReason' : 'recommendationStatus')
+    if (!profile.recommendationReason || profile.recommendationReason === 'unknown') return missingInput(rule, notice, '기관추천', '추천 대상 사유를 입력하세요.', undefined, 'recommendationReason')
     const allowed = Array.isArray(rule.allowed_reasons) ? rule.allowed_reasons : typeof rule.value === 'string' ? [rule.value] : []
     const matches = allowed.length > 0 && allowed.includes(profile.recommendationReason)
+    const unsupportedReasons = Array.isArray(rule.unsupported_reasons) ? rule.unsupported_reasons.filter((value): value is string => typeof value === 'string') : null
+    // An exact reviewed source can distinguish a real unmodeled subset from
+    // a named reason it does not accept. A generic gap label cannot rescue
+    // that known exclusion; older unstructured sources remain conservative.
+    if (allowed.length > 0 && !matches && unsupportedReasons && !unsupportedReasons.includes(profile.recommendationReason)) return reason(rule, notice, 'fail', '기관추천 대상 사유', `추천 사유 ${profile.recommendationReason}는 이 공고가 열거한 기관추천 대상에 해당하지 않습니다.`, profile.recommendationReason, `공식 추천 사유 ${allowed.join(', ')}`)
+    if (profile.recommendationStatus === 'unknown') return missingInput(rule, notice, '기관추천', '해당 기관의 추천 상태를 입력하세요.', undefined, 'recommendationStatus')
     if (profile.recommendationStatus === 'confirmed' && !matches && typeof rule.unsupported_reason_label === 'string') return unsupported(rule, notice, `추천 사유 ${profile.recommendationReason}는 확인했으나 이 사유의 공식 추천·통장 면제 분기를 아직 비교에 반영하지 못했습니다.`, rule.unsupported_reason_label)
     return reason(rule, notice, profile.recommendationStatus === 'confirmed' && matches ? 'pass' : 'review', '기관추천', `추천 사유 ${profile.recommendationReason} · 상태 ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, `${profile.recommendationReason} / ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, allowed.length ? `공식 추천 사유 ${allowed.join(', ')}` : '공고의 공식 추천 사유 미확인')
   }

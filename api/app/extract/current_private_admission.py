@@ -11,7 +11,7 @@ import re
 
 from .hangang_admission import DEPOSIT_TABLE, GENERAL, INCOME_140, INCOME_160, SPECIALS
 
-REVIEW_VERSION = "current-private-admission-2026-10-09-v1"
+REVIEW_VERSION = "current-private-admission-2026-10-09-v2"
 SOURCE_LAYOUTS = {
     "b08df1475867c4c75e2d7f3d2d94e63be338975dc9ae5578638aa8dc9e56cf96": {
         "title": "용인 양지 서희스타힐스 하이뷰", "count": 58, "summary": 1, "active": 1,
@@ -21,6 +21,7 @@ SOURCE_LAYOUTS = {
         "newborn_income": 19, "newborn_asset": 19, "newborn_scope": 19, "ownership": 23,
         "newlywed_income": 14, "newlywed_asset": 15, "newlywed_policy": 14, "newlywed_scope": 15,
         "reasons": ["장애인", "국가유공자·보훈"],
+        "unsupported_reasons": ["장기복무 군인", "기타"],
     },
     "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01": {
         "title": "향남역 그로브 스위첸", "count": 94, "summary": 2, "active": 2,
@@ -30,6 +31,7 @@ SOURCE_LAYOUTS = {
         "newborn_income": 23, "newborn_asset": 24, "newborn_scope": 24, "elder": 18, "ownership": 49, "benefits": 37,
         "newlywed_income": 17, "newlywed_asset": 18, "newlywed_policy": 16, "newlywed_scope": 17,
         "reasons": ["장애인", "국가유공자·보훈", "중소기업 장기근속", "장기복무 군인"],
+        "unsupported_reasons": ["기타"],
     },
     "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e": {
         "title": "향남역 그로브 스위첸", "count": 95, "summary": 2, "active": 2,
@@ -39,6 +41,7 @@ SOURCE_LAYOUTS = {
         "newborn_income": 24, "newborn_asset": 25, "newborn_scope": 24, "elder": 19, "ownership": 50, "benefits": 38,
         "newlywed_income": 18, "newlywed_asset": 19, "newlywed_policy": 17, "newlywed_scope": 18,
         "reasons": ["장애인", "국가유공자·보훈", "중소기업 장기근속", "장기복무 군인"],
+        "unsupported_reasons": ["기타"],
     },
 }
 
@@ -142,6 +145,7 @@ def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
             output.append(group)
             output.append(make("recommendation", supply=supply, require_confirmed=True, includes_reserve_nomination=True,
                                allowed_reasons=layout["reasons"], unsupported_reason_label="공고에 열거된 장기복무 제대군인·철거주택 소유자의 별도 추천 분기",
+                               unsupported_reasons=layout["unsupported_reasons"],
                                unsupported_reason_evidence_page=nomination["page"], unsupported_reason_evidence_text=source[nomination["page"]][:900], **nomination))
             conditional[supply].append({"topic": "장기복무 제대군인·철거주택 소유자의 추천·통장 면제 분기", "status": "partial", "required": False,
                                        "phase": "conditional_admission", "rule_ids": [], "reason": "장기복무 제대군인·철거주택 소유자의 추천·통장 면제 분기"})

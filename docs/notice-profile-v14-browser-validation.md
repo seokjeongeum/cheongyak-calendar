@@ -1,7 +1,9 @@
 # Complete notice disclosure and factual profile browser validation
 
 Validated on 2026-10-09: **76 real Chromium checks passed** against production
-build asset `/assets/index-DS8qZBM8.js`, at 365px, 375px, and 1280px. The isolated
+build asset `/assets/index-BQtWgNst.js`, at 365px, 375px, and 1280px. Its SHA-256 is
+`f6882dd22dd5d9d29d7aae9cf77961ba0daf03717dffa3ee700d5b348881fc44`.
+The isolated
 pages had no JavaScript exceptions, horizontal overflow, POST requests, or
 additional API requests after disclosure, profile-input, or focus actions.
 See `docs/qa/notice-profile-v14/result.json` and the ten screenshots beside it.
