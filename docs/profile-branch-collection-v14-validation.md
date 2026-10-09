@@ -1,6 +1,6 @@
 # Factual profile, applicant branches and collection recovery
 
-Validated on 2026-10-09 against parser `official-sections-2026-10-09-v12` and
+Validated on 2026-10-09 against parser `official-sections-2026-10-09-v13` and
 document pipeline `official-downloads-2026-10-09-v13`.
 
 ## Resulting behavior
@@ -39,6 +39,7 @@ the review. Previous compatible source facts remain available during reprocessin
 | 향남역 그로브 스위첸 · 2026000463 · original | 2026-10-02 | 94 | `718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01` |
 | 향남역 그로브 스위첸 · 2026000463 · corrected | 2026-10-02 | 95 | `b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e` |
 | 더샵 오산역아크시티 오피스텔 · 2026950086 | 2026-10-07 | 30 | `6ef50fdb5c67dc7a7e9ec8dcb2d558e37438deb0a24300bc419be7063fa06db4` |
+| 천안 아이파크 시티 2단지(2회차) · 2026000498 · October 8 correction | 2026-10-02 criterion | 65 | `5f7606fc2b8ef879b63a95307b7c462cd504ccc7d22960aa3520d70df49d1f12` |
 
 The reviews add actual nomination categories, applicable account conditions,
 family and tax branches, financial thresholds and their household scope. The
@@ -53,6 +54,13 @@ Osan uses its own October 7 attachment (`atchmnflSeqNo=1988108`,
 `atchmnflSn=5`). Its domestic-residence/age and unrestricted applicant-region
 clauses include foreign applicants. Apartment account/rank conditions are not
 inferred from its address or from a previous apartment notice.
+
+Cheonan's latest attachment (`atchmnflSeqNo=1991055`, `atchmnflSn=2`)
+is an October 8 correction with a new hash and 65 pages. Its own page 5 retains
+the October 2 qualification cutoff and explicitly permits Chungnam, Daejeon and
+Sejong applicants, with Cheonan priority. Its page 6 supply inventory totals
+61 units. The separate reviewed correction does not borrow the original
+64-page document's hash or certify its unresolved admission/rank conditions.
 
 ## Durable collection and concurrent result proofs
 
@@ -97,10 +105,11 @@ and an external scheduler are separate from these lifecycle safeguards.
 
 ## Verification
 
-- Full API suite: **508 passed**, including list/detail projection,
+- Full API suite: **514 passed**, including list/detail projection,
   interruption/lease races, cancellation, source fairness, persistent pending
   audits, current-batch delivery before blocked archival models, preserved
-  current counts during cancellation/failure and concurrent competition revisions.
+  current counts during cancellation/failure, exact corrected Cheonan document
+  identity/regions/inventory and concurrent competition revisions.
 - Full web suite: **531 passed**; TypeScript and production Vite build passed.
 - Offline diagnosis against the current Hangang/Yongin/Hyangnam source
   snapshots: **33 checks passed**, including current account and nomination

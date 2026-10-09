@@ -120,6 +120,31 @@ REVIEWED_SOURCES.update({'2026910251': {'title': '충정로역자이르네', 'an
 
 REVIEWED_SOURCES["2026000444"]["rank_reviewed_pages"] = [9]
 
+# The current official detail links this October 8 correction. Its added
+# cover page shifts the source clauses, and its changed supply/price layouts
+# receive an independent hash review rather than borrowing the original PDF.
+REVIEWED_SOURCES["2026000498-corrected-20261008"] = {
+    "title": "천안 아이파크 시티 2단지(2회차)",
+    "announcement_date": "2026-10-02", "housing_kind": "private",
+    "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026000498&pblancNo=2026000498&atchmnflSeqNo=1991055&atchmnflSn=2",
+    "document_hash": "5f7606fc2b8ef879b63a95307b7c462cd504ccc7d22960aa3520d70df49d1f12",
+    "correction_publication_date": "2026-10-08", "correction_reviewed": True,
+    "supersedes_document_hash": "dd62febed115a2ed2c457820e9aa9fcb10df93b4c017764f36b6d1273f23400d",
+    "reviewed_pages": [1, 2, 5, 6, 23], "document_page_count": 65,
+    "regional_review": True, "region_page": 5,
+    "regions": [{"region_code": "44", "region_name": "충청남도"},
+                {"region_code": "30", "region_name": "대전광역시"},
+                {"region_code": "36", "region_name": "세종특별자치시"}],
+    "local_priority": {"region_code": "44130", "region_name": "충청남도 천안시", "min_months": 0},
+    "priority_applicable": True, "adult_or_minor_page": 5,
+    "military_page": 6,
+    "military_exception": {"min_years": 10, "currently_serving": True, "residence_area": "local"},
+    "inventory_page": 6,
+    "inventory_columns": ["기관추천 특별공급", "다자녀가구 특별공급", "신혼부부 특별공급", "노부모부양 특별공급", "생애최초 특별공급", "신생아 특별공급", "일반공급"],
+    "inventory_units": {"084.9800A": [4, 4, 5, 1, 3, 4, 16], "084.9700B": [2, 2, 4, 1, 1, 2, 12]},
+    "exclusive_areas": {"084.9800A": 84.98, "084.9700B": 84.97},
+}
+
 def reviewed_document_url(official_url: str) -> str | None:
     parsed = urlparse(official_url)
     if parsed.scheme != "https" or parsed.hostname not in {"www.applyhome.co.kr", "applyhome.co.kr"}:

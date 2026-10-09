@@ -168,3 +168,4 @@ def test_procedure_guidance_and_compatible_previous_parser_facts_remain_availabl
     assert all("서류" not in topic for scope in scopes(parse()).values() for topic in scope["missing_topics"])
     assert parser_version_usable({"source": "official_document_parser", "parser_version": "official-sections-2026-10-07-v9"})
     assert parser_version_usable({"source": "official_document_parser", "parser_version": "official-sections-2026-10-09-v10"})
+    assert parser_version_usable({"source": "official_document_parser", "parser_version": "official-sections-2026-10-09-v12"})

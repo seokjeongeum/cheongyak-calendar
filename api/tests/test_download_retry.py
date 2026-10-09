@@ -2,6 +2,7 @@
 import hashlib
 import io
 import zipfile
+from collections import Counter
 
 import httpx
 import pytest
@@ -101,8 +102,14 @@ async def test_enrichment_exhausted_fallback_exposes_actual_host_statuses_withou
     entries = rule["diagnostics"]
     assert next(entry for entry in entries if entry["stage"] == "discovery" and entry["status"] == "error")["evidence_url"] == requested[0]
     failures = [entry for entry in entries if entry["stage"] == "download" and entry["status"] == "error"]
-    assert len(failures) == 2 * pipeline.MAX_DOWNLOAD_ATTEMPTS
-    assert {(entry["evidence_url"], entry["http_status"]) for entry in failures} == {(STATIC, 500), (WWW, 503)}
+    corrected_static = STATIC.replace("atchmnflSn=1", "atchmnflSn=2")
+    corrected_www = corrected_static.replace("static.applyhome.co.kr", "www.applyhome.co.kr")
+    assert requested[1:3] == [corrected_static, corrected_www]
+    assert Counter((entry["evidence_url"], entry["http_status"]) for entry in failures) == {
+        (corrected_static, 404): 1, (corrected_www, 404): 1,
+        (STATIC, 500): pipeline.MAX_DOWNLOAD_ATTEMPTS,
+        (WWW, 503): pipeline.MAX_DOWNLOAD_ATTEMPTS,
+    }
     assert not any(entry["code"] == "document_read" for entry in entries)
 
 
