@@ -316,7 +316,7 @@ async def _save_rows(
 
 
 async def run_once(*, today: date | None = None, client: httpx.AsyncClient | None = None) -> dict[str, dict]:
-    """Fetch all sources, then durably save and audit one fair row at a time."""
+    """Collect sources independently and durably audit one fair row at a time."""
     # httpx INFO request logs include query strings and therefore serviceKey.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -373,51 +373,57 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 session.commit()
             results[competition.SOURCE] = {"status": "error", "count": 0}
 
-    try:
-        for source in ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh"):
+    async def collect_source(source: str, semaphore: asyncio.Semaphore) -> None:
+        try:
             key = _api_key(source)
             if source not in ("sh", "gh") and not key:
                 with SessionLocal() as session:
                     record_source_status(session, source, "disabled", "공공데이터포털 API 키 미설정")
                     session.commit()
                 results[source] = {"status": "disabled", "count": 0}
-                continue
+                return
             # Commit before the potentially long network request so coverage
             # can distinguish active collection from an untouched source.
             with SessionLocal() as session:
                 record_source_status(session, source, "running", "공식 공고 수집 중")
                 session.commit()
-            try:
-                source_warning = None
-                if source == "cheongyak_home":
-                    rows = await reb.collect(client, key, start, end)
-                elif source == "myhome":
-                    rows = await myhome.collect(client, key, start, end)
-                elif source == "lh":
-                    rows = await lh.collect(client, key, start, end)
-                elif source == "ih":
-                    rows = await ih.collect(client, key, start, end)
-                elif source == "sh":
-                    rows = await boards.collect_sh(client, start, end)
-                else:
-                    rows, source_warning = await boards.collect_gh(client, start, end)
-                pending_documents[source] = (rows, source_warning)
-                with SessionLocal() as session:
-                    state = session.get(SourceStatus, source)
-                    state.message = f"공식 공고 {len(rows)}건 조회 · 저장 순서 대기"
-                    session.commit()
-            except Exception as exc:
-                failed_source(source, exc)
-        if not pending_documents.get("cheongyak_home", ([], None))[0]:
-            competition_ready.set()
+            source_warning = None
+            if source == "cheongyak_home":
+                rows = await reb.collect(client, key, start, end)
+            elif source == "myhome":
+                rows = await myhome.collect(client, key, start, end)
+            elif source == "lh":
+                rows = await lh.collect(client, key, start, end)
+            elif source == "ih":
+                rows = await ih.collect(client, key, start, end)
+            elif source == "sh":
+                rows = await boards.collect_sh(client, start, end)
+            else:
+                rows, source_warning = await boards.collect_gh(client, start, end)
+            pending_documents[source] = (rows, source_warning)
+            with SessionLocal() as session:
+                state = session.get(SourceStatus, source)
+                state.message = f"공식 공고 {len(rows)}건 조회 · 저장 순서 대기"
+                session.commit()
+            # Even an immediate/cached collector gives the other source tasks
+            # a chance to start. A slow source never gates ready documents.
+            await asyncio.sleep(0)
+            await audit_source(source, semaphore)
+        except Exception as exc:
+            failed_source(source, exc)
+        finally:
+            if source == "cheongyak_home":
+                competition_ready.set()
+
+    try:
         # A fair semaphore permits exactly one document audit at a time. Each
         # source yields after a committed row, so an archival first source cannot
         # monopolize every document turn. TaskGroup cancels siblings on stop.
         semaphore = asyncio.Semaphore(1)
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(collect_competition())
-            for source in pending_documents:
-                tasks.create_task(audit_source(source, semaphore))
+            for source in ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh"):
+                tasks.create_task(collect_source(source, semaphore))
         return results
     finally:
         if own_client:

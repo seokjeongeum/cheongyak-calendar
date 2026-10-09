@@ -74,7 +74,7 @@ def no_network(request):
 
 
 @pytest.mark.asyncio
-async def test_all_feeds_are_fetched_and_each_row_is_durable_before_fair_document_turns(store, monkeypatch):
+async def test_all_source_tasks_start_and_ready_rows_are_durable_before_fair_document_turns(store, monkeypatch):
     factory, engine = store
     rows = {source: rows_for(source, 30 if source == "cheongyak_home" else 1) for source in SOURCES}
     # Preserve the old first audit of a newly inserted historical notice too.
@@ -129,6 +129,77 @@ async def test_all_feeds_are_fetched_and_each_row_is_durable_before_fair_documen
         assert set(session.scalars(select(Notice.external_id))) == expected_ids
         assert session.get(SourceStatus, "cheongyak_home").record_count == 30
         assert "문서 확인" not in session.get(SourceStatus, "cheongyak_home").message
+    assert engine.pool.checkedout() == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("slow_source", ["myhome", "gh"])
+async def test_slow_collector_does_not_gate_other_sources_or_their_durable_documents(store, monkeypatch, slow_source):
+    factory, engine = store
+    rows = {source: rows_for(source) for source in SOURCES}
+    observed = []
+    mock_feeds(monkeypatch, rows, observed)
+    slow_started = asyncio.Event()
+    slow_cancelled = asyncio.Event()
+    document_cancelled = asyncio.Event()
+    ready_documents = asyncio.Event()
+    hold_source = "gh" if slow_source == "myhome" else "sh"
+    documented = set()
+    competition_calls = []
+
+    async def blocked(*args):
+        observed.append(slow_source)
+        slow_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            slow_cancelled.set()
+
+    monkeypatch.setattr(worker.myhome if slow_source == "myhome" else worker.boards,
+                        "collect" if slow_source == "myhome" else "collect_gh", blocked)
+
+    async def competition(**kwargs):
+        competition_calls.append(True)
+        with factory() as session:
+            assert session.scalar(select(Notice).where(Notice.source == "cheongyak_home")) is not None
+        return {"status": "ok", "count": 0}
+
+    async def enrich(payload, **kwargs):
+        assert slow_started.is_set() and observed == list(SOURCES)
+        with factory() as session:
+            assert session.scalar(select(Notice).where(Notice.external_id == payload["external_id"])) is not None
+            blocked_state = session.get(SourceStatus, slow_source)
+            assert blocked_state.status == "running" and blocked_state.message == "공식 공고 수집 중"
+        documented.add(payload["source"])
+        if payload["source"] == hold_source:
+            ready_documents.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                document_cancelled.set()
+        await asyncio.sleep(0)
+        return payload
+
+    monkeypatch.setattr(worker.competition, "run_once", competition)
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        cycle = asyncio.create_task(worker.run_once(today=TODAY, client=client))
+        await asyncio.wait_for(ready_documents.wait(), timeout=5)
+        assert documented == set(SOURCES) - {slow_source}
+        assert competition_calls == [True]
+        assert engine.pool.checkedout() == 0
+        cycle.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await cycle
+    assert slow_cancelled.is_set() and document_cancelled.is_set()
+    with factory() as session:
+        assert not session.scalars(select(Notice).where(Notice.source == slow_source)).all()
+        held = session.scalar(select(Notice).where(Notice.source == hold_source))
+        assert held is not None
+        assert session.get(DocumentExtractionState, (hold_source, held.external_id)).audited_on is None
+        assert session.get(SourceStatus, hold_source).last_success_at.replace(tzinfo=timezone.utc) == BEFORE
+        assert session.get(SourceStatus, slow_source).last_success_at.replace(tzinfo=timezone.utc) == BEFORE
+        assert all(session.get(SourceStatus, source).last_attempt_at.replace(tzinfo=timezone.utc) > BEFORE for source in SOURCES)
     assert engine.pool.checkedout() == 0
 
 

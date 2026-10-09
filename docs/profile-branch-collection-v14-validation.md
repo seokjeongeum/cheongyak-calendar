@@ -56,12 +56,13 @@ inferred from its address or from a previous apartment notice.
 
 ## Durable collection and concurrent result proofs
 
-All six provider lists are fetched before document audits, recording each
-actual collection attempt. Reception/recent rows receive the first document
-turns. Each turn saves that row's structured schedule/price and durable pending
-audit before awaiting its public document. The source tasks share one fair
-audit turn; a large historical source cannot monopolize every turn or require
-every archival row to be saved before other providers start. Source state
+The six provider collectors start independently, recording each actual
+collection attempt. A source whose list is ready starts its reception/recent
+rows without waiting for a slower provider. Each turn saves that row's
+structured schedule/price and durable pending audit before awaiting its public
+document. The source tasks share one fair audit turn; a large historical source
+cannot monopolize every turn or require every archival row to be saved before
+other providers start. Source state
 distinguishes stored rows and pending review from a successful completed source.
 Pending document state is durable across cancellation/restart. Previous
 hash-bound rules, prices, rates, revisions and integration settings are retained.
@@ -87,7 +88,7 @@ and an external scheduler are separate from these lifecycle safeguards.
 
 ## Verification
 
-- Full API suite: **497 passed**, including list/detail projection,
+- Full API suite: **499 passed**, including list/detail projection,
   interruption/lease races, cancellation, source fairness, persistent pending
   audits and concurrent competition revisions.
 - Full web suite: **531 passed**; TypeScript and production Vite build passed.
@@ -107,6 +108,8 @@ Before deployment, public collection state still showed the previous job
 interrupted at 09:24:41 UTC, with 59 Cheongyak records and other feeds unattempted.
 The first rollout (`d422766`) deployed and resumed that collection, but live
 progress exposed a slow global save barrier across 434 archival feed rows.
-The per-row durability/fairness refinement above removes that barrier. This
-report records local verified behavior; production activation and live source
+The second rollout removed that barrier; a slow MyHome list response then
+demonstrated why collection must proceed independently for each provider too.
+The final per-source/per-row refinement above removes both barriers. This report
+records local verified behavior; production activation and live source
 processing require checking the final deployed public APIs.
