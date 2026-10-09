@@ -11,6 +11,7 @@ import json
 import mimetypes
 import os
 import re
+import sys
 from copy import deepcopy
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -46,6 +47,21 @@ def fixtures():
     unknown = fixture("qa-unknown", "미확인 국적 회귀 검증", [rule("citizenship", ["korean"], supply_type="일반공급")])
     mixed = fixture("qa-mixed", "일반공급 가능·노부모 불일치 검증", [rule("age_min", 19, supply_type="일반공급"), rule("parent_age_min", 65, supply_type="노부모부양 특별공급")], ["일반공급", "노부모부양 특별공급"])
     return [outside, possible, unknown, mixed]
+
+
+def sangok_official_fixture():
+    """Parse the exact local official PDF text rather than mock its conditions."""
+    root = Path(__file__).resolve().parents[2]
+    sys.path.insert(0, str(root / "api"))
+    from app.extract.official_rules import parse_official_rules
+    source = next(row for row in json.loads((root / "api/tests/fixtures/current-oct8-regions.json").read_text()) if row["external_id"] == "2026000458")
+    stock = json.loads((root / "api/tests/fixtures/sangok-current-feed-inventory.json").read_text())
+    payload = deepcopy(source["payload"])
+    payload["rules"] = [{"kind": "offered_supplies", "effect": "metadata", "source": "cheongyak_home", "verification": "official", "evidence_url": stock["official_url"], "supplies": stock["supplies"]}]
+    parsed = parse_official_rules(source["pages"], url=source["document_url"], digest=source["document_hash"], payload=payload)
+    row = fixture("qa-sangok-official", "산곡역자이힐스테이트앤하늘채", parsed["rules"])
+    row.update({"address": "인천광역시 부평구 산곡동 10번지 일원", "region_code": "28", "region_name": "인천광역시", "announcement_date": "2026-10-08", "official_url": payload["official_url"], "document_hash": source["document_hash"], "rules_complete": False, "offered_supplies": stock["supplies"]})
+    return row
 
 
 class OfflineRouter(Router):
@@ -128,16 +144,23 @@ async def main():
             await expect(outside.locator(".prices-section")).to_be_hidden()
             await expect(outside.locator(".notice-foot")).to_be_hidden()
             check(f"{width}px entire unavailable card starts closed with title/address/status retained")
+            await expect(outside.get_by_label("신청 불가 이유")).to_be_visible()
+            await expect(outside.get_by_label("신청 불가 이유")).to_contain_text("대구광역시 · 경상북도 신청 범위 밖")
+            check(f"{width}px official exclusion reason is visible before expanding")
             await expect(outside.get_by_role("link", name="더샵 동인센트리체 공식 공고 보기", exact=True)).to_have_attribute("href", EVIDENCE)
             await expect(outside.get_by_role("link", name="더샵 동인센트리체 공식 공고 보기", exact=True)).to_be_visible()
             check(f"{width}px closed card retains clickable official source")
             for row in fixtures():
                 card = page.locator(".notice-card").filter(has=page.get_by_role("heading", name=row["title"], exact=True))
-                link = card.get_by_role("link", name=f'{row["title"]} 호갱노노 검색', exact=True)
-                await expect(link).to_be_visible()
-                url = urlsplit(await link.get_attribute("href"))
-                expected_title = "천안 아이파크 시티 2단지" if row["id"] == "qa-possible" else row["title"]
-                check(f'{width}px {row["id"]} external query contains only apartment title', url.hostname == "hogangnono.com" and url.path == "/search" and parse_qs(url.query) == {"q": [expected_title]} and await link.get_attribute("rel") == "noopener noreferrer")
+                link = card.get_by_role("link", name=f'{row["title"]} 호갱노노 단지 보기', exact=True)
+                expected_id = {"qa-outside": "fq81f", "qa-possible": "ghL9c"}.get(row["id"])
+                if expected_id:
+                    await expect(link).to_be_visible()
+                    url = urlsplit(await link.get_attribute("href"))
+                    check(f'{width}px {row["id"]} links directly to verified complex without profile query', url.hostname == "hogangnono.com" and url.path == f"/apt/{expected_id}" and not url.query and await link.get_attribute("rel") == "noopener noreferrer")
+                else:
+                    await expect(link).to_have_count(0)
+                    check(f'{width}px {row["id"]} has no fabricated external match or search fallback')
             for identifier in ["qa-possible", "qa-unknown", "qa-mixed"]:
                 row = next(row for row in fixtures() if row["id"] == identifier)
                 card = page.locator(".notice-card").filter(has=page.get_by_role("heading", name=row["title"], exact=True))
@@ -174,6 +197,26 @@ async def main():
             await privacy(page, router, before, f"{width}px disclosures/focus issue no API request and no POST")
             requests.extend(router.requests)
             await page.context.close()
+
+        facts = profile(region="경기도", regionCode="41", district="화성시", districtCode="41590", householdMembers=[], pointsFamily={}, additionalFamilyPresence=False,
+                        currentlyDomesticResident=True, domesticResidenceFactsAsOfDate="2026-10-08", currentAccountUsedForWinning=False,
+                        currentAccountFactsAsOfDate="2026-10-09", privateDepositAsOfDate="2026-10-08", privateDepositMaintained=True,
+                        accountConversionUnclear=False, applicationRestrictionFacts={"applicant": {"ineligibleRestrictionActive": False, "resaleRestrictionActive": False,
+                        "rewinningRestrictionActive": False, "ineligibleHistoryPresence": False, "resaleViolationHistoryPresence": False, "asOfDate": "2026-10-09", "historyConfirmations": []}},
+                        factChanges={"domestic_residence": {"mode": "unchanged"}, "bank_account": {"mode": "unchanged"}, "bank_private": {"mode": "unchanged"}})
+        page, router = await create(375, [sangok_official_fixture()], facts)
+        before = len(router.requests)
+        card = page.locator(".notice-card")
+        general = card.locator(".qualification-supply-overview .qualification-supply-brief").filter(has=page.get_by_text("일반공급", exact=True))
+        await expect(general).to_contain_text("조건상 가능성 있음")
+        await expect(card.locator("details.notice-content-fold")).to_have_js_property("open", True)
+        await expect(card.get_by_role("link", name="산곡역자이힐스테이트앤하늘채 호갱노노 단지 보기", exact=True)).to_have_attribute("href", "https://hogangnono.com/apt/faQec")
+        check("375px exact Sangok official parser standard general conditions are possible without a generic source gap")
+        check("375px Sangok source-backed qualification has no horizontal overflow", await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        await page.screenshot(path=str(OUT / "sangok-official-general-375.png"))
+        await privacy(page, router, before, "375px actual Sangok conditions are evaluated locally with no new request")
+        requests.extend(router.requests)
+        await page.context.close()
 
         institution = fixture("qa-institution", "기관추천 해당 없음 검증", [rule("age_min", 19, supply_type="일반공급"), rule("recommendation", True, supply_type="기관추천 특별공급", allowed_reasons=["장애인"], require_confirmed=True)], ["일반공급", "기관추천 특별공급"])
         history = fixture("qa-history", "공통 사실 이력 재사용 검증", [rule("previous_winning", False, scope="household", supply_type="일반공급")])

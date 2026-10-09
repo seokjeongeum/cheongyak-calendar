@@ -302,6 +302,9 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
         if known and "정정" in str(payload.get("title", "")):
             context_conflict = False
     manage_no = (parse_qs(urlparse(str(payload.get("official_url", ""))).query).get("houseManageNo") or [None])[0]
+    reviewed_manage_no = (parse_qs(urlparse(str((reviewed or {}).get("document_url", ""))).query).get("houseManageNo") or [None])[0]
+    if manage_no and reviewed_manage_no and manage_no != reviewed_manage_no:
+        context_conflict = True
     if manage_no and manage_no not in flat and not reviewed:
         context_conflict = True
     official_kind = next((r.get("housing_kind") for r in payload.get("rules", []) if r.get("kind") == "housing_classification" and r.get("verification") == "official"), None)
@@ -718,6 +721,9 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     if not admission_review:
         from .current_private_admission import current_private_admission
         admission_review = current_private_admission(pages, digest=digest, reviewed=reviewed, rules=rules, offered=offered, make=make)
+    if not admission_review:
+        from .sangok_admission import sangok_admission
+        admission_review = sangok_admission(pages, digest=digest, reviewed=reviewed, rules=rules, offered=offered, make=make)
     if admission_review:
         rules = admission_review["rules"]
 

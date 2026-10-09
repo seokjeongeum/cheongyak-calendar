@@ -163,6 +163,12 @@ def reviewed_document_urls(official_url: str, *, announcement_date: str | None =
     reviewed hash. It is never substituted for a different notice or date.
     The parser still verifies the downloaded document's identity and bytes.
     """
+    from .public_residual_sources import GIMHAE_YANGSAN_DOCUMENT, GIMHAE_YANGSAN_DATE, GIMHAE_YANGSAN_PAN_ID
+    parsed = urlparse(official_url)
+    if (parsed.scheme == "https" and parsed.hostname == "apply.lh.or.kr"
+            and (parse_qs(parsed.query).get("panId") or [None])[0] == GIMHAE_YANGSAN_PAN_ID
+            and str(announcement_date or "")[:10] == GIMHAE_YANGSAN_DATE):
+        return [GIMHAE_YANGSAN_DOCUMENT]
     primary = reviewed_document_url(official_url)
     if not primary:
         return []
@@ -195,14 +201,21 @@ def reviewed_source_for_document(url: str, digest: str) -> dict | None:
 def focused_review_version(official_url: str, announcement_date: str | None) -> str | None:
     """Retry only these changed reviews, without reprocessing every notice."""
     parsed = urlparse(official_url)
+    if parsed.scheme == "https" and parsed.hostname == "apply.lh.or.kr":
+        params = parse_qs(parsed.query)
+        if ((params.get("panId") or [""])[0] == "2015122300020860"
+                and str(announcement_date or "")[:10] == "2026-09-30"):
+            return "gimhae-yangsan-residual-2026-10-10-v1"
+        return None
     if parsed.scheme != "https" or parsed.hostname not in {"www.applyhome.co.kr", "applyhome.co.kr"}:
         return None
     params = parse_qs(parsed.query)
     number = (params.get("houseManageNo") or [""])[0]
     if (params.get("pblancNo") or [""])[0] != number:
         return None
-    targets = {"2026000458": ("2026-10-08", "current-selection-2026-10-09-v2"),
-               "2026950087": ("2026-10-06", "office-cutoff-2026-10-09-v2")}
+    targets = {"2026000458": ("2026-10-08", "sangok-admission-2026-10-10-v1"),
+               "2026950087": ("2026-10-06", "office-cutoff-2026-10-09-v2"),
+               "2026950077": ("2026-10-08", "okjung-office-2026-10-10-v1")}
     target = targets.get(number)
     return target[1] if target and str(announcement_date or "")[:10] == target[0] else None
 
@@ -294,6 +307,13 @@ REVIEWED_SOURCES["2026000463-project-pdf"] = {
 }
 
 REVIEWED_SOURCES.update({
+    "2026950077": {
+        "title": "옥정중앙역 대방 디에트르Ⅱ", "announcement_date": "2026-10-08",
+        "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950077&pblancNo=2026950077&atchmnflSeqNo=1963143&atchmnflSn=9",
+        "document_hash": "fab0730811574f4d146027cc911a0325955bb5d0ac6c0c97c4d4de7a9461c260",
+        "reviewed_pages": list(range(1, 34)),
+        "office_review": {"qualification_page": 7, "adult_age": 19, "domestic_only": True},
+    },
     "2026950086": {
         "title": "더샵 오산역아크시티 오피스텔", "announcement_date": "2026-10-07",
         "document_url": "https://static.applyhome.co.kr/ai/aia/getAtchmnfl.do?houseManageNo=2026950086&pblancNo=2026950086&atchmnflSeqNo=1988108&atchmnflSn=5",

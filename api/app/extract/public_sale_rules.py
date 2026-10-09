@@ -12,6 +12,7 @@ import re
 from datetime import date
 
 from .gajeong_admission import GAJEONG_HASH, GAJEONG_REVIEW, gajeong_admission
+from .public_residual_sources import GIMHAE_YANGSAN_HASH, reviewed_public_residual_source
 
 # Full applicant sections, exemptions and employee clauses compared with the
 # source PDFs. These certify admission, not contract/payment obligations.
@@ -55,6 +56,10 @@ def _match(pages, pattern, *, limit=None):
 
 
 def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
+    current_review = reviewed_public_residual_source(url=url, digest=digest, payload=payload)
+    if digest == GIMHAE_YANGSAN_HASH and current_review is None:
+        return {"rules": [], "offered_supply_types": [], "status": "unsupported", "identity_status": "mismatch",
+                "reason": "현재 모집공고 번호·날짜가 검토한 김해시·양산시 원문과 일치하지 않습니다."}
     body = "\n".join(p["text"] for p in pages)
     flat = _flat(body)
     head = _flat(re.split(r"공급위치|공급대상|알\s*려\s*드\s*립", pages[0]["text"])[0])
@@ -64,7 +69,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     firstcome = bool(re.search(r"선착순.{0,25}(?:동.?호|일반매각|계약)|일반매각.{0,15}선착순", head))
     residual = "잔여" in head and ("일반매각" in head or "입주자모집" in head)
     relaxed = "자격완화" in head
-    if not (firstcome or residual or relaxed) or not re.search(r"금회공급|신청자격|자격요건", flat):
+    if not (firstcome or residual or relaxed or current_review) or not re.search(r"금회공급|신청자격|자격요건", flat):
         return None
     # This route's supported public templates explicitly waive the savings
     # account. Without that clause, keep the ordinary detailed parser.
@@ -74,7 +79,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     shinhee = "신혼희망타운" in head
     office = "오피스텔" in head
     kind = "not_applicable" if office else "national" if re.search(r"(?:의한|해당하는|따른)\s*국민주택", body) else "unknown"
-    method = "first_come" if firstcome else "optional_supply"
+    method = current_review.get("application_method") if current_review else "first_come" if firstcome else "optional_supply"
     criterion = _match(pages, r"(?:\(자격요건\)\s*)?(?:주택공급|분양)?계약\s*체결일\s*(?:기준|현재)[^■]{0,230}?(?:성년자|만\s*19세)")
     basis = "contract_date" if criterion else "announcement"
     cutoff, cutoff_source = None, None
@@ -181,12 +186,17 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             for restriction in ("prior_project_winner", "prior_project_contract"):
                 project = "LH-SUWON-DANGSU-A3" if "수원당수" in head and "A-3" in head else None
                 facts.append(("application_restrictions", make("application_restriction", False, supply=supply, evidence=barred, scope="household", restriction=restriction, project_id=project)))
+        for restriction in (current_review or {}).get("restrictions", []):
+            evidence = _match([p for p in pages if p["page"] == restriction["page"]], restriction["pattern"])
+            if evidence:
+                facts.append(("application_restrictions", make("application_restriction", False, supply=supply, evidence=evidence,
+                    scope=restriction["scope"], restriction=restriction["restriction"])))
         rules.extend(r for _,r in facts)
         topic_rules[supply] = facts
     exempt_topics = []
     # Some templates place home ownership and income before the account name.
     # Keep the complete explicit waiver clause, rather than its trailing half.
-    whole_exemption = _match(pages, r"(?:금회\s*(?:공급하는|공급되는|공고)[^■•]{0,80})?(?:주택\s*소유\s*여부|거주지역|입주자저축\s*가입\s*여부|청약저축\s*가입여부)[^■•]{0,420}?(?:불문|관계없이|무관|불요)") or exemption
+    whole_exemption = _match(pages, r"(?:금회\s*(?:공급하는|공급되는|공고)[^■•]{0,80})?(?:주택\s*소유\s*여부|거주지역|입주자저축\s*가입\s*여부|청약저축(?:통장)?\s*가입여부)[^■•]{0,420}?(?:불문|관계없이|무관|불요)") or exemption
     exemption_flat = _flat(whole_exemption["text"])
     for topic, pattern in [("account", r"입주자(?:저축|통장)|청약저축|청약통장"), ("income",r"소득"), ("assets",r"자산"), ("home_ownership",r"주택소유여부"), ("prior_win",r"과거당첨")]:
         if re.search(pattern, exemption_flat) and (topic != "home_ownership" or not home):
@@ -217,7 +227,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             inventory = gajeong["inventory"]
             rules = [r for r in rules if r["kind"] != "offered_supplies"]
             rules.append(make("offered_supplies", effect="metadata", supplies=inventory, inventory_status="verified", evidence={"page": 3, "text": " / ".join(s["evidence_text"] for s in inventory)}))
-    review = REVIEWED_ADMISSION.get(digest)
+    review = current_review or REVIEWED_ADMISSION.get(digest)
     reviewed_pages = {p["page"] for p in pages}
     scopes = []
     for supply, facts in topic_rules.items():
@@ -231,6 +241,10 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             if absent_pages:
                 source_gaps.append({"item": "검토한 원문 페이지 미확보", "pages": absent_pages, "stage": "document_text"})
             source_gaps.extend({"item": TOPIC_LABELS.get(topic, topic), "topic": topic, "stage": "clause_extraction"} for topic in missing)
+            source_gaps.extend({"item": restriction["label"], "topic": "restriction:" + restriction["restriction"], "stage": "clause_extraction", "evidence_page": restriction["page"]}
+                for restriction in review.get("restrictions", [])
+                if not any(rule.get("restriction") == restriction["restriction"] for _, rule in facts))
+            source_gaps.extend(review.get("source_gaps_by_supply", {}).get(supply, []))
         else:
             # Concrete unreviewed admission areas, rather than treating
             # submission or payment procedures as unknown eligibility.
@@ -240,9 +254,11 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         if basis != "contract_date" and not cutoff:
             source_gaps.append({"item": "공식 신청 자격 기준일", "stage": "criterion_date"})
         missing = list(dict.fromkeys([TOPIC_LABELS.get(topic, topic) for topic in missing] + [gap["item"] + (" (" + ", ".join(map(str, gap["pages"])) + "쪽)" if gap.get("pages") else "") for gap in source_gaps]))
+        complete = complete and not source_gaps
         scopes.append({"supply_type":supply,"complete":complete,"verified_rule_count":len(facts),"missing_topics":missing,
             "topics":[{"topic":topic,"status":"verified","required":True,"rule_ids":[r["id"] for t,r in facts if t==topic]} for topic in sorted(kinds)]
-               +[{"topic":t,"status":"not_applicable","required":False,"rule_ids":[]} for t in exempt_topics],
+               +[{"topic":t,"status":"not_applicable","required":False,"rule_ids":[]} for t in exempt_topics]
+               +[{"topic":gap["topic"],"status":"missing","required":True,"rule_ids":[],"reason":gap["item"]} for gap in source_gaps if gap.get("topic") and gap["topic"] not in kinds],
             "source_gaps": source_gaps, "reviewed_document_hash": digest if review else None,
             "reviewed_section_pages": review.get("reviewed_section_pages", review["pages"]) if review else [],
             "branches": review.get("branches", []) if review else [],

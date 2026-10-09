@@ -46,8 +46,10 @@ SOURCE_LAYOUTS = {
 }
 
 
-def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
-    layout = SOURCE_LAYOUTS.get(digest)
+def current_private_admission(pages, *, digest, reviewed, rules, offered, make, _reviewed_layout=None, _review_version=None):
+    # A separately gated, exact-source review can share the condition model
+    # without borrowing another project's page layout or notice date.
+    layout = _reviewed_layout or SOURCE_LAYOUTS.get(digest)
     if not layout or not reviewed or reviewed.get("title") != layout["title"]:
         return None
     source = {p["page"]: re.sub(r"\s+", " ", p["text"]).strip() for p in pages}
@@ -61,7 +63,7 @@ def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
         return {"page": page, "quote": match.group(0)} if match else None
 
     active = e("active", r"입주자모집공고일\s*현재\s*입주자저축\s*순위요건을\s*만족하였으나.{0,150}?청약이\s*불가합니다")
-    overseas = e("overseas", r"출입국사실증명서\s*상\s*해외체류기간.{0,1300}?국내에\s*거주하고\s*있는\s*것으로\s*봅니다")
+    overseas = e("overseas", r"출입국사실증명서\s*(?:상\s*)?해외체류기간.{0,1300}?국내에\s*거주하고\s*있는\s*것으로\s*봅니다")
     illegal = e("restriction", r"주택법.{0,180}?제64조\s*제?1항.{0,220}?10년간\s*입주자로\s*선정될\s*수\s*없습니다")
     ineligible = e("ineligible", r"부적격\s*당\s*첨자로\s*판명된\s*경우.{0,550}?입주자로\s*선정될\s*수\s*없습니다")
     used = e("used", r"당첨\s*된\s*청약통장은\s*계약여부와\s*관계없이\s*재사용이\s*불가합니다")
@@ -94,7 +96,7 @@ def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
 
     def current_bank(supply):
         fields = dict(supply=supply, criterion_basis="application_date", criterion_date=None,
-                      original_announcement_date="2026-10-02", evaluation_mode="today_precheck",
+                      original_announcement_date=reviewed["announcement_date"], evaluation_mode="today_precheck",
                       requires_maintained_until_application=True)
         return [make("account_unused_after_winning", False, **fields, **used),
                 make("account_type", allowed_values=["comprehensive", "deposit", "installment"], area_limit_for_installment=85,
@@ -163,12 +165,12 @@ def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
     first = SPECIALS[4]
     family = e("first", r"아래\s*‘가’\s*또는\s*‘나’.{0,1500}?직계존속과\s*같은\s*세대를\s*구성하는\s*경우를\s*말함")
     past = e("first", r"생애최초로\s*주택을\s*구입하는\s*분.{0,450}?혼인\s*전\s*처분한\s*이력은\s*배제합니다")
-    tax = e("first", r"입주자모집공고일\s*현재\s*근로자\s*또는\s*자영업자.{0,430}?납부의무액이\s*없는\s*경우를\s*포함")
+    tax = e("first", r"입주자모집공고일\s*현재\s*근로자\s*또는\s*자영업자.{0,430}?납부\s*의무액이\s*없는\s*경우를\s*포함")
     if all((family, past, tax)):
         never_owned = make("never_owned_home", True, supply=first, scope="household", exclude_spouse_pre_marriage_disposed=True, **past)
         never_owned["exceptions"] = [make("unparsed", supply=first, label="생애최초의 제53조 과거 주택 소유 예외",
                                           text="법령상 소유 예외와 과거 소유 사실의 적용 범위를 대조해야 합니다.",
-                                          **e("ownership", r"만\s*60세\s*이상의\s*직계존속.{0,200}?특별공급\s*신청자\s*제외\)"))]
+                                          **e("ownership", r"만\s*60세\s*이상의\s*직계존속.{0,200}?(?:특별공급\s*신청자|부양자\s*특별공급\s*신청자)\s*제외\)"))]
         output.extend([never_owned,
                        make("first_home_family", True, supply=first, solo_max_area_sqm=60, include_adoption=True, include_pregnancy=True,
                             unmarried_child_required=True, unmarried_applicant_child_same_register=True, non_solo_requires_ascendant=True, **family),
@@ -249,4 +251,4 @@ def current_private_admission(pages, *, digest, reviewed, rules, offered, make):
     # not block the reviewed standard branch. Unparsed alternative nodes still
     # require review if an ordinary mandatory condition is not satisfied.
     return {"rules": output, "missing_topics": missing, "conditional_topics": conditional, "exempt_topics": exempt,
-            "review_version": REVIEW_VERSION, "reviewed_pages": sorted({v for k, v in layout.items() if k != "count" and isinstance(v, int)})}
+            "review_version": _review_version or REVIEW_VERSION, "reviewed_pages": sorted({v for k, v in layout.items() if k != "count" and isinstance(v, int)})}
