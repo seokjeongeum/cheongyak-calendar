@@ -451,7 +451,7 @@ function App() {
 
   const highlighted = useMemo(() => shown.filter((notice) => candidateInRange(notice, evaluations[notice.id], start, end)).length, [shown, evaluations, start, end])
   const sourceStates = coverage?.sources || []
-  const collecting = sourceStates.some((source) => source.status === 'running')
+  const collecting = collectionRequesting || collection?.status === 'running' || sourceStates.some((source) => source.status === 'running')
   const awaitingSources = sourceStates.some((source) => source.status === 'pending')
   const allSourcesUnavailable = sourceStates.length > 0 && sourceStates.every((source) =>
     source.status === 'disabled' || source.status === 'error')
@@ -465,7 +465,7 @@ function App() {
               : '이 기간에 예정된 접수일이 없어요'
   const emptyDescription = dataError ? '공고 API 연결을 확인하고 다시 시도해 주세요.'
     : coverageError && !coverage ? '기관별 수집 상태 API 연결을 확인하고 다시 시도해 주세요.'
-      : collecting ? '기관별 진행 상황이 갱신되면 공고 목록을 다시 확인합니다.'
+      : collecting ? '처음 수집할 때는 공고와 원문 검토에 시간이 걸립니다. 저장된 공고는 수집 도중에도 자동으로 표시됩니다.'
         : awaitingSources || !coverage ? '수집 대기는 아직 결과가 없다는 뜻입니다. 기관별 상태를 확인하거나 새로고침해 주세요.'
           : allSourcesUnavailable ? '현재 연결 미설정 또는 수집 실패 상태입니다. 아래 기관별 상태를 확인해 주세요.'
             : hasActiveFilter ? '필터를 해제하거나 다른 날짜를 선택해 주세요.'

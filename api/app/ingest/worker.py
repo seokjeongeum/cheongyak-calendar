@@ -19,18 +19,21 @@ from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
 import httpx
+from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, init_db
 from app.collection import CollectionHeartbeat, claim_collection, finish_collection, renew_collection
 from app.integration_settings import setting_value
 from app.extract.pipeline import enrich_notice, extraction_configured
-from app.models import DocumentExtractionState, Notice
+from app.models import DocumentExtractionState, Notice, SourceStatus
 from app.qualification import is_metadata, merge_poll_rules
-from app.repository import NON_APPLICATION_KINDS, lock_notice, record_source_status, resolve_pending_corrections, upsert_notice
+from app.repository import NON_APPLICATION_KINDS, is_open_ended_application, lock_notice, record_source_status, resolve_pending_corrections, upsert_notice
+from app.schemas import EventPublic
 
 from . import boards, competition, ih, lh, myhome, reb
-from .common import FeedError
+from .common import FeedError, date_iso
 
 LOGGER = logging.getLogger("cheongyak.ingest")
 KST = ZoneInfo("Asia/Seoul")
@@ -57,6 +60,33 @@ def _active_notice(payload: dict, today: date) -> bool:
     return bool(announced and str(announced) >= (today - timedelta(days=45)).isoformat())
 
 
+def _save_priority(payload: dict, today: date) -> int:
+    """Show available reception first without dropping historical feed rows."""
+    for raw_event in payload.get("events") or []:
+        try:
+            event = EventPublic.model_validate(raw_event)
+        except ValidationError:
+            # Invalid input still reaches the usual normalization diagnostics.
+            continue
+        if event.kind.lower() in NON_APPLICATION_KINDS:
+            continue
+        if is_open_ended_application(event) or (event.end_date or event.start_date) >= today:
+            return 0
+    announced = date_iso(payload.get("announcement_date"))
+    return 1 if announced and announced >= (today - timedelta(days=45)).isoformat() else 2
+
+
+def _save_progress(session: Session, state: SourceStatus | None, source: str, saved: int, total: int) -> SourceStatus:
+    """Commit progress with its notice, retaining the source attempt/success times."""
+    message = f"공식 공고 저장 중 · {saved}/{total}건 저장"
+    if state is None:
+        return record_source_status(session, source, "running", message, record_count=saved)
+    state.status = "running"
+    state.message = message
+    state.record_count = saved
+    return state
+
+
 async def _save_rows(
     source: str, rows: list[dict], client: httpx.AsyncClient, today: date,
     source_warning: str | None = None,
@@ -69,7 +99,8 @@ async def _save_rows(
     missing_dates = 0
     with SessionLocal() as session:
         quota_state = session.get(DocumentExtractionState, QUOTA_STATE_KEY)
-        for payload in rows:
+        source_state = session.get(SourceStatus, source)
+        for payload in sorted(rows, key=lambda row: _save_priority(row, today)):
             if payload.get("source") != source:
                 invalid += 1
                 continue
@@ -154,6 +185,7 @@ async def _save_rows(
                     LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
             try:
                 notice = upsert_notice(session, payload)
+                source_state = _save_progress(session, source_state, source, saved + 1, len(rows))
                 session.commit()
                 saved += 1
                 if not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices):

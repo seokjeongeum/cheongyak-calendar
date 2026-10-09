@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.db import init_db, make_engine
@@ -14,7 +15,7 @@ from app.ingest.reb import PAIRS, normalize as normalize_reb
 from app.ingest import worker
 from app.ingest import ih
 from app.ingest.common import FeedError, get_json
-from app.models import DocumentExtractionState, SourceStatus
+from app.models import DocumentExtractionState, Notice, SourceStatus
 from app.repository import record_source_status
 
 
@@ -351,4 +352,103 @@ async def test_free_quota_pauses_all_documents_across_worker_cycles(tmp_path, mo
     with factory() as session:
         state = session.get(DocumentExtractionState, worker.QUOTA_STATE_KEY)
         assert state is not None and state.deferred_until is not None
+    engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_first_save_prioritizes_reception_and_retains_full_history(tmp_path, monkeypatch):
+    engine = make_engine(f"sqlite:///{tmp_path / 'reception-order.db'}")
+    init_db(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    monkeypatch.setattr(worker, "SessionLocal", factory)
+    monkeypatch.setattr(worker, "extraction_configured", lambda: False)
+    seen = []
+
+    async def enrich(payload, **kwargs):
+        seen.append(payload["external_id"])
+        return payload
+
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    def row(identity, announced, kind, start, end=None, label="접수"):
+        return {
+            "source": "myhome", "external_id": identity, "title": identity,
+            "category": "public_sale", "announcement_date": announced,
+            "events": [{"kind": kind, "label": label, "start_date": start, "end_date": end}],
+        }
+
+    rows = [
+        row("historical", "2026-05-01", "general", "2026-05-12"),
+        row("recent-closed", "2026-10-01", "general", "2026-10-02", "2026-10-04"),
+        row("future-contract", "2026-05-01", "contract", "2026-12-01", label="계약"),
+        row("upcoming", "2026-09-30", "general", "2026-10-12"),
+        row("current", "2026-09-30", "first_priority", "2026-10-08", "2026-10-09"),
+        row("future-announcement", "2026-05-01", "announcement", "2026-12-01", label="당첨자 발표"),
+        row("open-ended", "2026-05-01", "general", "2026-05-12", label="상시 신청 접수"),
+        row("past-single-day", "2026-05-01", "general", "2026-05-12"),
+        row("mislabelled-open-contract", "2026-05-01", "general", "2026-05-12", label="계약 체결 종료일 미공개"),
+    ]
+    original_order = [item["external_id"] for item in rows]
+    async with httpx.AsyncClient() as client:
+        result = await worker._save_rows("myhome", rows, client, date(2026, 10, 9))
+    assert seen == [
+        "upcoming", "current", "open-ended", "recent-closed", "historical", "future-contract",
+        "future-announcement", "past-single-day", "mislabelled-open-contract",
+    ]
+    assert [item["external_id"] for item in rows] == original_order
+    assert result[0] == len(rows)
+    with factory() as session:
+        assert set(session.scalars(select(Notice.external_id))) == set(original_order)
+    engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_save_progress_is_visible_before_next_document_without_changing_attempt_or_success(tmp_path, monkeypatch):
+    engine = make_engine(f"sqlite:///{tmp_path / 'save-progress.db'}")
+    init_db(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    monkeypatch.setattr(worker, "SessionLocal", factory)
+    monkeypatch.setattr(worker, "extraction_configured", lambda: False)
+    success = datetime(2026, 10, 8, 0, 0, tzinfo=timezone.utc)
+    attempt = datetime(2026, 10, 9, 0, 12, tzinfo=timezone.utc)
+    with factory() as session:
+        record_source_status(session, "myhome", "ok", "이전 성공", success, 17)
+        record_source_status(session, "myhome", "running", "공식 공고 수집 중", attempt)
+        session.commit()
+    observed = []
+
+    async def enrich(payload, **kwargs):
+        with factory() as session:
+            status = session.get(SourceStatus, "myhome")
+            saved_ids = set(session.scalars(select(Notice.external_id)))
+            observed.append((payload["external_id"], status.record_count, status.message, saved_ids))
+            assert status.status == "running"
+            assert status.last_attempt_at.replace(tzinfo=timezone.utc) == attempt
+            assert status.last_success_at.replace(tzinfo=timezone.utc) == success
+        return payload
+
+    monkeypatch.setattr(worker, "enrich_notice", enrich)
+    rows = [{
+        "source": "myhome", "external_id": f"sale-{number}", "title": f"공공분양 {number}",
+        "category": "public_sale", "announcement_date": "2026-10-09",
+        "events": [{"kind": "general", "label": "접수", "start_date": "2026-10-12"}],
+        "prices": [{"unit_type": "84", "price_kind": "sale_total", "amount_krw": 400_000_000,
+                    "verification": "official"}],
+    } for number in (1, 2, 3)]
+    # Preserve normal invalid-row handling and terminal partial status too.
+    rows[-1]["title"] = ""
+    async with httpx.AsyncClient() as client:
+        result = await worker._save_rows("myhome", rows, client, date(2026, 10, 9))
+    assert observed == [
+        ("sale-1", 17, "공식 공고 수집 중", set()),
+        ("sale-2", 1, "공식 공고 저장 중 · 1/3건 저장", {"sale-1"}),
+        ("sale-3", 2, "공식 공고 저장 중 · 2/3건 저장", {"sale-1", "sale-2"}),
+    ]
+    assert result[0:2] == (2, 1)
+    assert result[-1] == "partial"
+    with factory() as session:
+        status = session.get(SourceStatus, "myhome")
+        assert status.status == "partial"
+        assert status.record_count == 2
+        assert "2건 저장" in status.message and "1건 정규화 실패" in status.message
+        assert status.last_success_at.replace(tzinfo=timezone.utc) > success
     engine.dispose()
