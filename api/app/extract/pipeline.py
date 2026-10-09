@@ -9,6 +9,7 @@ unverified and never replaces an official structured price.
 from __future__ import annotations
 
 import base64
+import asyncio
 import hashlib
 import io
 import json
@@ -31,9 +32,12 @@ from .reviewed_sources import REVIEWED_SOURCES, reviewed_document_urls, reviewed
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v12"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v13"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
+MAX_DOWNLOAD_ATTEMPTS = 3
+DOWNLOAD_RETRY_DELAY_SECONDS = 0.5
+TRANSIENT_DOWNLOAD_STATUSES = {500, 502, 503, 504}
 TRUSTED_HOSTS = (
     "applyhome.co.kr",
     "reb.or.kr",
@@ -59,6 +63,8 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "attachment_fallback_succeeded": "동일한 공식 첨부의 청약홈 www 경로에서 원문을 확보했습니다.",
         "document_download_failed": "공식 모집공고문 파일을 내려받지 못했습니다.",
         "document_downloaded": "공식 모집공고문 파일을 내려받았습니다.",
+        "download_retry_succeeded": "일시적인 서버 오류 뒤 같은 공식 주소에서 파일을 내려받았습니다.",
+        "announcement_retry_succeeded": "일시적인 서버 오류 뒤 같은 공식 공고 페이지를 가져왔습니다.",
         "unexpected_response": "첨부 주소가 PDF·HWP·HWPX 문서 대신 다른 응답을 반환했습니다.",
         "hwp_converter_missing": "HWP 문서 변환기를 사용할 수 없습니다.",
         "hwp_conversion_failed": "HWP 문서를 로컬에서 변환하지 못했습니다.",
@@ -133,6 +139,21 @@ class ExtractionDeferred(Exception):
     def __init__(self, message: str, *, quota_exhausted: bool = False):
         super().__init__(message)
         self.quota_exhausted = quota_exhausted
+
+
+class DocumentDownloadFailed(ValueError):
+    """Stable public attempt records; never expose raw request exceptions."""
+
+    def __init__(self, diagnostics: list[dict]):
+        super().__init__("Official public download failed")
+        self.diagnostics = diagnostics
+
+
+def _download_failures(exc, url: str, *, stage: str = "download") -> list[dict]:
+    if isinstance(exc, DocumentDownloadFailed):
+        return exc.diagnostics
+    return [document_diagnostic(stage, "announcement_download_failed" if stage == "discovery" else "document_download_failed", url,
+                               http_status=exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None)]
 
 
 def extraction_configured() -> bool:
@@ -363,28 +384,48 @@ def find_document_links(html: str, base_url: str) -> list[str]:
     return list(dict.fromkeys(parser.links))
 
 
-async def _download(url: str, client: httpx.AsyncClient) -> tuple[bytes, str]:
+async def _download(url: str, client: httpx.AsyncClient, *, diagnostics: list[dict] | None = None, stage: str = "download") -> tuple[bytes, str]:
     """Bound downloads and validate each redirect to avoid arbitrary URL fetching."""
     current = url
+    recovered_attempts = []
     for _ in range(4):
         if not _trusted_url(current):
             raise ValueError("Only HTTPS URLs on official provider hosts are allowed")
-        async with client.stream("GET", current, follow_redirects=False) as response:
-            if response.status_code in (301, 302, 303, 307, 308):
-                location = response.headers.get("location")
-                if not location:
-                    raise ValueError("Redirect without Location")
-                current = urljoin(current, location)
-                continue
-            response.raise_for_status()
-            chunks: list[bytes] = []
-            size = 0
-            async for chunk in response.aiter_bytes():
-                size += len(chunk)
-                if size > MAX_DOCUMENT_BYTES:
-                    raise ValueError("Document exceeds 10 MB extraction limit")
-                chunks.append(chunk)
-            return b"".join(chunks), response.headers.get("content-type", "")
+        failures = []
+        for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+            try:
+                async with client.stream("GET", current, follow_redirects=False) as response:
+                    if response.status_code in TRANSIENT_DOWNLOAD_STATUSES:
+                        entry = document_diagnostic(stage, "announcement_download_failed" if stage == "discovery" else "document_download_failed",
+                                                    current, http_status=response.status_code)
+                        failures.append({**entry, "attempt": attempt, "max_attempts": MAX_DOWNLOAD_ATTEMPTS})
+                        if attempt == MAX_DOWNLOAD_ATTEMPTS:
+                            raise DocumentDownloadFailed(failures)
+                    else:
+                        if response.status_code not in (301, 302, 303, 307, 308):
+                            response.raise_for_status()
+                        if failures and diagnostics is not None:
+                            recovered_attempts.append({**document_diagnostic(stage, "announcement_retry_succeeded" if stage == "discovery" else "download_retry_succeeded", current, status="ok"),
+                                                       "attempt_count": attempt, "previous_http_statuses": [failure["http_status"] for failure in failures]})
+                        if response.status_code in (301, 302, 303, 307, 308):
+                            location = response.headers.get("location")
+                            if not location:
+                                raise ValueError("Redirect without Location")
+                            current = urljoin(current, location)
+                            break
+                        chunks: list[bytes] = []
+                        size = 0
+                        async for chunk in response.aiter_bytes():
+                            size += len(chunk)
+                            if size > MAX_DOCUMENT_BYTES:
+                                raise ValueError("Document exceeds 10 MB extraction limit")
+                            chunks.append(chunk)
+                        if diagnostics is not None:
+                            diagnostics.extend(recovered_attempts)
+                        return b"".join(chunks), response.headers.get("content-type", "")
+            except httpx.HTTPError as exc:
+                raise DocumentDownloadFailed([*failures, *_download_failures(exc, current, stage=stage)]) from exc
+            await asyncio.sleep(DOWNLOAD_RETRY_DELAY_SECONDS)
     raise ValueError("Too many document redirects")
 
 
@@ -487,27 +528,33 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
     diagnostics = []
     fallback = applyhome_attachment_fallback_url(url)
     try:
-        data, content_type = await _download(url, client)
+        data, content_type = await _download(url, client, diagnostics=diagnostics)
     except (httpx.HTTPError, ValueError) as exc:
         if not fallback:
             raise
         # A provider HTTP failure can be specific to its static host, just as
         # an HTTP-200 HTML error can. The fallback has exactly the same four
         # attachment identifiers and is validated by _download as usual.
-        data, content_type = await _download(fallback, client)
+        try:
+            data, content_type = await _download(fallback, client, diagnostics=diagnostics)
+        except (httpx.HTTPError, ValueError) as fallback_error:
+            raise DocumentDownloadFailed([*_download_failures(exc, url), *_download_failures(fallback_error, fallback)]) from fallback_error
         if not data.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
-            raise exc
+            raise DocumentDownloadFailed([*_download_failures(exc, url), document_diagnostic("decode", "unexpected_response", fallback)]) from exc
+        previous_failures = _download_failures(exc, url)
+        previous_url = previous_failures[-1].get("evidence_url", url) if previous_failures else url
         diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
-            "previous_url": url,
-            **({"previous_http_status": exc.response.status_code} if isinstance(exc, httpx.HTTPStatusError) else {})})
+            "previous_url": previous_url,
+            **({"original_url": url} if previous_url != url else {}),
+            "previous_attempt_count": len(previous_failures),
+            **({"previous_http_status": previous_failures[-1]["http_status"]} if previous_failures and "http_status" in previous_failures[-1] else {})})
         url, fallback = fallback, None
     if fallback and not data.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
         original_url = url
         try:
-            alternative, alternative_type = await _download(fallback, client)
+            alternative, alternative_type = await _download(fallback, client, diagnostics=diagnostics)
         except (httpx.HTTPError, ValueError) as exc:
-            diagnostics.append(document_diagnostic("download", "document_download_failed", fallback,
-                http_status=exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None))
+            diagnostics.extend(_download_failures(exc, fallback))
         else:
             if alternative.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
                 diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
@@ -693,7 +740,7 @@ async def enrich_notice(
         else:
             try:
                 current_page_url = announcement_page_url(official_url)
-                page_bytes, content_type = await _download(current_page_url, client)
+                page_bytes, content_type = await _download(current_page_url, client, diagnostics=diagnostics, stage="discovery")
                 if page_bytes.startswith((b"%PDF", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", b"PK")) or "application/pdf" in content_type.lower():
                     links = [official_url]
                 else:
@@ -703,8 +750,7 @@ async def enrich_notice(
                     if detail_contract:
                         enriched["rules"] = [r for r in enriched.get("rules", []) if not (r.get("kind") == "contract_schedule" and r.get("source") == "lh_official_detail")] + [detail_contract]
             except (httpx.HTTPError, ValueError) as exc:
-                code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
-                diagnostics.append(document_diagnostic("discovery", "announcement_download_failed", official_url, http_status=code))
+                diagnostics.extend(_download_failures(exc, current_page_url, stage="discovery"))
                 links = []
             reviewed_links = reviewed_document_urls(official_url, announcement_date=payload.get("announcement_date"))
             correction = _reviewed_correction(reviewed_links, payload.get("announcement_date"))
@@ -749,8 +795,7 @@ async def enrich_notice(
                     best, best_score = local, score
                     best_url = local.get("document_url") or link
             except (httpx.HTTPError, ValueError) as exc:
-                code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
-                diagnostics.append(document_diagnostic("download", "document_download_failed", link, http_status=code))
+                diagnostics.extend(_download_failures(exc, link))
                 local = None
                 conditions = 0
             if allow_gemini and extraction_configured():

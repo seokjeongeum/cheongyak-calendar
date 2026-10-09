@@ -143,7 +143,7 @@ async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_un
         return httpx.Response(200, content=fake_pdf, headers={"Content-Type": "application/octet-stream"})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
         result = await pipeline.extract_local_document(original, http, payload=source["payload"])
-    assert requests == [original, source["document_url"]]
+    assert requests == [*([original] * (pipeline.MAX_DOWNLOAD_ATTEMPTS if static_status == 500 else 1)), source["document_url"]]
     assert result["status"] == "complete"
     region = next(r for r in result["rules"] if r["kind"] == "applicant_regions")
     assert region["unrestricted"] and region["evidence_url"] == source["document_url"]

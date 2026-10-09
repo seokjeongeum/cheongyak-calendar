@@ -89,7 +89,12 @@ def _failed_document_needs_new_pipeline(existing: Notice | None) -> bool:
             and entry.get("code") in {"announcement_download_failed", "attachment_not_found"}
             for entry in rule.get("diagnostics") or [] if isinstance(entry, dict)
         )
-        if rule.get("pipeline_version") != DOCUMENT_PIPELINE_VERSION and (status in {"unreadable", "error"} or discovery_failed):
+        download_failed = any(
+            entry.get("stage") == "download" and entry.get("status") == "error"
+            and entry.get("code") == "document_download_failed"
+            for entry in rule.get("diagnostics") or [] if isinstance(entry, dict)
+        )
+        if rule.get("pipeline_version") != DOCUMENT_PIPELINE_VERSION and (status in {"unreadable", "error"} or discovery_failed or download_failed):
             return True
         if rule.get("parser_version") != PARSER_VERSION and status in {"partial", "unsupported", "unreadable", "error"}:
             return True
