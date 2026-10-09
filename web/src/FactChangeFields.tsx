@@ -1,7 +1,7 @@
 import type { FactChangeGroup, LocalProfile } from './types'
 
 const GROUP_FIELD: Record<FactChangeGroup, keyof LocalProfile> = {
-  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFacts',
+  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', bank_account: 'currentAccountUsedForWinning', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFacts',
 }
 
 /** A current state has one effective date, reused across every notice. */

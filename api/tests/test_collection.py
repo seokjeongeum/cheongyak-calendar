@@ -238,3 +238,160 @@ def test_manual_subprocess_keeps_api_responsive_and_shutdown_reaps_group(client,
             assert open(proc_stat).read().split()[2] == "Z"
     finally:
         manager.shutdown()
+
+
+def interrupted_manual(store):
+    previous, _ = collection.claim_collection("manual")
+    collection.finish_collection(previous.job_id, "interrupted", "fictional deployment interruption")
+    with store() as session:
+        session.add(IntegrationSetting(name="DATA_GO_KR_API_KEY", value="fictional-saved-feed-key"))
+        session.commit()
+    return previous
+
+
+def test_startup_resumes_saved_owner_job_once_for_each_code_version(store, monkeypatch):
+    previous = interrupted_manual(store)
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "fictional-deployment-one")
+    starts = []
+    manager = collection.ManualCollector()
+    monkeypatch.setattr(manager, "start", starts.append)
+
+    manager.startup()
+    resumed = collection.collection_state()
+    assert starts == [resumed.job_id]
+    assert resumed.job_id != previous.job_id
+    assert resumed.status == "running"
+    assert resumed.trigger.startswith("manual-resume:")
+    assert len(resumed.trigger) <= 32
+    assert "중단된 수집" in resumed.message
+    assert "fictional-saved-feed-key" not in resumed.model_dump_json()
+    assert "fictional-deployment-one" not in resumed.model_dump_json()
+
+    # A deployment or sleep interruption of this retry must not create a
+    # restart loop on the same code. An explicit owner start still works.
+    collection.finish_collection(resumed.job_id, "interrupted", "fictional retry interruption")
+    manager.startup()
+    assert starts == [resumed.job_id]
+    assert collection.collection_state().status == "interrupted"
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "fictional-deployment-two")
+    manager.startup()
+    upgraded = collection.collection_state()
+    assert starts == [resumed.job_id, upgraded.job_id]
+    assert upgraded.trigger != resumed.trigger
+    assert upgraded.job_id != resumed.job_id
+
+    collection.finish_collection(upgraded.job_id, "interrupted", "fictional retry interruption")
+    explicit, claimed = collection.claim_collection("manual")
+    assert claimed and explicit.trigger == "manual"
+
+
+@pytest.mark.parametrize("status", ["idle", "running", "completed", "error"])
+def test_startup_does_not_resume_other_job_states(store, monkeypatch, status):
+    interrupted_manual(store)
+    with store() as session:
+        row = session.get(CollectionRun, collection.NAME)
+        row.status = status
+        # Even an expired running lease waits for ordinary lease expiry and
+        # an explicit/scheduled claim; startup resumes interrupted jobs only.
+        row.lease_expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+        session.commit()
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    manager.startup()
+    assert starts == []
+    with store() as session:
+        assert session.get(CollectionRun, collection.NAME).status == status
+
+
+@pytest.mark.parametrize("trigger", ["scheduled", "manual-resume:invalid", None])
+def test_startup_does_not_resume_non_owner_interruption(store, monkeypatch, trigger):
+    interrupted_manual(store)
+    with store() as session:
+        session.get(CollectionRun, collection.NAME).trigger = trigger
+        session.commit()
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    manager.startup()
+    assert starts == []
+
+
+@pytest.mark.parametrize("saved_key", [None, "", "   ", "gemini-only"])
+def test_startup_requires_nonempty_feed_key_saved_on_server(store, monkeypatch, saved_key):
+    previous, _ = collection.claim_collection("manual")
+    collection.finish_collection(previous.job_id, "interrupted", "fictional interruption")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "fictional-environment-only-key")
+    if saved_key is not None:
+        with store() as session:
+            name = "GEMINI_API_KEY" if saved_key == "gemini-only" else "DATA_GO_KR_API_KEY"
+            session.add(IntegrationSetting(name=name, value=saved_key))
+            session.commit()
+    manager = collection.ManualCollector()
+    starts = []
+    monkeypatch.setattr(manager, "start", starts.append)
+    manager.startup()
+    assert starts == []
+    assert collection.collection_state().job_id == previous.job_id
+
+
+def test_startup_resume_is_atomic_across_api_instances(store, monkeypatch):
+    previous = interrupted_manual(store)
+    starts = []
+    monkeypatch.setattr(collection.ManualCollector, "start", lambda _, job_id: starts.append(job_id))
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        list(executor.map(lambda _: collection.ManualCollector().startup(), range(6)))
+    assert len(starts) == 1
+    state = collection.collection_state()
+    assert state.status == "running"
+    assert state.job_id == starts[0] and state.job_id != previous.job_id
+
+
+def test_pipeline_upgrade_allows_one_resume_without_host_deployment_metadata(store, monkeypatch):
+    from app.extract import pipeline
+
+    interrupted_manual(store)
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    starts = []
+    manager = collection.ManualCollector()
+    monkeypatch.setattr(manager, "start", starts.append)
+    manager.startup()
+    first = collection.collection_state()
+    collection.finish_collection(first.job_id, "interrupted", "fictional interruption")
+    manager.startup()
+    assert starts == [first.job_id]
+
+    monkeypatch.setattr(pipeline, "DOCUMENT_PIPELINE_VERSION", "fictional-new-pipeline-version")
+    manager.startup()
+    upgraded = collection.collection_state()
+    assert starts == [first.job_id, upgraded.job_id]
+    assert upgraded.trigger != first.trigger
+
+
+def test_resume_claim_cannot_replace_concurrent_explicit_start_or_deleted_key(store):
+    interrupted_manual(store)
+    previous = collection.collection_state()
+    explicit, _ = collection.claim_collection("manual")
+    state, claimed = collection.claim_collection(collection._resume_trigger(), interrupted_from=previous)
+    assert not claimed and state.job_id == explicit.job_id
+
+    collection.finish_collection(explicit.job_id, "interrupted", "fictional interruption")
+    previous = collection.collection_state()
+    with store() as session:
+        session.get(IntegrationSetting, "DATA_GO_KR_API_KEY").value = ""
+        session.commit()
+    state, claimed = collection.claim_collection(collection._resume_trigger(), interrupted_from=previous)
+    assert not claimed and state.job_id == previous.job_id
+
+
+def test_startup_resume_failure_keeps_api_available_without_echoing_error(monkeypatch, caplog):
+    def unavailable():
+        raise OSError("fictional-private-database-url")
+    monkeypatch.setattr(collection, "_claim_interrupted_manual_resume", unavailable)
+    manager = collection.ManualCollector()
+    manager.stopping = True
+    manager.startup()
+    assert not manager.stopping
+    assert "OSError" in caplog.text
+    assert "fictional-private-database-url" not in caplog.text

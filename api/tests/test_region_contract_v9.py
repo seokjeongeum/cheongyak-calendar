@@ -185,7 +185,7 @@ async def test_hyangnam_corrected_project_fallback_after_provider_page_and_attac
         f'<a href="/ancillary-{number}.pdf">첨부 PDF</a>' for number in range(3))) if ancillary_links else httpx.Response(404))
     async with httpx.AsyncClient(transport=transport) as http:
         result = await pipeline.enrich_notice(source["payload"], http, allow_gemini=False)
-    assert calls == (["https://www.applyhome.co.kr/ancillary-0.pdf", "https://www.applyhome.co.kr/ancillary-1.pdf", source["document_url"]] if ancillary_links else candidates)
+    assert calls == (["https://www.applyhome.co.kr/ancillary-0.pdf", "https://www.applyhome.co.kr/ancillary-1.pdf", source["document_url"]] if ancillary_links else [source["document_url"]])
     assert result["document_hash"] == source["document_hash"]
     scope = next(r for r in result["rules"] if r["kind"] == "applicant_regions" and not r.get("supply_type"))
     assert {r["region_code"] for r in scope["regions"]} == {"41", "11", "28"}

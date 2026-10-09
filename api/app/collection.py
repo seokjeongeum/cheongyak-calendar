@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import logging
 import os
+import hashlib
+import re
 import signal
 import subprocess
 import sys
@@ -19,19 +21,23 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.db import SessionLocal
 from app.hosted_runner import _shutdown
 from app.integration_settings import require_admin
-from app.models import CollectionRun, SourceStatus
+from app.models import CollectionRun, IntegrationSetting, SourceStatus
 
 LOGGER = logging.getLogger("cheongyak.collection")
 NAME = "current"
 LEASE_SECONDS = 10 * 60
 HEARTBEAT_SECONDS = 30
+PUBLIC_FEED_KEYS = (
+    "DATA_GO_KR_API_KEY", "MYHOME_API_KEY", "LH_API_KEY",
+    "IH_API_KEY", "CHEONGYAK_COMPETITION_API_KEY",
+)
 router = APIRouter(prefix="/api/collection", tags=["공식 공고 수집"])
 
 
@@ -88,24 +94,67 @@ def collection_state() -> CollectionPublic:
         return _public(session.get(CollectionRun, NAME))
 
 
-def claim_collection(trigger: str) -> tuple[CollectionPublic, bool]:
+def claim_collection(
+    trigger: str, *, interrupted_from: CollectionPublic | None = None,
+) -> tuple[CollectionPublic, bool]:
     """Atomic across API replicas and the external three-hour worker."""
     now = _now()
     job_id = str(uuid4())
     with SessionLocal() as session:
-        insert = pg_insert if session.bind.dialect.name == "postgresql" else sqlite_insert
-        session.execute(insert(CollectionRun).values(name=NAME, status="idle").on_conflict_do_nothing(index_elements=[CollectionRun.name]))
-        _expire_collection(session, now)
+        if interrupted_from is None:
+            insert = pg_insert if session.bind.dialect.name == "postgresql" else sqlite_insert
+            session.execute(insert(CollectionRun).values(name=NAME, status="idle").on_conflict_do_nothing(index_elements=[CollectionRun.name]))
+            _expire_collection(session, now)
+            eligible = or_(CollectionRun.status != "running", CollectionRun.lease_expires_at <= now, CollectionRun.lease_expires_at.is_(None))
+        else:
+            # Resume only the exact interrupted owner-started job we observed.
+            # Checking configuration in SQL never fetches a credential value,
+            # and prevents a concurrent explicit start or key deletion racing
+            # this compare-and-swap from launching an unrequested replacement.
+            configured = select(IntegrationSetting.name).where(
+                IntegrationSetting.name.in_(PUBLIC_FEED_KEYS),
+                func.length(func.trim(IntegrationSetting.value)) > 0,
+            ).exists()
+            eligible = (
+                (CollectionRun.status == "interrupted") &
+                (CollectionRun.job_id == interrupted_from.job_id) &
+                (CollectionRun.trigger == interrupted_from.trigger) & configured
+            )
         result = session.execute(update(CollectionRun).where(
-            CollectionRun.name == NAME,
-            or_(CollectionRun.status != "running", CollectionRun.lease_expires_at <= now, CollectionRun.lease_expires_at.is_(None)),
+            CollectionRun.name == NAME, eligible,
         ).values(
             job_id=job_id, status="running", trigger=trigger, started_at=now,
             finished_at=None, lease_expires_at=now + timedelta(seconds=LEASE_SECONDS),
-            message="공식 공고와 경쟁률을 수집하고 있습니다.",
+            message=("서버 재시작 후 중단된 수집을 이어서 실행하고 있습니다."
+                     if interrupted_from else "공식 공고와 경쟁률을 수집하고 있습니다."),
         ))
         session.commit()
         return _public(session.get(CollectionRun, NAME)), result.rowcount == 1
+
+
+def _resume_trigger() -> str:
+    from app.extract.pipeline import DOCUMENT_PIPELINE_VERSION
+    from app.extract.official_rules import PARSER_VERSION
+
+    version = "|".join((os.getenv("RENDER_GIT_COMMIT", ""), DOCUMENT_PIPELINE_VERSION, PARSER_VERSION))
+    # Fits the existing 32-character column. Persisting this marker means a
+    # repeatedly sleeping/restarting free host gets at most one retry for the
+    # same code/document pipeline, until the owner explicitly starts again.
+    return "manual-resume:" + hashlib.sha256(version.encode()).hexdigest()[:16]
+
+
+def _claim_interrupted_manual_resume() -> tuple[CollectionPublic, bool]:
+    with SessionLocal() as session:
+        previous = _public(session.get(CollectionRun, NAME))
+    if previous.status != "interrupted" or not previous.job_id:
+        return previous, False
+    trigger = _resume_trigger()
+    if previous.trigger == trigger or not (
+        previous.trigger == "manual" or
+        re.fullmatch(r"manual-resume:[0-9a-f]{16}", previous.trigger or "")
+    ):
+        return previous, False
+    return claim_collection(trigger, interrupted_from=previous)
 
 
 def renew_collection(job_id: str) -> bool:
@@ -180,6 +229,14 @@ class ManualCollector:
     def startup(self) -> None:
         with self.lock:
             self.stopping = False
+        try:
+            state, claimed = _claim_interrupted_manual_resume()
+            if claimed:
+                self.start(state.job_id)
+        except Exception as error:
+            # A temporary collection-state failure must not hide the saved
+            # calendar or credentials by taking down the entire public API.
+            LOGGER.warning("Interrupted collection resume failed: %s", type(error).__name__)
 
     def start(self, job_id: str) -> None:
         try:

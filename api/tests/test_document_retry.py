@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db import init_db, make_engine
 from app.extract.pipeline import DOCUMENT_PIPELINE_VERSION, _diagnostics_rule
+from app.extract.official_rules import PARSER_VERSION
 from app.ingest import worker
 from app.models import DocumentExtractionState, Notice
 from app.repository import upsert_notice
@@ -18,11 +19,21 @@ from test_repository_api import example_notice
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("status,version,expected_attempts", [
-    ("unreadable", None, 1), ("error", "older-download-pipeline", 1),
-    ("unreadable", DOCUMENT_PIPELINE_VERSION, 0), ("partial", None, 0), ("complete", None, 0),
+@pytest.mark.parametrize("status,version,parser_version,discovery_status,expected_attempts", [
+    ("unreadable", None, PARSER_VERSION, None, 1),
+    ("error", "older-download-pipeline", PARSER_VERSION, None, 1),
+    ("unreadable", DOCUMENT_PIPELINE_VERSION, PARSER_VERSION, None, 0),
+    ("partial", None, PARSER_VERSION, None, 0),
+    ("complete", None, PARSER_VERSION, None, 0),
+    ("partial", DOCUMENT_PIPELINE_VERSION, "older-parser", None, 1),
+    ("unsupported", DOCUMENT_PIPELINE_VERSION, "older-parser", None, 1),
+    ("complete", DOCUMENT_PIPELINE_VERSION, "older-parser", None, 0),
+    ("partial", "older-download-pipeline", PARSER_VERSION, "error", 1),
+    ("complete", "older-download-pipeline", PARSER_VERSION, "error", 1),
+    ("partial", "older-download-pipeline", PARSER_VERSION, "resolved", 0),
+    ("partial", DOCUMENT_PIPELINE_VERSION, PARSER_VERSION, "error", 0),
 ])
-async def test_same_day_failure_gets_one_new_pipeline_retry_without_erasing_reviews(tmp_path, monkeypatch, status, version, expected_attempts):
+async def test_same_day_failure_gets_one_new_pipeline_retry_without_erasing_reviews(tmp_path, monkeypatch, status, version, parser_version, discovery_status, expected_attempts):
     today = date(2026, 10, 9)
     engine = make_engine(f"sqlite:///{tmp_path / 'retry.db'}")
     init_db(engine)
@@ -35,7 +46,10 @@ async def test_same_day_failure_gets_one_new_pipeline_retry_without_erasing_revi
     reviewed = {"kind": "applicant_regions", "effect": "metadata", "source": "official_document_parser",
                 "verification": "official", "document_hash": row["document_hash"],
                 "scope_complete": True, "regions": [{"region_code": "41", "region_name": "경기도"}]}
-    row["rules"] += [reviewed, {**_diagnostics_rule([], status, row["document_hash"]), "pipeline_version": version}]
+    entries = ([{"stage": "discovery", "code": "announcement_download_failed", "status": discovery_status}]
+               if discovery_status else [])
+    row["rules"] += [reviewed, {**_diagnostics_rule(entries, status, row["document_hash"]),
+                               "pipeline_version": version, "parser_version": parser_version}]
     with factory() as session:
         upsert_notice(session, row)
         session.add(DocumentExtractionState(source=row["source"], external_id=row["external_id"], audited_on=today))

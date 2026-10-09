@@ -617,20 +617,138 @@ def notice_public(
     # altering source rows or their revision history. Import here keeps the
     # document package outside repository initialization.
     from app.extract.official_rules import PARSER_VERSION, parser_version_usable
+    from app.extract.reviewed_sources import reviewed_source_for_document
 
-    has_current_document_review = any(r.get("source") == "official_document_parser" and r.get("parser_version") == PARSER_VERSION
-                                      for item in related for r in item.rules or [])
+    scope_fields = ("supply_type", "supply_types", "unit_type", "unit_types", "purpose", "restriction", "scope")
 
-    def current_parser_rule(rule: dict[str, Any], notice: Notice) -> bool:
-        if rule.get("source") == "official_document_parser" and rule.get("parser_version") != PARSER_VERSION and has_current_document_review:
+    def scoped(rule: dict[str, Any], inherited: dict[str, Any]) -> dict[str, Any]:
+        result = {**inherited, **{key: rule[key] for key in scope_fields if key in rule}}
+        if result.get("purpose") in {None, "eligibility", "admission"}:
+            result.pop("purpose", None)
+        return result
+
+    def values(rule: dict[str, Any], single: str, plural: str) -> tuple:
+        return tuple(sorted({str(value) for value in [rule.get(single), *(rule.get(plural) or [])] if value}))
+
+    def review_key(rule: dict[str, Any], scope: dict[str, Any]) -> tuple:
+        return (rule.get("kind"), values(scope, "supply_type", "supply_types"), values(scope, "unit_type", "unit_types"),
+                scope.get("purpose"), scope.get("restriction"), scope.get("scope"),
+                rule.get("label") if rule.get("kind") in {"all", "any", "not", "condition_group"} else None)
+
+    def substantive_review(rule: dict[str, Any]) -> bool:
+        if rule.get("kind") in {"document_diagnostics", "condition_coverage", "unparsed"} or rule.get("preserved_review_parser_version"):
             return False
+        if rule.get("status") in {"partial", "unreadable", "unsupported", "error"} or rule.get("scope_complete") is False:
+            return False
+        if rule.get("kind") == "applicant_regions":
+            return rule.get("scope_complete") is True
+        if rule.get("kind") == "regional_allocation":
+            method = rule.get("allocation_method")
+            return bool(method and method != "unknown" and (method != "regional_quota" or rule.get("regional_shares") or rule.get("local_share_percent") is not None))
+        return True
+
+    replacements: dict[str, set[tuple]] = {}
+    admission_reviews: dict[str, list[dict[str, Any]]] = {}
+    complete_scopes: dict[str, list[dict[str, Any]]] = {}
+    full_admission_reviews: set[str] = set()
+    current_diagnostics: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    def collect_review(rule: dict[str, Any], notice: Notice, inherited: dict[str, Any]) -> None:
+        scope = scoped(rule, inherited)
+        if rule.get("effect") in {"priority", "procedure", "instruction"} or scope.get("purpose") == "selection":
+            # Children inherit the parent's role even when their own effect
+            # is omitted. Selection and instructions do not replace admission.
+            return
+        digest = rule.get("document_hash")
+        if (rule.get("source") == "official_document_parser" and rule.get("verification") == "official"
+                and rule.get("parser_version") == PARSER_VERSION and digest and digest == notice.document_hash
+                and substantive_review(rule)):
+            replacements.setdefault(digest, set()).add(review_key(rule, scope))
+            if not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}:
+                admission_reviews.setdefault(digest, []).append(scope)
+        for key in ("conditions", "exceptions"):
+            for child in rule.get(key, []):
+                if isinstance(child, dict):
+                    collect_review(child, notice, scope)
+
+    for notice in related:
+        for rule in notice.rules or []:
+            collect_review(rule, notice, {})
+            digest = rule.get("document_hash")
+            if (rule.get("kind") == "document_diagnostics" and rule.get("source") == "official_document_parser"
+                    and rule.get("verification") == "official" and rule.get("parser_version") == PARSER_VERSION
+                    and digest and digest == notice.document_hash):
+                updated = notice.updated_at
+                observed = updated.replace(tzinfo=timezone.utc).timestamp() if updated and updated.tzinfo is None else updated.timestamp() if updated else 0
+                if digest not in current_diagnostics or observed > current_diagnostics[digest][0]:
+                    current_diagnostics[digest] = (observed, rule)
+    for notice in related:
+        for rule in notice.rules or []:
+            digest = rule.get("document_hash")
+            if (rule.get("kind") != "condition_coverage" or rule.get("source") != "official_document_parser"
+                    or rule.get("verification") != "official" or rule.get("parser_version") != PARSER_VERSION
+                    or not digest or digest != notice.document_hash or digest not in replacements
+                    or rule.get("status") in {"unreadable", "unsupported", "error"}
+                    or rule.get("preserved_review_parser_version") or not rule.get("scopes")):
+                continue
+            source = reviewed_source_for_document(str(rule.get("evidence_url") or ""), digest)
+            reviewed_pages = set((source or {}).get("admission_reviewed_pages") or [])
+            if (digest in admission_reviews and source and source.get("admission_review_version") and reviewed_pages
+                    and any(review.get("review_version") == source["admission_review_version"]
+                            and reviewed_pages <= set(review.get("reviewed_pages") or [])
+                            for review in [rule, *rule["scopes"]] if isinstance(review, dict))):
+                # This exact whole-source review replaces generic admission
+                # interpretations even when individual exception branches
+                # explicitly remain unsupported in its fresh coverage report.
+                full_admission_reviews.add(digest)
+            # A real partial review renews its coverage report, but leaves
+            # unmatched previously reviewed conditions available for these bytes.
+            replacements[digest].add(review_key(rule, scoped(rule, {})))
+            scopes = [scope for scope in rule["scopes"] if isinstance(scope, dict) and scope.get("complete") is True
+                      and all(not topic.get("required", True) or topic.get("status") in {"verified", "not_applicable"}
+                              for topic in scope.get("topics", []) if isinstance(topic, dict))
+                      and any(all(not values(scope, single, plural) or not values(condition, single, plural) or
+                                  bool(set(values(scope, single, plural)) & set(values(condition, single, plural)))
+                                  for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
+                              for condition in admission_reviews.get(digest, []))]
+            complete_scopes.setdefault(digest, []).extend(scopes)
+            offered = set(rule.get("offered_supply_types") or [])
+            if offered and offered <= {scope.get("supply_type") for scope in scopes if not values(scope, "unit_type", "unit_types")}:
+                complete_scopes[digest].append({"global_admission": True})
+
+    def admission_replaced(scope: dict[str, Any], digest: str) -> bool:
+        for reviewed in complete_scopes.get(digest, []):
+            if reviewed.get("global_admission"):
+                if not values(scope, "supply_type", "supply_types"):
+                    return True
+                continue
+            if all(not values(reviewed, single, plural) or bool(values(scope, single, plural)) and
+                   set(values(scope, single, plural)) <= set(values(reviewed, single, plural))
+                   for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types"))):
+                return True
+        return False
+
+    def current_parser_rule(rule: dict[str, Any], notice: Notice, inherited: dict[str, Any] | None = None) -> bool:
         if not parser_version_usable(rule, category=notice.category, title=notice.title, rules=notice.rules):
             return False
         if rule.get("source") == "official_document_parser" and notice.document_hash and rule.get("document_hash") != notice.document_hash:
             return False
+        if (rule.get("kind") == "document_diagnostics" and rule.get("source") == "official_document_parser"
+                and rule.get("document_hash") in current_diagnostics
+                and rule != current_diagnostics[rule["document_hash"]][1]):
+            # Latest processing evidence for the same bytes supersedes an
+            # older duplicate's failure; it is never admission review proof.
+            return False
+        scope = scoped(rule, inherited or {})
+        if rule.get("source") == "official_document_parser" and rule.get("parser_version") != PARSER_VERSION:
+            digest = rule.get("document_hash")
+            if (review_key(rule, scope) in replacements.get(digest, set()) or
+                    not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
+                    and (digest in full_admission_reviews or admission_replaced(scope, digest))):
+                return False
         # Dropping only a child could weaken an all/any/exception requirement.
         # Retire the containing branch when an obsolete interpretation occurs.
-        return all(current_parser_rule(child, notice) for key in ("conditions", "exceptions")
+        return all(current_parser_rule(child, notice, scope) for key in ("conditions", "exceptions")
                    for child in rule.get(key, []) if isinstance(child, dict))
 
     canonical = related[0]

@@ -189,6 +189,9 @@ REVIEWED_SOURCES.update({
         "inventory_page": 5, "inventory_columns": _columns,
         "inventory_units": {"074.9845": [7,7,10,2,5,7,32], "084.9947A": [15,14,22,4,10,15,69], "084.8542B": [4,4,6,1,3,4,18], "084.8894C": [3,4,6,1,2,3,18], "123.7781": [0,4,0,1,0,0,30], "146.8598P": [0,0,0,0,0,0,2]},
         "adult_or_minor_page": 4,
+        "admission_review_version": "hangang-admission-2026-10-09-v2",
+        "admission_reviewed_pages": list(range(1, 63)),
+        "admission_reviewed_standard_supply_types": ["일반공급", "기관추천 특별공급", "다자녀가구 특별공급", "노부모부양 특별공급", "생애최초 특별공급", "신생아 특별공급"],
     },
     "2026000386": {
         "title": "용인 양지 서희스타힐스 하이뷰", "announcement_date": "2026-10-02",
@@ -244,6 +247,8 @@ REVIEWED_SOURCES["2026000463-project-pdf"] = {
     **REVIEWED_SOURCES["2026000463"],
     "document_url": "https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf",
     "document_hash": "b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e",
+    "supersedes_document_hash": "718d3a166be758bb8e4cae0617741b52c4d372050dcb399e5f8874583dafce01",
+    "correction_reviewed": True,
     "inventory_page": 8,
     "military_page": 6,
 }

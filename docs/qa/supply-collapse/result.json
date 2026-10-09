@@ -1,0 +1,25 @@
+{
+  "fixture_data_only": true,
+  "checks_passed": 18,
+  "checks": [
+    "375px failed brief path starts closed with no failure facts exposed outside",
+    "375px possible general supply remains expanded",
+    "375px brief expansion reveals 60-versus-65 comparison and public evidence",
+    "375px native summary keyboard toggle closes evidence",
+    "375px detailed mismatch also starts closed without promoted shared failure facts",
+    "375px detailed keyboard expansion retains original source evidence",
+    "375px disclosure preserves page width",
+    "375px all disclosure actions are local without API requests",
+    "1280px failed brief path starts closed with no failure facts exposed outside",
+    "1280px possible general supply remains expanded",
+    "1280px brief expansion reveals 60-versus-65 comparison and public evidence",
+    "1280px native summary keyboard toggle closes evidence",
+    "1280px detailed mismatch also starts closed without promoted shared failure facts",
+    "1280px detailed keyboard expansion retains original source evidence",
+    "1280px disclosure preserves page width",
+    "1280px all disclosure actions are local without API requests",
+    "missing parent age stays expanded as a review path",
+    "all disclosure pages have no JavaScript exceptions"
+  ],
+  "javascript_errors": []
+}

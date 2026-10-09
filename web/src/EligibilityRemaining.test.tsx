@@ -12,6 +12,42 @@ const notice = (rules: NoticeRule[]): Notice => ({ id: 'gajeong', title: '인천
 const profile = { ...EMPTY_PROFILE, dateOfBirth: '1990-01-01' }
 
 describe('specific remaining clauses and personal facts', () => {
+  it('does not present a recovered page lookup as a missing attachment', () => {
+    const item = notice([rule('document_diagnostics', { effect: 'metadata', status: 'partial', diagnostics: [
+      { stage: 'discovery', code: 'announcement_download_failed', status: 'resolved', message: '공식 공고 페이지를 가져오지 못했습니다.', resolved_document_hash: hash, resolved_evidence_url: evidence },
+      { stage: 'discovery', code: 'attachment_found', status: 'ok', message: '공식 첨부를 확보했습니다.' },
+      { stage: 'interpretation', code: 'context_not_supported', status: 'partial', message: '소득 분기의 원문 검토가 필요합니다.' },
+    ] })])
+    expect(conditionSourceStatus(item).diagnostics.map((entry) => entry.code)).toEqual(['context_not_supported'])
+    const html = renderToStaticMarkup(<EligibilityDetails notice={item} profile={profile} onProfile={() => {}} />)
+    expect(html).not.toContain('공식 공고 페이지를 가져오지 못했습니다')
+    expect(html).toContain('소득 분기의 원문 검토가 필요합니다')
+  })
+  it('retains actual attachment failures when a different file succeeds', () => {
+    const item = notice([rule('document_diagnostics', { effect: 'metadata', status: 'partial', diagnostics: [
+      { stage: 'discovery', code: 'announcement_download_failed', status: 'error', message: '공식 공고 페이지를 가져오지 못했습니다.', missing_items: ['현재 모집공고문의 첨부 주소'] },
+      { stage: 'download', code: 'document_download_failed', status: 'error', message: '정정 공고문을 다운로드하지 못했습니다.', evidence_url: 'https://example.org/corrected.pdf', missing_items: ['정정 공고문'] },
+      { stage: 'download', code: 'document_read', status: 'ok', message: '다른 파일을 읽었습니다.' },
+    ] })])
+    expect(conditionSourceStatus(item).diagnostics.map((entry) => entry.code)).toEqual(['announcement_download_failed', 'document_download_failed'])
+  })
+  it('shows an active legal exception alongside another supply’s mandatory source topic once', () => {
+    const label = '생애최초의 제53조 과거 주택 소유 예외'
+    const item = notice([
+      rule('age_min', { value: 19, supply_type: '생애최초 특별공급' }),
+      rule('unparsed', { label, text: '모든 과거 취득·처분에 대한 소유 예외 적용을 확인하지 못했습니다.', supply_type: '생애최초 특별공급' }),
+      rule('condition_coverage', { effect: 'metadata', scopes: [
+        { supply_type: '생애최초 특별공급', complete: true, topics: [] },
+        { supply_type: '신혼부부 특별공급', complete: false, topics: [{ topic: '동일 배우자와 재혼한 경우 이전 혼인기간 합산', status: 'missing', required: true }] },
+      ] }),
+    ])
+    const html = renderToStaticMarkup(<EligibilityDetails notice={item} profile={profile} onProfile={() => {}} />)
+    expect(html).toContain('동일 배우자와 재혼한 경우 이전 혼인기간 합산')
+    expect(html.match(new RegExp(`서비스 원문 검토 부족 · ${label}`, 'g'))).toHaveLength(1)
+    expect(html).toContain('모든 과거 취득·처분에 대한 소유 예외 적용을 확인하지 못했습니다.')
+    expect(html).not.toContain(`${label} 입력하기`)
+    expect(html.match(/class="qualification-source-gap"/g)).toHaveLength(1)
+  })
   it('distinguishes missing input, unknown past facts, and service source review', () => {
     const reasons: EligibilityReason[] = [
       { status: 'review', category: 'missing_input', label: '부양 시작일', detail: '같은 등본에서 부양을 시작한 날짜가 필요합니다.', profileField: 'parentSupportSince' },

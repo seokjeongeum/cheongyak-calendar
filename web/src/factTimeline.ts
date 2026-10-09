@@ -13,7 +13,7 @@ export function setEvaluationToday(today?: string | null): void {
 }
 export function getEvaluationToday(): string { return evaluationToday || new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10) }
 export const FACT_GROUP_ANCHORS: Record<FactChangeGroup, keyof LocalProfile> = {
-  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFacts',
+  household: 'householdSnapshotDate', household_head: 'isHouseholdHead', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', income: 'monthlyIncomeKrw', assets: 'assetsKrw', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', bank_account: 'currentAccountUsedForWinning', citizenship: 'citizenship', employment: 'employed', parent_support: 'parentSupportSince', marital: 'maritalStatus', children: 'children', pregnancy: 'pregnant', points: 'pointsFamily', provider_employee: 'providerEmployeeOrRelatedFamily', ownership: 'ownershipFacts',
 }
 
 export const FACT_GROUP_FIELDS: Partial<Record<FactChangeGroup, readonly (keyof LocalProfile)[]>> = {
@@ -27,6 +27,7 @@ export const FACT_GROUP_FIELDS: Partial<Record<FactChangeGroup, readonly (keyof 
   assets: ['assetsKrw', 'officialNetAssetsKrw', 'realEstateKrw', 'vehicleKrw'],
   bank_private: ['accountType', 'privateRankBaseDate', 'privateDepositKrw'],
   bank_national: ['accountType', 'nationalRankBaseDate', 'nationalRecognizedPayments', 'nationalRecognizedAmountKrw'],
+  bank_account: ['accountType', 'currentAccountUsedForWinning', 'currentAccountFirstWinningDate'],
   citizenship: ['citizenship'], employment: ['employed', 'relocatedWorker'],
   parent_support: ['parentSameRegister', 'parentOwnsHome', 'parentSpouseOwnsHome', 'parentSupportSince'],
   marital: ['maritalStatus', 'hasSpouse', 'marriageDate', 'plannedMarriage', 'raisesChildWithoutSpouse', 'hasDeFactoPartner'],
@@ -43,6 +44,7 @@ const GROUPS: Record<string, FactChangeGroup> = {
   monthly_income_max_krw: 'income', income_max_krw: 'income', shinhee_income: 'income', dual_income: 'income',
   assets_max_krw: 'assets', real_estate_max_krw: 'assets', real_estate_assets_max_krw: 'assets', shinhee_assets: 'assets',
   deposit_min_krw: 'bank_private', recognized_payments_min: 'bank_national', recognized_amount_min_krw: 'bank_national',
+  account_unused_after_winning: 'bank_account',
   marital_status: 'marital', marriage_months_max: 'marital', planned_marriage: 'marital', single_parent_family: 'marital', first_home_family: 'marital',
   children_min: 'children', newborn_children_min: 'children', pregnant: 'pregnancy',
   employed: 'employment', relocated_worker: 'employment', parent_same_register: 'parent_support', parent_owns_home: 'parent_support', parent_spouse_owns_home: 'parent_support', parent_support_months_min: 'parent_support',
@@ -61,6 +63,10 @@ export function factsAtDate(profile: LocalProfile, group: FactChangeGroup, date:
     if (group === 'household' && !Object.hasOwn(snapshot.values, 'additionalFamilyPresence')) values.additionalFamilyPresence = null
     if (group === 'household' && !Object.hasOwn(snapshot.values, 'householdMembersComplete')) values.householdMembersComplete = null
     if (group === 'ownership' && !Object.hasOwn(snapshot.values, 'ownershipPropertyCounts')) values.ownershipPropertyCounts = {}
+    if (group === 'bank_account') {
+      if (!Object.hasOwn(snapshot.values, 'currentAccountUsedForWinning')) values.currentAccountUsedForWinning = null
+      if (!Object.hasOwn(snapshot.values, 'currentAccountFirstWinningDate')) values.currentAccountFirstWinningDate = ''
+    }
     if (group === 'ownership' && !Object.hasOwn(snapshot.values, 'ownershipFactsKnown')) values.ownershipFactsKnown = null
     return { known: true, profile: { ...profile, ...values }, source: 'snapshot' }
   }

@@ -26,12 +26,12 @@ from xml.etree import ElementTree
 import httpx
 from pypdf import PdfReader
 
-from .official_rules import PARSER_VERSION, parse_official_rules
-from .reviewed_sources import reviewed_document_urls
+from .official_rules import PARSER_VERSION, parse_official_rules, parser_version_usable
+from .reviewed_sources import REVIEWED_SOURCES, reviewed_document_urls, reviewed_source_for_document
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v10"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v12"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 TRUSTED_HOSTS = (
@@ -68,7 +68,8 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "context_not_supported": "공고문은 읽었지만 모집 방식·기준일 또는 신청 조건의 구조를 아직 해석하지 못했습니다.",
         "conditions_parsed": "공식 신청 조건을 비교 가능한 항목으로 읽었습니다.",
         "parser_failed": "공고문 조건을 해석하는 과정에서 오류가 발생했습니다.",
-        "document_changed": "공고문이 변경되어 이전 문서의 지역 조건·신청 제한 검토를 다시 확인합니다.",
+        "current_document_mismatch": "첨부 문서의 공고번호 또는 기준일이 현재 공고와 일치하지 않습니다.",
+        "document_changed": "공고문 원본이 변경되었습니다. 조건별 검토는 현재 문서 해시를 기준으로 표시합니다.",
     }
     result = {"stage": stage, "code": code, "status": status, "message": messages[code], "evidence_url": url}
     if status != "ok":
@@ -76,7 +77,7 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
             "discovery": ["현재 모집공고문의 첨부 주소"], "download": ["모집공고문 원본"],
             "conversion": ["변환된 신청자격·지역 조건 문단"], "decode": ["신청자격·지역 조건의 원문 텍스트"],
             "interpretation": ["공고의 모집 방식·자격 기준일·신청 가능 지역", "공급유형별 신청 제한·면제"],
-            "identity": ["변경된 문서의 지역 조건·신청 제한·면제 검토"],
+            "identity": ["현재 공고번호·기준일과 일치하는 모집공고문"] if code == "current_document_mismatch" else ["변경된 문서의 지역 조건·신청 제한·면제 검토"],
         }.get(stage, [])
     if source_format:
         result["source_format"] = source_format
@@ -104,6 +105,26 @@ def _has_reviewed_geography(rules: list[dict]) -> bool:
     return any(rule.get("kind") == "applicant_regions" and rule.get("verification") == "official"
                and rule.get("scope_complete") is True and (rule.get("regions") or rule.get("unrestricted"))
                for rule in rules)
+
+
+def _resolve_discovery_failures(entries: list[dict], *, url: str, digest: str) -> list[dict]:
+    """A matched, parsed attachment resolves discovery, not other failures.
+
+    Preserve the failed page request for audit while removing its obsolete
+    missing item. A download, conversion or identity failure is separate and
+    must still describe the attachment that could not be reviewed.
+    """
+    resolved = []
+    for entry in entries:
+        if (entry.get("stage") == "discovery"
+                and entry.get("code") in {"announcement_download_failed", "attachment_not_found"}
+                and entry.get("status") not in {"ok", "resolved"}):
+            entry = {**entry, "status": "resolved", "resolved_evidence_url": url,
+                     "resolved_document_hash": digest,
+                     "resolution_message": "현재 모집공고문 원본과 신청 조건을 다른 공식 경로에서 확보했습니다."}
+            entry.pop("missing_items", None)
+        resolved.append(entry)
+    return resolved
 
 
 class ExtractionDeferred(Exception):
@@ -184,6 +205,97 @@ def _retain_same_hash_regions(previous: list[dict], incoming: list[dict], digest
     retained = [{**r, "preserved_review_parser_version": r.get("preserved_review_parser_version") or r.get("parser_version"), "parser_version": PARSER_VERSION}
                 for r in reviewed if scope(r) not in incoming_scopes]
     return [*incoming, *retained]
+
+
+def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], digest: str, payload: dict) -> list[dict]:
+    """Keep compatible unanswered facts, not replaced interpretations.
+
+    An explicit hash-bound whole-source admission review intentionally replaces
+    the older fact set. Ordinary partial reviews retain only unmatched facts;
+    a replaced child retires its containing branch rather than weakening it.
+    """
+    from app.qualification import is_metadata
+
+    for rule in incoming:
+        if rule.get("kind") != "condition_coverage" or rule.get("document_hash") != digest:
+            continue
+        source = reviewed_source_for_document(str(rule.get("evidence_url") or ""), digest)
+        reviews = [rule, *(scope for scope in rule.get("scopes") or [] if isinstance(scope, dict))]
+        if (source and source.get("admission_review_version") and source.get("admission_reviewed_pages")
+                and any(review.get("review_version") == source["admission_review_version"]
+                        and set(source["admission_reviewed_pages"]) <= set(review.get("reviewed_pages") or [])
+                        for review in reviews)):
+            return incoming
+
+    fields = ("supply_type", "supply_types", "unit_type", "unit_types", "purpose", "restriction", "scope")
+
+    def scoped(rule, parent):
+        result = {**parent, **{field: rule[field] for field in fields if field in rule}}
+        result["selection_only"] = bool(parent.get("selection_only") or rule.get("effect") in {"priority", "procedure", "instruction"}
+                                        or result.get("purpose") == "selection")
+        if result.get("purpose") in {None, "eligibility", "admission"}:
+            result.pop("purpose", None)
+        return result
+
+    def values(scope, single, plural):
+        return {str(value) for value in [scope.get(single), *(scope.get(plural) or [])] if value}
+
+    def overlaps(first, second):
+        return all(not values(first, single, plural) or not values(second, single, plural)
+                   or bool(values(first, single, plural) & values(second, single, plural))
+                   for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
+
+    def walk(rule, parent):
+        scope = scoped(rule, parent)
+        yield rule, scope
+        for field in ("conditions", "exceptions"):
+            for child in rule.get(field) or []:
+                if isinstance(child, dict):
+                    yield from walk(child, scope)
+
+    replacements = [(rule, scope) for entry in incoming for rule, scope in walk(entry, {})
+                    if rule.get("verification") == "official" and not is_metadata(rule)
+                    and not scope.get("selection_only")
+                    and rule.get("status") not in {"partial", "unsupported", "unreadable", "error"}]
+    complete_scopes = [scope for rule in incoming if rule.get("kind") == "condition_coverage"
+                       and rule.get("verification") == "official" and rule.get("document_hash") == digest
+                       for scope in rule.get("scopes") or [] if isinstance(scope, dict) and scope.get("complete") is True
+                       and all(not topic.get("required", True) or topic.get("status") in {"verified", "not_applicable"}
+                               for topic in scope.get("topics") or [] if isinstance(topic, dict))
+                       and any(overlaps(scope, condition_scope) for _, condition_scope in replacements)]
+
+    def replaced(old, old_scope):
+        return any(old.get("kind") == new.get("kind") and overlaps(old_scope, new_scope)
+                   and all(old_scope.get(field) == new_scope.get(field) for field in ("purpose", "restriction", "scope"))
+                   and (old.get("kind") not in {"all", "any", "not", "condition_group"} or old.get("label") == new.get("label"))
+                   for new, new_scope in replacements)
+
+    retained = []
+    for rule in previous:
+        if (rule.get("source") != "official_document_parser" or rule.get("verification") != "official"
+                or rule.get("document_hash") != digest or is_metadata(rule)
+                or rule.get("effect") in {"priority", "procedure", "instruction"}
+                or not parser_version_usable(rule, category=payload.get("category", ""), title=payload.get("title", ""), rules=previous)):
+            continue
+        old_conditions = list(walk(rule, {}))
+        if any(replaced(old, scope) for old, scope in old_conditions):
+            continue
+        if any(scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
+               and any(overlaps(scope, complete) for complete in complete_scopes)
+               for _, scope in old_conditions):
+            continue
+        # Keep the original parser version: this is retained evidence, not a
+        # claim that the new parser re-reviewed the unanswered condition.
+        retained.append(rule)
+    return [*incoming, *retained]
+
+
+def _reviewed_correction(reviewed_links: list[str], announcement_date) -> dict | None:
+    """Precedence requires an explicit reviewed successor for this date/id."""
+    return next((source for source in REVIEWED_SOURCES.values()
+                 if source.get("document_url") in reviewed_links and source.get("correction_reviewed") is True
+                 and source.get("supersedes_document_hash")
+                 and source.get("announcement_date") == str(announcement_date)[:10]), None)
 
 
 class _DocumentLinkParser(HTMLParser):
@@ -425,14 +537,19 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
                 diagnostics.append(document_diagnostic("interpretation", "parser_failed", url, source_format=source_format))
             else:
                 has_conditions = any(r.get("effect") != "metadata" for r in result.get("rules", [])) or _has_reviewed_geography(result.get("rules", []))
-                diagnostics.append(document_diagnostic("interpretation", "conditions_parsed" if has_conditions else "context_not_supported", url, status="ok" if has_conditions else "partial", source_format=source_format))
+                if result.get("identity_status") == "mismatch":
+                    diagnostics.append({**document_diagnostic("identity", "current_document_mismatch", url),
+                                        "attachment_hash": digest})
+                else:
+                    diagnostics.append(document_diagnostic("interpretation", "conditions_parsed" if has_conditions else "context_not_supported", url, status="ok" if has_conditions else "partial", source_format=source_format))
     if not result.get("rules"):
         result["rules"] = [{"kind": "condition_coverage", "effect": "metadata", "verification": "official",
             "source": "official_document_parser", "parser_version": PARSER_VERSION,
             "document_hash": digest, "evidence_url": url, "status": result["status"], "scopes": [], "offered_supply_types": [], "covered_supply_types": []}]
     # An HTML error returned with HTTP 200 is not a changed announcement.
     # Keep its processing failure, without replacing the last PDF identity.
-    return {**result, "document_hash": digest if source_format != "unknown" else None, "data": data, "content_type": content_type, "diagnostics": diagnostics}
+    return {**result, "document_hash": digest if source_format != "unknown" and result.get("identity_status") != "mismatch" else None,
+            "document_url": url, "data": data, "content_type": content_type, "diagnostics": diagnostics}
 
 
 def _clean_extraction(raw: dict, url: str, digest: str) -> dict:
@@ -558,8 +675,13 @@ async def enrich_notice(
 ) -> dict:
     """Retain the best readable attachment and record each processing stage."""
     enriched = dict(payload)
+    if known_document_hash and not enriched.get("document_hash"):
+        # Feed rows do not carry the prior PDF hash. Failed current attempts
+        # must remain visible beside its retained facts in the public API.
+        enriched["document_hash"] = known_document_hash
     official_url = str(payload.get("official_url") or "")
     diagnostics = []
+    correction = None
     if not _trusted_url(official_url):
         return _with_diagnostics(enriched, [document_diagnostic("discovery", "provider_not_supported", "")], "unsupported")
     owns_client = client is None
@@ -585,6 +707,11 @@ async def enrich_notice(
                 diagnostics.append(document_diagnostic("discovery", "announcement_download_failed", official_url, http_status=code))
                 links = []
             reviewed_links = reviewed_document_urls(official_url, announcement_date=payload.get("announcement_date"))
+            correction = _reviewed_correction(reviewed_links, payload.get("announcement_date"))
+            if not links and correction:
+                # With no current attachment discovery, use the reviewed
+                # corrected copy before its known superseded original.
+                reviewed_links = [correction["document_url"], *(link for link in reviewed_links if link != correction["document_url"])]
             # Official discovery stays first. Exact reviewed copies remain
             # available if the current page or its attachment host is down.
             links = list(dict.fromkeys([*links, *reviewed_links]))
@@ -598,7 +725,7 @@ async def enrich_notice(
             links = unique_links
             # Reserve the final bounded attempt for an exact reviewed copy.
             # Ancillary files must not fill all three slots before it is tried.
-            preferred = next((link for link in reversed(reviewed_links) if link in links), None)
+            preferred = correction["document_url"] if correction else next((link for link in reversed(reviewed_links) if link in links), None)
             if preferred and preferred not in links[:MAX_DOCUMENT_LINKS]:
                 links = [*links[:MAX_DOCUMENT_LINKS - 1], preferred]
         if not links:
@@ -606,6 +733,7 @@ async def enrich_notice(
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         diagnostics.append(document_diagnostic("discovery", "attachment_found", official_url, status="ok"))
         best = None
+        best_url = None
         best_score = -1
         ai_candidates = {"rules": [], "prices": []}
         for link in links[:MAX_DOCUMENT_LINKS]:
@@ -616,9 +744,10 @@ async def enrich_notice(
                 # A readable unsupported PDF is more useful than a broken HWP
                 # copy. Only a better interpretation can replace its hash.
                 readable = any(d["code"] == "document_read" for d in local["diagnostics"])
-                score = 100 + conditions if conditions else 10 if readable else 0
+                score = -1 if local.get("identity_status") == "mismatch" else 100 + conditions if conditions else 10 if readable else 0
                 if score > best_score:
                     best, best_score = local, score
+                    best_url = local.get("document_url") or link
             except (httpx.HTTPError, ValueError) as exc:
                 code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
                 diagnostics.append(document_diagnostic("download", "document_download_failed", link, http_status=code))
@@ -634,17 +763,32 @@ async def enrich_notice(
                     allow_gemini = False
                 except (httpx.HTTPError, ValueError, zipfile.BadZipFile, json.JSONDecodeError):
                     pass
-            if conditions:
+            if conditions and local and local.get("identity_status") != "mismatch":
                 break
         if best is None or not best.get("document_hash"):
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         digest = best["document_hash"]
+        correction_pending = bool(correction and digest == correction["supersedes_document_hash"]
+                                  and any(entry.get("evidence_url") == correction["document_url"]
+                                          and entry.get("status") not in {"ok", "resolved"} for entry in diagnostics))
+        if correction_pending and known_document_hash == correction["document_hash"]:
+            # A failed current correction cannot downgrade an already reviewed
+            # successor to its superseded bytes or replace its fact set.
+            return _with_diagnostics(enriched, diagnostics, "unreadable")
         changed = bool(known_document_hash and digest != known_document_hash)
         existing_rules = list(enriched.get("rules") or [])
         existing_prices = list(payload.get("prices") or [])
         has_facts = any(r.get("effect") != "metadata" for r in best.get("rules", [])) or _has_reviewed_geography(best.get("rules", []))
+        if has_facts and best.get("status") not in {"unreadable", "error", "unsupported"}:
+            diagnostics = _resolve_discovery_failures(diagnostics, url=best_url, digest=digest)
         if changed:
-            diagnostics.append(document_diagnostic("identity", "document_changed", link, status="partial"))
+            # A new hash is an identity event. Reviewed current regions must
+            # not become a missing regional review; incomplete admission
+            # clauses retain their specific coverage topics instead.
+            reviewed_current = best.get("status") == "complete" or has_facts and best.get("status") == "partial"
+            diagnostics.append({**document_diagnostic("identity", "document_changed", best_url,
+                                                      status="ok" if reviewed_current else "partial"),
+                                "previous_document_hash": known_document_hash, "document_hash": digest})
             existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser" and r.get("verification") not in {"ai_unverified", "auto_unverified"}]
             existing_prices = [p for p in existing_prices if p.get("verification") not in {"ai_unverified", "auto_unverified"}]
             enriched["replace_rules"] = True
@@ -653,12 +797,8 @@ async def enrich_notice(
         # A successful parse replaces local facts, rather than appending copies.
         if has_facts or changed or not any(r.get("source") == "official_document_parser" and r.get("effect") != "metadata" for r in existing_rules):
             parsed_rules = best.get("rules", []) if changed else _retain_same_hash_regions(existing_rules, best.get("rules", []), digest)
-            if not changed and _has_reviewed_geography(parsed_rules) and not any(r.get("effect") != "metadata" for r in parsed_rules):
-                # A geographic-only review cannot discard already reviewed
-                # admission facts belonging to those same document bytes.
-                parsed_rules = [*parsed_rules, *(r for r in existing_rules
-                    if r.get("source") == "official_document_parser" and r.get("verification") == "official"
-                    and r.get("document_hash") == digest and r.get("effect") != "metadata")]
+            if not changed:
+                parsed_rules = _retain_same_hash_conditions(existing_rules, parsed_rules, digest, payload)
             existing_rules = [r for r in existing_rules if r.get("source") != "official_document_parser"] + parsed_rules
             enriched["replace_rules"] = True
             coverage = next((r for r in best.get("rules", []) if r.get("kind") == "condition_coverage"), {})
@@ -681,7 +821,7 @@ async def enrich_notice(
         cap = next((r.get("value") for r in best.get("rules", []) if r.get("kind") == "price_cap" and r.get("verification") == "official"), None)
         if cap in {"yes", "no", "not_applicable"}:
             enriched["price_cap_status"] = cap
-        return _with_diagnostics(enriched, diagnostics, best.get("status", "partial"))
+        return _with_diagnostics(enriched, diagnostics, "unreadable" if correction_pending else best.get("status", "partial"))
     finally:
         if owns_client:
             await client.aclose()

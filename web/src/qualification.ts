@@ -4,6 +4,7 @@ import { deriveHousehold } from './household'
 import { evaluateHouseholdOwnership, evaluatePropertyOwnership, ownershipInventoryComplete, OWNERSHIP_LAW_URL } from './ownership'
 import { contractEvaluationDate, FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, getEvaluationToday } from './factTimeline'
 import { isParentRule, resolveParentSupport } from './parentSupport'
+import { accountWinningUsageAtDate } from './accountUsage'
 export { setEvaluationToday } from './factTimeline'
 
 export type EligibilityStatus = 'possible' | 'mismatch' | 'review' | 'unpublished'
@@ -20,9 +21,11 @@ export interface EligibilityReason {
   evidenceText?: string | null
   category?: ReasonCategory
   profileField?: keyof LocalProfile
+  profileMemberId?: string
   ruleId?: string
   historyGroup?: FactChangeGroup
   contractPreview?: boolean
+  todayPreview?: boolean
 }
 export interface EligibilityResult { status: EligibilityStatus; reasons: EligibilityReason[] }
 export interface RankResult extends EligibilityResult { rank: 'first' | 'unknown' | 'not_applicable'; label: string }
@@ -157,7 +160,7 @@ function residenceCutoffReview(rule: NoticeRule, profile: LocalProfile, notice: 
   return { ...reason(rule, notice, 'review', '공고 기준일 거주지역', `현재 ${changed.label} 연속 거주 시작일 ${changed.date}은 공고 기준일 ${date} 이후입니다. 저장된 당시 주소가 없어 과거 거주지역은 판정을 보류합니다.`, `${profile.region} ${profile.district} · ${changed.date}부터`, requirement), category: 'past_fact' }
 }
 function reason(rule: NoticeRule, notice: Notice, status: ReasonStatus, label: string, detail: string, input?: string, requirement?: string): EligibilityReason {
-  return { status, label, detail, input, requirement, category: 'condition', ruleId: rule.id, criterionDate: criterionDate(rule, notice), evidenceUrl: rule.evidence_url || notice.official_url, evidenceText: rule.evidence_text || rule.text, ...(rule.criterion_basis === 'contract_date' ? { contractPreview: true } : {}) }
+  return { status, label, detail, input, requirement, category: 'condition', ruleId: rule.id, criterionDate: criterionDate(rule, notice), evidenceUrl: rule.evidence_url || notice.official_url, evidenceText: rule.evidence_text || rule.text, ...(rule.criterion_basis === 'contract_date' ? { contractPreview: true } : {}), ...(rule.criterion_basis === 'application_date' && rule.evaluation_mode === 'today_precheck' ? { todayPreview: true } : {}) }
 }
 function result(reasons: EligibilityReason[]): EligibilityResult {
   return { status: reasons.some((r) => r.status === 'fail') ? 'mismatch' : reasons.some((r) => r.status === 'review') ? 'review' : reasons.length ? 'possible' : 'unpublished', reasons }
@@ -171,6 +174,7 @@ export function profileFieldForRule(rule: NoticeRule, notice: Notice): keyof Loc
     previous_winning: 'previousWinning', special_winning: 'specialWinning', employed: 'employed', dual_income: 'dualIncome',
     parent_same_register: 'parentSameRegister', parent_owns_home: 'parentOwnsHome', parent_spouse_owns_home: 'parentSpouseOwnsHome', relocated_worker: 'relocatedWorker', pregnant: 'pregnant',
     account_type: 'accountType', deposit_min_krw: 'privateDepositKrw', recognized_payments_min: 'nationalRecognizedPayments',
+    account_unused_after_winning: 'currentAccountUsedForWinning',
     recognized_amount_min_krw: 'nationalRecognizedAmountKrw', household_min: 'householdMembers', tax_years_min: 'taxYears',
     marital_status: 'maritalStatus', marriage_months_max: 'marriageDate', age_min: 'dateOfBirth', age_max: 'dateOfBirth',
     parent_age_min: 'parentDateOfBirth', parent_support_months_min: 'parentSupportSince', children_min: 'hasChildren',
@@ -196,7 +200,7 @@ function missingInput(rule: NoticeRule, notice: Notice, label: string, detail: s
   return { ...reason(rule, notice, 'review', label, detail, undefined, requirement), category: 'missing_input', profileField: field }
 }
 const HISTORY_LABELS: Record<FactChangeGroup, string> = {
-  household: '가족 구성 변경일', household_head: '세대주 상태 변경일', domestic_residence: '국내 거주 상태 변경일', restrictions: '청약 제한 상태 변경일', overseas: '해외 체류 상태 변경일', military: '군 복무 상태 변경일', income_tax: '소득세 납부 사실 변경일', income: '소득 변경일', assets: '자산 변경일', bank_private: '민영 통장 잔액 변경일', bank_national: '국민 통장 납입 변경일', citizenship: '국적 변경일', employment: '근로 상태 변경일', parent_support: '부양 시작일', marital: '혼인 상태 변경일', children: '자녀 구성 변경일', pregnancy: '임신 상태 변경일', points: '청약가점 사실 변경일', provider_employee: '공급기관 임직원·관련 가족 상태 변경일', ownership: '주택 보유 상태 변경일',
+  household: '가족 구성 변경일', household_head: '세대주 상태 변경일', domestic_residence: '국내 거주 상태 변경일', restrictions: '청약 제한 상태 변경일', overseas: '해외 체류 상태 변경일', military: '군 복무 상태 변경일', income_tax: '소득세 납부 사실 변경일', income: '소득 변경일', assets: '자산 변경일', bank_private: '민영 통장 잔액 변경일', bank_national: '국민 통장 납입 변경일', bank_account: '현재 청약통장 당첨 사용 이력 변경일', citizenship: '국적 변경일', employment: '근로 상태 변경일', parent_support: '부양 시작일', marital: '혼인 상태 변경일', children: '자녀 구성 변경일', pregnancy: '임신 상태 변경일', points: '청약가점 사실 변경일', provider_employee: '공급기관 임직원·관련 가족 상태 변경일', ownership: '주택 보유 상태 변경일',
 }
 function pastFact(rule: NoticeRule, notice: Notice, group: FactChangeGroup, detail?: string): EligibilityReason {
   const date = criterionDate(rule, notice), label = HISTORY_LABELS[group]
@@ -304,7 +308,7 @@ function conditionChildren(rule: NoticeRule): NoticeRule[] {
 }
 export function inheritedCondition(parent: NoticeRule, child: NoticeRule): NoticeRule {
   const inherited: Partial<NoticeRule> = {}
-  for (const key of ['verification', 'evidence_url', 'evidence_text', 'document_hash', 'criterion_date', 'reference_date', 'criterion_basis', 'supply_type', 'unit_type', 'housing_kind']) if (parent[key] !== undefined && child[key] === undefined) inherited[key] = parent[key]
+  for (const key of ['verification', 'evidence_url', 'evidence_text', 'document_hash', 'criterion_date', 'reference_date', 'criterion_basis', 'evaluation_mode', 'requires_maintained_until_application', 'supply_type', 'unit_type', 'housing_kind']) if (parent[key] !== undefined && child[key] === undefined) inherited[key] = parent[key]
   return { ...inherited, ...child }
 }
 function allKinds(rules: NoticeRule[]): string[] { return rules.flatMap((r) => [r.kind, ...allKinds(conditionChildren(r))]) }
@@ -317,9 +321,54 @@ function scopeProblem(rule: NoticeRule, notice: Notice): string | null {
   if (typeof rule.public_housing === 'boolean' && notice.qualification_context?.public_housing !== rule.public_housing) return '공공주택 특별법 적용 여부가 확인되지 않았거나 조건 범위가 다릅니다.'
   return null
 }
+/** Exact notices may require unmarried children on the applicant's own register. */
+function strictFirstHomeFamily(rule: NoticeRule, profile: LocalProfile, notice: Notice, date: string, unitType?: string): EligibilityReason {
+  const pregnancy = rule.include_pregnancy === true ? factsAtDate(profile, 'pregnancy', date) : null
+  if (pregnancy?.known && pregnancy.profile.pregnant === true) return reason(rule, notice, 'pass', '생애최초 가족 조건', '공고 기준일의 임신 사실이 태아를 인정하는 가족 조건을 충족합니다.', '임신 중', '공고가 인정하는 태아')
+  const pregnancyGap = pregnancy && !pregnancy.known && profile.pregnant != null
+    ? pastFact(rule, notice, 'pregnancy') : pregnancy && pregnancy.profile.pregnant == null
+      ? missingInput(rule, notice, '생애최초 임신 조건', '태아를 인정하는 공고입니다. 임신 사실이 다른 가족 경로를 충족하는지 입력하세요.', '공고가 인정하는 태아', 'pregnant') : null
+  const household = deriveHousehold(profile, date)
+  if (!household.complete) return missingInput(rule, notice, '생애최초 가족·등본 조건', household.reviewDetail || '가족 관계와 등본 위치를 입력하세요.', '미혼 자녀의 동일 등본 또는 1인 가구 분기', household.profileField)
+  const familyFacts = factsAtDate(profile, 'household', date, legacyFactObservation(profile, 'household')).profile
+  const children = familyFacts.householdMembers.filter((member) => member.relation === 'applicant_child')
+  const points = factsAtDate(profile, 'points', date)
+  const ascendant = familyFacts.householdMembers.some((member) => ['applicant_parent', 'applicant_grandparent'].includes(member.relation) && (['applicant', 'both'].includes(member.register) || member.register === 'spouse' && familyFacts.spouseSameRegister === true))
+  const maximum = numberFrom(rule.solo_max_area_sqm), prices = (notice.prices || []).filter((price) => !unitType || price.unit_type === unitType)
+  // A child on a separate register can never satisfy the child route. Its
+  // marital fact only matters if a childless one-person route could succeed.
+  const noChildRoutePossible = (rule.non_solo_requires_ascendant === true ? ascendant : household.legalCount! > 1) || maximum === null || !prices.length || prices.some((price) => exclusiveArea(price) === null || exclusiveArea(price)! <= maximum)
+  let childGap: EligibilityReason | null = null, unmarriedOutsideRegister = false
+  for (const child of children) {
+    const sameRegister = ['applicant', 'both'].includes(child.register) || child.register === 'spouse' && familyFacts.spouseSameRegister === true
+    if (rule.unmarried_applicant_child_same_register === true && !sameRegister && !noChildRoutePossible) continue
+    if (!parseDate(child.dateOfBirth)) { childGap ||= { ...missingInput(rule, notice, '생애최초 자녀 생년월일', '가족 목록에 있는 자녀의 생년월일을 입력하면 공고 기준일의 자녀 사실을 비교합니다.', '공고 기준일에 존재하는 자녀', 'householdMembers'), profileMemberId: child.id }; continue }
+    if (child.dateOfBirth > date) continue
+    const unmarried = points.profile.pointsFamily[child.id]?.unmarried
+    if (!points.known && unmarried != null) { childGap ||= { ...pastFact(rule, notice, 'points', `${date} 당시 이 자녀의 미혼 여부를 확인할 저장된 가족 이력이 없습니다. 가족 혼인 사실의 기존 변경일을 재사용합니다.`), profileMemberId: child.id }; continue }
+    if (unmarried == null) { childGap ||= { ...missingInput(rule, notice, '생애최초 자녀 혼인 여부', '가족 목록의 이 자녀가 미혼인지 가족 혼인 입력에 한 번 입력하세요.', '미혼인 자녀', 'pointsFamily'), profileMemberId: child.id }; continue }
+    if (!unmarried) continue
+    if (rule.unmarried_applicant_child_same_register !== true || sameRegister) return reason(rule, notice, 'pass', '생애최초 가족 조건', '선택한 가족 목록의 미혼 자녀가 본인과 같은 등본에 있습니다. 이 가족의 혼인·등본 사실을 재사용했습니다.', '미혼 자녀 · 본인 동일 등본', '공고가 정한 미혼 자녀 조건')
+    unmarriedOutsideRegister = true
+  }
+  if (!children.length) {
+    const childFacts = factsAtDate(profile, 'children', date)
+    if (!childFacts.known && profile.hasChildren != null) childGap ||= pastFact(rule, notice, 'children')
+    else if (childFacts.profile.hasChildren !== false || childFacts.profile.children.length > 0) childGap ||= missingInput(rule, notice, '생애최초 자녀·등본 연결', '자녀가 있다면 가족 목록에 자녀를 연결해 미혼 여부와 본인 등본 위치를 비교하세요. 생년월일만 적힌 자녀 목록으로 혼인·등본 조건을 추정하지 않습니다.', '자녀별 혼인 상태·본인 등본 위치', 'householdMembers')
+  }
+  if (childGap) return childGap
+  if (unmarriedOutsideRegister) return pregnancyGap || reason(rule, notice, 'fail', '생애최초 미혼 자녀 등본 조건', '미혼 자녀가 본인과 같은 등본에 있지 않아 이 공고의 자녀 경로에 해당하지 않습니다. 미혼 자녀가 있는데 없는 1인 가구로 바꾸어 비교하지 않습니다.', '미혼 자녀 · 본인 별도 등본', '본인과 같은 등본의 미혼 자녀')
+  if (rule.non_solo_requires_ascendant === true ? ascendant : household.legalCount! > 1) return reason(rule, notice, 'pass', '생애최초 비단독 1인 가구 조건', '혼인·미혼 자녀가 없고 직계존속과 본인의 같은 등본에 있는 비단독 1인 가구 조건을 충족합니다.', '직계존속 · 본인 동일 등본', '공고가 정한 비단독 1인 가구')
+  if (maximum === null || !prices.length || prices.some((price) => exclusiveArea(price) === null)) return unsupported(rule, notice, '단독 1인 가구의 공식 신청 면적과 주택형 전용면적을 확인해야 합니다.', '생애최초 단독 1인 가구 면적')
+  const matches = prices.map((price) => exclusiveArea(price)! <= maximum)
+  if (matches.some(Boolean) && matches.some((match) => !match)) return { ...unsupported(rule, notice, '단독 1인 가구가 신청 가능한 면적과 초과 면적이 함께 있습니다. 주택형별 조건을 확인하세요.', '생애최초 단독 1인 가구 면적'), category: 'selection' }
+  if (!matches.every(Boolean) && pregnancyGap) return pregnancyGap
+  return reason(rule, notice, matches.every(Boolean) ? 'pass' : 'fail', '생애최초 단독 1인 가구 면적', `직계존속과 같은 등본의 비단독 가구 요건이 충족되지 않아 전용 ${maximum}㎡ 이하의 1인 가구 조건을 비교했습니다.`, '혼인·미혼 자녀 없는 단독 1인 가구', `전용 ${maximum}㎡ 이하`)
+}
 export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: Notice, unitType?: string): EligibilityReason {
   if (rule.verification !== 'official') return { ...unsupported(rule, notice, '문서에서 추출한 내용입니다. 원문과 적용 범위를 검토하기 전에는 자격 판정에 사용하지 않습니다.', '자동 추출 참고 내용'), category: 'unverified' }
   if (!rule.evidence_url && !rule.evidence_text && !rule.text && !notice.official_url) return unsupported(rule, notice, '공식 조건의 원문 근거가 제공되지 않아 자동 판정하지 않습니다.', '근거 미공개')
+  if (rule.kind === 'unparsed') return unsupported(rule, notice, rule.text || rule.evidence_text || '공고의 이 조항을 아직 비교 가능한 조건으로 정리하지 못했습니다.', typeof rule.label === 'string' && rule.label ? rule.label : '신청자격 조항 검토 필요')
   if (rule.criterion_basis === 'contract_date') rule = { ...rule, criterion_date: contractEvaluationDate(notice) }
   profile = profileForResidenceDate(profile, criterionDate(rule, notice))
   const problem = scopeProblem(rule, notice)
@@ -363,6 +412,15 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     return { ...reason(rule, notice, status, typeof rule.label === 'string' ? rule.label : mode === 'any' ? '대체 충족 조건' : '함께 필요한 조건', explained.map((r) => `${r.label}: ${r.detail}`).join(' / '), inputs.length ? inputs.join(' / ') : undefined, requirement), category: status === 'review' ? question?.category || 'source_gap' : 'condition', profileField: status === 'review' ? question?.profileField : undefined, historyGroup: status === 'review' ? question?.historyGroup : undefined }
   }
   const date = criterionDate(rule, notice)
+  if (rule.kind === 'account_unused_after_winning') {
+    if (!date) return unsupported(rule, notice, '현재 청약통장의 당첨 사용 여부를 비교할 공식 기준일이 확인되지 않았습니다.', '현재 청약통장 사용 이력')
+    const usage = accountWinningUsageAtDate(profile, date)
+    const preview = rule.criterion_basis === 'application_date' && rule.evaluation_mode === 'today_precheck' ? ' 오늘의 통장 상태로 미리 비교하며, 접수일까지 유효한 통장을 유지해야 합니다.' : ''
+    if (usage.status === 'past_fact') return pastFact(rule, notice, 'bank_account', usage.detail + preview)
+    if (usage.status === 'missing_input') return missingInput(rule, notice, usage.profileField === 'currentAccountFirstWinningDate' ? '현재 청약통장 최초 당첨일' : '현재 청약통장 당첨 사용 이력', usage.detail + preview, '당첨에 사용되지 않은 현재 통장', usage.profileField)
+    const compared = factualBoolean(rule, notice, usage.value, '현재 청약통장 당첨 사용 이력')
+    return { ...compared, detail: `${usage.detail} ${compared.detail}${preview}` }
+  }
   if (isParentRule(rule.kind)) {
     const parent = resolveParentSupport(profile, date || getEvaluationToday())
     if (parent.mode !== 'legacy') {
@@ -624,16 +682,19 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const exact = rows.find((row) => row.household_size === target)
     const last = rows.find((row) => row.household_size === largest)
     const additional = numberFrom(rule.extra_person_krw, true)
-    const limit = exact ? numberFrom(exact.max_krw, true) : target > largest && last && additional !== null ? numberFrom(last.max_krw, true)! + (target - largest) * additional : null
+    const extraBase = numberFrom(rule.extra_person_base_krw, true), lastBase = numberFrom(rule.extra_person_income_base_last_krw, true), percent = numberFrom(rule.income_percent)
+    const expandedLimit = extraBase !== null && lastBase !== null && percent !== null ? Math.round((lastBase + (target - largest) * extraBase) * percent / 100) : last && additional !== null ? numberFrom(last.max_krw, true)! + (target - largest) * additional : null
+    const limit = exact ? numberFrom(exact.max_krw, true) : target > largest ? expandedLimit : null
     if (limit === null) return unsupported(rule, notice, `${size}인 가구의 공식 월평균소득 기준을 아직 대조하지 못했습니다.`, '월평균소득 표')
     const assessed = numeric({ ...rule, value: limit }, notice, numberFrom(profile.monthlyIncomeKrw, true), '공고 기준 월평균소득', '원', '<=')
-    assessed.requirement = `공식 소득 산정 ${size}인${target !== size ? ` (${target}인 기준 적용)` : ''} · <= ${limit.toLocaleString('ko-KR')}원`
+    assessed.requirement = `공식 소득 산정 ${size}인${target !== size ? ` (${target}인 기준 적용)` : ''} · ${rule.operator || '<='} ${limit.toLocaleString('ko-KR')}원`
     return assessed
   }
   if (['real_estate_assets_max_krw', 'real_estate_max_krw'].includes(rule.kind)) return numeric(rule, notice, numberFrom(profile.realEstateKrw, true), '공고 기준 부동산 가액', '원', '<=')
   if (rule.kind === 'first_home_family') {
     if (profile.maritalStatus === 'unknown' || profile.hasSpouse === null) return missingInput(rule, notice, '생애최초 가족 조건', '공고 기준일의 혼인 상태와 배우자 유무를 입력하세요.', '혼인·자녀 또는 공고의 1인 가구 조건', 'maritalStatus')
     if (profile.hasSpouse === true || profile.maritalStatus === 'married') return reason(rule, notice, 'pass', '생애최초 가족 조건', '혼인 중이라고 입력한 사실이 공고의 가족 조건을 충족합니다.', '혼인 중', '혼인 또는 자녀·1인 가구 분기')
+    if (rule.unmarried_child_required === true || rule.unmarried_applicant_child_same_register === true || rule.non_solo_requires_ascendant === true) return date ? strictFirstHomeFamily(rule, profile, notice, date, unitType) : unsupported(rule, notice, '생애최초 가족 사실을 비교할 공식 기준일이 필요합니다.', '공고 기준일의 사실')
     if (profile.hasChildren === null) return missingInput(rule, notice, '생애최초 가족 조건', '혼인 중이 아니라면 자녀 유무를 입력하세요.', '자녀 또는 1인 가구 분기', 'hasChildren')
     if (profile.hasChildren === true) {
       if (!profile.children.length || profile.children.some((child) => !parseDate(child.dateOfBirth) || !date || child.dateOfBirth > date || child.adopted === null)) return missingInput(rule, notice, '생애최초 자녀 조건', '자녀의 생년월일과 입양 사실을 입력하세요.', '공고가 인정하는 자녀', 'children')
@@ -818,6 +879,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     if (profile.recommendationStatus === 'unknown' || !profile.recommendationReason) return missingInput(rule, notice, '기관추천', '추천 대상 사유와 해당 기관의 추천 상태를 입력하세요.', undefined, !profile.recommendationReason ? 'recommendationReason' : 'recommendationStatus')
     const allowed = Array.isArray(rule.allowed_reasons) ? rule.allowed_reasons : typeof rule.value === 'string' ? [rule.value] : []
     const matches = allowed.length > 0 && allowed.includes(profile.recommendationReason)
+    if (profile.recommendationStatus === 'confirmed' && !matches && typeof rule.unsupported_reason_label === 'string') return unsupported(rule, notice, `추천 사유 ${profile.recommendationReason}는 확인했으나 이 사유의 공식 추천·통장 면제 분기를 아직 비교에 반영하지 못했습니다.`, rule.unsupported_reason_label)
     return reason(rule, notice, profile.recommendationStatus === 'confirmed' && matches ? 'pass' : profile.recommendationStatus === 'none' && rule.require_confirmed === true ? 'fail' : 'review', '기관추천', `추천 사유 ${profile.recommendationReason} · 상태 ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, `${profile.recommendationReason} / ${RECOMMENDATION_LABEL[profile.recommendationStatus]}`, allowed.length ? `공식 추천 사유 ${allowed.join(', ')}` : '공고의 공식 추천 사유 미확인')
   }
   if (rule.kind === 'first_rank') {
@@ -865,12 +927,13 @@ function latestAttachmentUnreviewed(notice: Notice, reviewed: NoticeRule[]): boo
   const failures = notice.rules.filter((rule) => rule.kind === 'document_diagnostics' && rule.verification === 'official' && ['unreadable', 'error'].includes(String(rule.status)) && Array.isArray(rule.diagnostics))
   if (!failures.length) return false
   const urls = new Set(reviewed.filter((rule) => rule.verification === 'official' && typeof rule.document_hash === 'string').map((rule) => documentUrlIdentity(rule.evidence_url)).filter((url): url is string => !!url))
-  if (!urls.size) return false
   const attachmentStages = ['download', 'conversion', 'decode', 'interpretation']
   return failures.some((rule) => (rule.diagnostics as Record<string, unknown>[]).some((entry) => {
-    if (!entry || typeof entry !== 'object' || entry.status === 'ok' || !attachmentStages.includes(String(entry.stage))) return false
+    if (!entry || typeof entry !== 'object' || entry.status === 'ok') return false
+    if (entry.stage === 'identity' || entry.code === 'current_document_mismatch') return true
+    if (!attachmentStages.includes(String(entry.stage))) return false
     const url = documentUrlIdentity(entry.evidence_url)
-    return !!url && !urls.has(url)
+    return urls.size > 0 && !!url && !urls.has(url)
   }))
 }
 

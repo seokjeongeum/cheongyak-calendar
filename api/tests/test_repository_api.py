@@ -443,12 +443,13 @@ def test_corrected_document_keeps_only_parser_facts_matching_new_hash(db, client
 
 @pytest.mark.parametrize("failed_current", [False, True])
 @pytest.mark.parametrize("legacy_version", ["official-sections-2026-10-03-v1", "official-sections-2026-10-04-v3"])
-def test_obsolete_duplicate_parser_rules_cannot_restore_conditions_or_classification(db, client, failed_current, legacy_version):
+def test_partial_review_replaces_matching_compatible_rules_and_rejects_obsolete_versions(db, client, failed_current, legacy_version):
     current = {"source": "official_document_parser", "verification": "official",
                "parser_version": PARSER_VERSION, "document_hash": "same-official-file"}
     raw = example_notice(external_id="CURRENT-PARSER")
     raw.update(document_hash="same-official-file", rules_complete=False,
                rules=[classification("national"),
+                      {**current, "kind": "housing_classification", "effect": "metadata", "housing_kind": "national"},
                       {**current, "kind": "qualification_context", "effect": "metadata",
                        "value": {"speculation_zone": False, "original_announcement_date": "2026-09-28"}},
                       {**current, "kind": "condition_coverage", "effect": "metadata",
@@ -474,16 +475,293 @@ def test_obsolete_duplicate_parser_rules_cannot_restore_conditions_or_classifica
         assert public["qualification_context"]["speculation_zone"] is False
         assert public["qualification_context"]["original_announcement_date"] == "2026-09-28"
         document_rules = [rule for rule in public["rules"] if rule.get("source") == "official_document_parser"]
-        assert {rule["parser_version"] for rule in document_rules} == {PARSER_VERSION}
+        assert {rule["parser_version"] for rule in document_rules} == ({PARSER_VERSION, legacy_version} if legacy_version.endswith("-v3") else {PARSER_VERSION})
         conditions = [rule for rule in document_rules if rule.get("effect") != "metadata"]
-        assert len(conditions) == (0 if failed_current else 1)
-        assert not any(rule["kind"] == "national_rank_months" for rule in conditions)
+        assert len(conditions) == (2 if legacy_version.endswith("-v3") else 0 if failed_current else 1)
+        assert any(rule["kind"] == "national_rank_months" for rule in conditions) is legacy_version.endswith("-v3")
+        assert not any(rule["kind"] == "homeless" and rule["value"] is False for rule in conditions) or failed_current
         assert public["rules_complete"] is False
         assert len(public["prices"]) == 2 and len(public["events"]) == 2
     # Public filtering never rewrites the archived duplicate or its provenance.
     assert any(rule.get("parser_version") == legacy_version for rule in duplicate.rules)
     archived = db.query(NoticeRevision).filter_by(notice_id=duplicate.id).one()
     assert any(rule.get("parser_version") == legacy_version for rule in archived.payload["rules"])
+
+
+def document_rule(kind, *, version="official-sections-2026-10-07-v9", digest="reviewed-file", **fields):
+    return {"kind": kind, "source": "official_document_parser", "verification": "official",
+            "parser_version": version, "document_hash": digest, **fields}
+
+
+def test_failed_current_download_preserves_reviewed_admission_regions_and_visible_diagnostics(db, client):
+    old = [document_rule("homeless", value=True, supply_type="일반공급"),
+           document_rule("applicant_regions", effect="metadata", scope_complete=True, regions=[{"province_code": "11"}]),
+           document_rule("condition_coverage", effect="metadata", status="complete",
+                         scopes=[{"supply_type": "일반공급", "complete": True, "verified_rule_count": 1}])]
+    diagnostic = document_rule("document_diagnostics", version=PARSER_VERSION, effect="metadata", status="unreadable",
+                               diagnostics=[{"stage": "download", "code": "document_download_failed", "status": "error"}])
+    raw = example_notice(external_id="FAILED-REVIEW-RETAINED")
+    raw.update(document_hash="reviewed-file", rules_complete=True, rules=[classification(), *old, diagnostic])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    for endpoint in ("/api/notices", f"/api/notices/{notice.id}"):
+        response = client.get(endpoint).json()
+        public = response["items"][0] if "items" in response else response
+        assert all(rule in public["rules"] for rule in old)
+        assert diagnostic in public["rules"]
+        assert public["rules_complete"] is True
+        assert not any(item.get("code") == "document_read" for item in diagnostic["diagnostics"])
+
+
+def test_geographic_only_current_review_preserves_older_same_hash_admission(db, client):
+    admission = document_rule("homeless", value=True, supply_type="일반공급")
+    old_region = document_rule("applicant_regions", effect="metadata", scope_complete=True, unrestricted=True)
+    current_region = document_rule("applicant_regions", version=PARSER_VERSION, effect="metadata", scope_complete=True,
+                                   regions=[{"province_code": "11", "district_code": "11680"}])
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="partial",
+                             scopes=[{"supply_type": "일반공급", "complete": False, "verified_rule_count": 0}])
+    raw = example_notice(external_id="GEOGRAPHY-REVIEW-RETAINED")
+    raw.update(document_hash="reviewed-file", rules=[classification(), admission, old_region, current_region, coverage])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    public = client.get(f"/api/notices/{notice.id}").json()
+    assert admission in public["rules"] and current_region in public["rules"]
+    assert old_region not in public["rules"]
+    assert public["rules_complete"] is False
+
+
+def test_partial_current_review_replaces_conflicting_variants_only_in_same_scope(db, client):
+    old = document_rule("homeless", value=True, supply_type="일반공급", unit_type="59A")
+    conflict = {**old, "value": False}
+    other_unit = {**old, "unit_type": "84A"}
+    other_supply = {**old, "supply_type": "신혼부부"}
+    fresh = document_rule("homeless", version=PARSER_VERSION, value=False, supply_types=["일반공급"], unit_types=["59A"])
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="partial",
+                             scopes=[{"supply_type": "일반공급", "complete": False}])
+    raw = example_notice(external_id="PARTIAL-SCOPED-REVIEW")
+    raw.update(document_hash="reviewed-file", rules=[classification(), old, conflict, other_unit, other_supply, fresh, coverage])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert old not in rules and conflict not in rules
+    assert fresh in rules and other_unit in rules and other_supply in rules
+
+
+def test_full_current_admission_review_retires_only_matching_scope(db, client):
+    replaced = document_rule("age_min", value=19, supply_type="일반공급", unit_type="59A")
+    other_unit = {**replaced, "unit_type": "84A"}
+    other_supply = {**replaced, "supply_type": "신혼부부"}
+    rank = document_rule("national_rank_months", value=6, purpose="first_rank", supply_type="일반공급", unit_type="59A")
+    fresh = document_rule("homeless", version=PARSER_VERSION, value=True, supply_type="일반공급", unit_type="59A")
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="complete",
+                             offered_supply_types=["일반공급"], scopes=[{"supply_type": "일반공급", "unit_type": "59A", "complete": True, "verified_rule_count": 1}])
+    raw = example_notice(external_id="COMPLETE-SCOPED-REVIEW")
+    raw.update(document_hash="reviewed-file", rules=[classification(), replaced, other_unit, other_supply, rank, fresh, coverage])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert replaced not in rules
+    assert all(rule in rules for rule in (other_unit, other_supply, rank, fresh))
+
+
+def test_complete_general_review_does_not_retire_unreviewed_special_scope(db, client):
+    global_old = document_rule("age_min", value=19)
+    special_old = document_rule("age_min", value=19, supply_type="신혼부부")
+    fresh = document_rule("homeless", version=PARSER_VERSION, value=True, supply_type="일반공급")
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="complete",
+                             offered_supply_types=["일반공급"], scopes=[{"supply_type": "일반공급", "complete": True, "verified_rule_count": 1}])
+    raw = example_notice(external_id="COMPLETE-GENERAL-SCOPE")
+    raw.update(document_hash="reviewed-file", rules=[classification(), global_old, special_old, fresh, coverage])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert global_old not in rules and special_old in rules
+
+
+def test_geography_coverage_flag_alone_is_not_proof_of_new_admission_review(db, client):
+    admission = document_rule("homeless", value=True, supply_type="일반공급")
+    region = document_rule("applicant_regions", version=PARSER_VERSION, effect="metadata", scope_complete=True, unrestricted=True)
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="complete",
+                             scopes=[{"supply_type": "일반공급", "complete": True, "verified_rule_count": 0}])
+    raw = example_notice(external_id="GEOGRAPHY-NOT-ADMISSION-PROOF")
+    raw.update(document_hash="reviewed-file", rules=[classification(), admission, region, coverage])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert admission in rules
+
+
+def test_nested_replacement_retires_whole_old_branch_without_weakening_it(db, client):
+    branch = document_rule("all", label="함께 필요한 신청 조건", supply_type="일반공급", unit_type="59A",
+                           conditions=[document_rule("homeless", value=True), document_rule("income_max", value=100)])
+    other_unit = {**branch, "unit_type": "84A"}
+    fresh = document_rule("homeless", version=PARSER_VERSION, value=False, supply_type="일반공급", unit_type="59A")
+    raw = example_notice(external_id="NESTED-SCOPED-REVIEW")
+    raw.update(document_hash="reviewed-file", rules=[classification(), branch, other_unit, fresh])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert branch not in rules and other_unit in rules and fresh in rules
+    assert not any(rule["kind"] == "income_max" for rule in rules)
+
+
+def test_current_review_does_not_retire_valid_separate_provider_document(db, client):
+    fresh = document_rule("homeless", version=PARSER_VERSION, digest="provider-a-file", value=True, supply_type="일반공급")
+    raw = example_notice(external_id="PROVIDER-A-REVIEW")
+    raw.update(document_hash="provider-a-file", rules=[classification(), fresh])
+    notice = upsert_notice(db, raw)
+    other = document_rule("homeless", digest="provider-b-file", value=False, supply_type="일반공급")
+    duplicate = upsert_notice(db, {**raw, "source": "myhome", "external_id": "PROVIDER-B-REVIEW",
+                                  "document_hash": "provider-b-file", "rules": [classification(), other]})
+    db.commit()
+    assert duplicate.duplicate_of_id == notice.id
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert fresh in rules and other in rules
+
+
+def test_wrong_hash_current_rule_is_not_replacement_proof_and_never_leaks(db, client):
+    retained = document_rule("homeless", value=True, supply_type="일반공급")
+    wrong = document_rule("homeless", version=PARSER_VERSION, digest="different-file", value=False, supply_type="일반공급")
+    raw = example_notice(external_id="WRONG-HASH-REVIEW")
+    raw.update(document_hash="reviewed-file", rules=[classification(), retained, wrong])
+    notice = upsert_notice(db, raw)
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert retained in rules and wrong not in rules
+
+
+@pytest.mark.asyncio
+async def test_actual_hangang_v8_to_current_pipeline_and_duplicate_projection_roundtrip(db, client, monkeypatch):
+    import json
+    from pathlib import Path
+    import httpx
+    from app.extract import pipeline
+    from app.extract.official_rules import parse_official_rules
+
+    fixtures = Path(__file__).parent / "fixtures"
+    source = next(row for row in json.loads((fixtures / "current-private-v5.json").read_text()) if row["external_id"] == "2026000468")
+    prior = json.loads((fixtures / "hangang-prior-generic-v8.json").read_text())
+    assert prior["document_hash"] == source["document_hash"]
+    raw = {**source["payload"], "source": "cheongyak_home", "external_id": source["external_id"],
+           "provider": "한국부동산원", "document_hash": source["document_hash"], "rules": [classification(), *prior["rules"]]}
+    notice = upsert_notice(db, raw)
+    duplicate = upsert_notice(db, {**raw, "source": "myhome", "external_id": "RECORDED-HANGANG-V8-COPY"})
+    assert duplicate.duplicate_of_id == notice.id
+    parsed = parse_official_rules(source["pages"], url=source["document_url"], digest=source["document_hash"], payload=source["payload"])
+
+    async def extract(url, download_client, *, payload):
+        return {**parsed, "document_url": source["document_url"], "document_hash": source["document_hash"],
+                "diagnostics": [pipeline.document_diagnostic("decode", "document_read", source["document_url"], status="ok")]}
+
+    monkeypatch.setattr(pipeline, "extract_local_document", extract)
+    html = f'<a href="{source["document_url"]}">모집공고문</a>'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=html))) as download_client:
+        enriched = await pipeline.enrich_notice(raw, download_client, known_document_hash=source["document_hash"], allow_gemini=False)
+    upsert_notice(db, enriched)
+    db.commit()
+    old_special = [rule for rule in prior["rules"] if rule.get("supply_type")]
+    assert len(old_special) == 8
+    assert not any(rule in enriched["rules"] for rule in old_special)
+
+    def general(rule):
+        return (rule.get("effect") not in {"metadata", "priority"} and rule.get("purpose") != "first_rank"
+                and rule.get("supply_type") in {None, "일반공급"}
+                and (not rule.get("supply_types") or "일반공급" in rule["supply_types"]))
+
+    expected_general = [rule for rule in parsed["rules"] if general(rule)]
+    assert len(expected_general) == 8
+    for endpoint in ("/api/notices", f"/api/notices/{notice.id}", f"/api/notices/{duplicate.id}"):
+        response = client.get(endpoint).json()
+        public = response["items"][0] if "items" in response else response
+        assert [rule for rule in public["rules"] if general(rule)] == expected_general
+        assert not any(rule in public["rules"] for rule in old_special)
+        assert not any(rule["kind"] == "tax_years_min" for rule in public["rules"])
+        first_rank = {rule["kind"]: rule for rule in public["rules"] if rule.get("purpose") == "first_rank"}
+        assert {"private_rank_months", "deposit_min_krw", "account_type"} <= first_rank.keys()
+        assert first_rank["private_rank_months"]["value"] == 12
+        coverage = next(rule for rule in public["rules"] if rule["kind"] == "condition_coverage")
+        scopes = {scope["supply_type"]: scope for scope in coverage["scopes"]}
+        assert scopes["일반공급"]["complete"] is True
+        assert {supply: scope["complete"] for supply, scope in scopes.items()} == {
+            scope["supply_type"]: scope["complete"] for rule in parsed["rules"] if rule["kind"] == "condition_coverage" for scope in rule["scopes"]}
+        assert scopes["신혼부부 특별공급"]["complete"] is False
+        assert public["rules_complete"] is False
+    # Projection does not rewrite the older duplicate's archived evidence.
+    assert all(rule in duplicate.rules for rule in old_special)
+
+
+@pytest.mark.parametrize("missing_proof", ["review_version", "reviewed_pages"])
+def test_whole_source_admission_retirement_requires_registry_version_and_full_pages(db, client, missing_proof):
+    import copy
+    import json
+    from pathlib import Path
+    from app.extract.official_rules import parse_official_rules
+
+    fixtures = Path(__file__).parent / "fixtures"
+    source = next(row for row in json.loads((fixtures / "current-private-v5.json").read_text()) if row["external_id"] == "2026000468")
+    prior = json.loads((fixtures / "hangang-prior-generic-v8.json").read_text())
+    old_tax = next(rule for rule in prior["rules"] if rule["kind"] == "tax_years_min")
+    parsed = parse_official_rules(source["pages"], url=source["document_url"], digest=source["document_hash"], payload=source["payload"])
+    rules = copy.deepcopy(parsed["rules"])
+    coverage = next(rule for rule in rules if rule["kind"] == "condition_coverage")
+    coverage[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else list(range(1, 62))
+    for scope in coverage["scopes"]:
+        scope[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else list(range(1, 62))
+        if scope["supply_type"] == "생애최초 특별공급":
+            scope["complete"] = False
+    raw = {**source["payload"], "source": "cheongyak_home", "external_id": source["external_id"],
+           "provider": "한국부동산원", "document_hash": source["document_hash"], "rules": [*rules, old_tax]}
+    notice = upsert_notice(db, raw)
+    db.commit()
+    assert old_tax in client.get(f"/api/notices/{notice.id}").json()["rules"]
+
+
+@pytest.mark.parametrize("old_version", ["official-sections-2026-10-07-v9", PARSER_VERSION])
+@pytest.mark.parametrize("failed_only", [False, True])
+def test_latest_same_hash_diagnostics_replace_duplicate_failure_without_retiring_facts(db, client, old_version, failed_only):
+    admission = document_rule("homeless", value=True, supply_type="일반공급")
+    raw = example_notice(external_id="LATEST-SAME-HASH-DIAGNOSTICS")
+    raw.update(document_hash="reviewed-file", rules=[classification(), admission])
+    notice = upsert_notice(db, raw)
+    previous = document_rule("document_diagnostics", version=old_version, effect="metadata", status="unreadable",
+                             diagnostics=[{"stage": "discovery", "code": "announcement_download_failed", "status": "error"}])
+    duplicate = upsert_notice(db, {**raw, "source": "myhome", "external_id": "OLD-DUPLICATE-DIAGNOSTICS",
+                                  "rules": [classification(), admission, previous]})
+    fresh = document_rule("document_diagnostics", version=PARSER_VERSION, effect="metadata", status="unreadable" if failed_only else "partial",
+                          diagnostics=[{"stage": "download" if failed_only else "discovery",
+                                        "code": "document_download_failed" if failed_only else "announcement_download_failed",
+                                        "status": "error" if failed_only else "resolved"}])
+    current_admission = admission if failed_only else {**admission, "parser_version": PARSER_VERSION}
+    upsert_notice(db, {**raw, "rules": [classification(), current_admission, fresh], "replace_rules": True})
+    db.commit()
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert fresh in rules and previous not in rules
+    assert current_admission in rules
+    if failed_only:
+        assert admission in rules
+    assert previous in duplicate.rules
+
+
+@pytest.mark.parametrize("effect,purpose", [("priority", None), ("procedure", None), ("instruction", None), ("metadata", "selection")])
+def test_non_admission_parent_children_cannot_replace_duplicate_admission_proof(db, client, effect, purpose):
+    admission = document_rule("homeless", value=True, supply_type="일반공급")
+    old_rank = document_rule("private_rank_months", value=6, purpose="first_rank")
+    current_rank = {**old_rank, "value": 12, "parser_version": PARSER_VERSION}
+    group = document_rule("all", version=PARSER_VERSION, effect=effect, purpose=purpose, supply_type="일반공급",
+                          conditions=[document_rule("homeless", version=PARSER_VERSION, value=False)])
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="complete",
+                             offered_supply_types=["일반공급"], scopes=[{"supply_type": "일반공급", "complete": True, "verified_rule_count": 1}])
+    raw = example_notice(external_id="NON-ADMISSION-PROOF-BOUNDARY")
+    raw.update(document_hash="reviewed-file", rules=[classification(), current_rank, group, coverage])
+    notice = upsert_notice(db, raw)
+    duplicate = upsert_notice(db, {**raw, "source": "myhome", "external_id": "PRIOR-ADMISSION-PROOF",
+                                  "rules": [classification(), admission, old_rank]})
+    db.commit()
+    assert duplicate.duplicate_of_id == notice.id
+    rules = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert admission in rules
+    assert current_rank in rules and old_rank not in rules
+    assert group in rules
 
 
 def test_cross_source_duplicate_merges_complementary_prices_and_events(db, client):

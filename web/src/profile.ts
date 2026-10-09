@@ -109,7 +109,7 @@ export function migrateProfile(value: unknown): LocalProfile {
     next.incomeHouseholdSize = ''; next.householdScopeKnown = null; next.familyOnRegister = null
   }
   if (stored.version === 5) {
-    const groups: FactChangeGroup[] = ['household', 'household_head', 'domestic_residence', 'restrictions', 'overseas', 'military', 'income_tax', 'income', 'assets', 'bank_private', 'bank_national', 'citizenship', 'employment', 'parent_support', 'marital', 'children', 'pregnancy', 'points', 'provider_employee', 'ownership']
+    const groups: FactChangeGroup[] = ['household', 'household_head', 'domestic_residence', 'restrictions', 'overseas', 'military', 'income_tax', 'income', 'assets', 'bank_private', 'bank_national', 'bank_account', 'citizenship', 'employment', 'parent_support', 'marital', 'children', 'pregnancy', 'points', 'provider_employee', 'ownership']
     if (stored.factChanges && typeof stored.factChanges === 'object' && !Array.isArray(stored.factChanges)) for (const [group, raw] of Object.entries(stored.factChanges)) {
       if (!groups.includes(group as FactChangeGroup) || !raw || typeof raw !== 'object' || Array.isArray(raw)) continue
       const change = raw as Record<string, unknown>
@@ -128,6 +128,8 @@ export function migrateProfile(value: unknown): LocalProfile {
   if (stored.pointsFamily && typeof stored.pointsFamily === 'object' && !Array.isArray(stored.pointsFamily)) next.pointsFamily = Object.fromEntries(Object.entries(stored.pointsFamily).filter(([, value]) => value && typeof value === 'object' && !Array.isArray(value)).map(([id, value]) => { const row = value as Record<string, unknown>; return [id, { registeredSince: typeof row.registeredSince === 'string' && parseDate(row.registeredSince) ? row.registeredSince : '', unmarried: bool(row.unmarried), spouseOwnsHome: bool(row.spouseOwnsHome), overseasExcluded: bool(row.overseasExcluded), grandchildrenParentsAbsent: bool(row.grandchildrenParentsAbsent) }] }))
   // A stale identity stays unresolved rather than silently selecting another parent.
   if (next.parentSupportMemberId && (next.parentSupportMemberId.length > 128 || /[\u0000-\u001f]/.test(next.parentSupportMemberId))) next.parentSupportMemberId = ''
+  if (next.currentAccountFirstWinningDate && !parseDate(next.currentAccountFirstWinningDate)) next.currentAccountFirstWinningDate = ''
+  if (next.currentAccountFactsAsOfDate && !parseDate(next.currentAccountFactsAsOfDate)) next.currentAccountFactsAsOfDate = ''
   if (next.factChanges.children && !next.factChanges.pregnancy) next.factChanges.pregnancy = { ...next.factChanges.children }
   next.factSnapshots = [...(next.factSnapshots || []), ...(next.factSnapshots || []).filter((snapshot) => snapshot.group === 'children' && Object.hasOwn(snapshot.values, 'pregnant') && !next.factSnapshots?.some((existing) => existing.group === 'pregnancy' && existing.date === snapshot.date)).map((snapshot) => ({ ...snapshot, group: 'pregnancy' as const, values: Object.fromEntries(['pregnant', 'expectedChildren'].filter((key) => Object.hasOwn(snapshot.values, key)).map((key) => [key, snapshot.values[key]])) }))]
   for (const key of MONEY_FIELDS) next[key] = normalizeMoney(next[key] ?? '') ?? ''
@@ -167,11 +169,15 @@ export function selectDistrict(profile: LocalProfile, code: string, options: { p
   return { ...profile, legacyDistrict: nextCity === previousCity ? profile.legacyDistrict : undefined, districtScopeSpecific: !!option?.parentCityCode && !!options.preserveOrdinaryDistrict, districtCode: option?.code || '', district: option?.name || '', districtMovedInDate: option && !option.parentCityCode && nextCity === previousCity ? cityStart : '', cityMovedInDate: cityStart, regionNeedsReview: false }
 }
 
-const SNAPSHOT_FIELDS: Partial<Record<FactChangeGroup, keyof LocalProfile>> = { household: 'householdSnapshotDate', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate' }
+const SNAPSHOT_FIELDS: Partial<Record<FactChangeGroup, keyof LocalProfile>> = { household: 'householdSnapshotDate', domestic_residence: 'domesticResidenceFactsAsOfDate', restrictions: 'applicationRestrictionsAsOfDate', overseas: 'overseasFactsAsOfDate', military: 'militaryFactsAsOfDate', income_tax: 'incomeTaxFactsAsOfDate', bank_private: 'privateDepositAsOfDate', bank_national: 'nationalPaymentsAsOfDate', bank_account: 'currentAccountFactsAsOfDate' }
 
 /** Preserve known old facts; an edit alone does not invent when the status changed. */
 export function updateProfileFacts(profile: LocalProfile, part: Partial<LocalProfile>, today: string): LocalProfile {
   const changed = { ...part }
+  if (part.accountType !== undefined && part.accountType !== profile.accountType) {
+    changed.currentAccountUsedForWinning = null
+    changed.currentAccountFirstWinningDate = ''
+  }
   if (part.maritalStatus !== undefined && part.maritalStatus !== profile.maritalStatus) changed.hasSpouse = part.maritalStatus === 'unknown' ? null : part.maritalStatus === 'married'
   else if (part.hasSpouse !== profile.hasSpouse) {
     if (part.hasSpouse === true) changed.maritalStatus = 'married'

@@ -2,6 +2,7 @@ import { criterionDate, evaluateRule, inheritedCondition, offeredSpecialSupplies
 import { FACT_GROUP_ANCHORS, factGroupForRule, factsAtDate, setEvaluationToday } from './factTimeline'
 import { parentCityCode } from './regions'
 import { isParentRule, resolveParentSupport } from './parentSupport'
+import { accountWinningUsageAtDate } from './accountUsage'
 import type { FactChangeGroup, LocalProfile, Notice, NoticeRule } from './types'
 
 export interface ProfileRuleContext { rule: NoticeRule; notice: Notice; date: string | null }
@@ -29,6 +30,7 @@ export interface ProfileQuestionModel {
   needsPlannedMarriage: boolean
   needsSingleParent: boolean
   needsProperty: boolean
+  needsAccountWinningUsage: boolean
 }
 const noticeContexts = new WeakMap<Notice, { today: string; rules: NoticeRule[]; rows: ProfileRuleContext[] }>()
 const models = new WeakMap<Notice[], { today: string; model: ProfileQuestionModel }>()
@@ -79,6 +81,10 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
     const group = factGroupForRule(rule)
     if (group) pastGroups.add(group)
     if (['children_min', 'newborn_children_min'].includes(rule.kind) && rule.include_pregnancy === true) pastGroups.add('pregnancy')
+    if (rule.kind === 'first_home_family') {
+      pastGroups.add('children')
+      if (rule.include_pregnancy === true) pastGroups.add('pregnancy')
+    }
     if (rule.domestic_only === true) pastGroups.add('domestic_residence')
   }
   const providerRules = scopedRules.filter(({ rule }) => rule.kind === 'provider_employee_restriction')
@@ -100,6 +106,7 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
     needsMonthly: kinds.has('shinhee_income') || kinds.has('monthly_income_max_krw') || scopedRules.some(({ rule }) => rule.kind === 'income_max_krw' && rule.period !== 'annual'),
     needsNetAssets: kinds.has('shinhee_assets'), needsPlannedMarriage: kinds.has('planned_marriage'), needsSingleParent: kinds.has('single_parent_family'),
     needsProperty: scopedRules.some(({ rule }) => /real_estate|vehicle|자동차|부동산/.test(String(rule.asset_basis || rule.kind))),
+    needsAccountWinningUsage: kinds.has('account_unused_after_winning'),
   }
   models.set(notices, { today, model })
   return model
@@ -138,6 +145,8 @@ export function getProfileHistoryTarget(field: keyof LocalProfile, profile: Loca
   // The support start is its own dated fact. Past ownership questions pass an
   // explicit history group instead of diverting the actual start-date input.
   if (field === 'parentSupportSince') return undefined
+  if (field === 'currentAccountFirstWinningDate') return undefined
+  if (field === 'currentAccountUsedForWinning') return model.scopedRules.some(({ rule, date }) => rule.kind === 'account_unused_after_winning' && date && accountWinningUsageAtDate(profile, date).status === 'past_fact') ? 'bank_account' : undefined
   const parentKind = ({ parentSameRegister: 'parent_same_register', parentOwnsHome: 'parent_owns_home', parentSpouseOwnsHome: 'parent_spouse_owns_home' } as const)[field as 'parentSameRegister' | 'parentOwnsHome' | 'parentSpouseOwnsHome']
   if (parentKind && resolveParentSupport(profile).mode !== 'legacy') {
     for (const { rule, date } of model.scopedRules) if (rule.kind === parentKind && date) {
@@ -148,7 +157,7 @@ export function getProfileHistoryTarget(field: keyof LocalProfile, profile: Loca
   }
   if (profile[field] == null || profile[field] === '' || profile[field] === 'unknown') return undefined
   return (Object.entries(FACT_GROUP_ANCHORS) as [FactChangeGroup, keyof LocalProfile][]).find(([group, anchor]) => anchor === field && model.scopedRules.some(({ rule, date }) =>
-    (factGroupForRule(rule) === group || group === 'pregnancy' && ['children_min', 'newborn_children_min'].includes(rule.kind) && rule.include_pregnancy === true) && date && !factsAtDate(profile, group, date).known,
+    (factGroupForRule(rule) === group || group === 'pregnancy' && ['children_min', 'newborn_children_min', 'first_home_family'].includes(rule.kind) && rule.include_pregnancy === true || group === 'children' && rule.kind === 'first_home_family') && date && !factsAtDate(profile, group, date).known,
   ))?.[0]
 }
 
@@ -161,4 +170,18 @@ export function getParentSupportHistoryGroups(profile: LocalProfile, model: Prof
     if (!entry.temporalKnown && entry.value != null && entry.value !== '' && entry.historyGroup) groups.add(entry.historyGroup)
   }
   return [...groups]
+}
+
+/** Mount a canonical child-marital input only when it changes an offered route. */
+export function getFirstHomeChildQuestionState(profile: LocalProfile, model: ProfileQuestionModel): { memberIds: string[]; historyNeeded: boolean } {
+  const memberIds = new Set<string>()
+  let historyNeeded = false
+  for (const { rule, notice } of model.scopedRules) {
+    if (rule.kind !== 'first_home_family' || rule.unmarried_child_required !== true && rule.unmarried_applicant_child_same_register !== true && rule.non_solo_requires_ascendant !== true) continue
+    const assessed = evaluateRule(rule, profile, notice, rule.unit_type || undefined)
+    if (assessed.status !== 'review' || assessed.profileField !== 'pointsFamily') continue
+    if (assessed.profileMemberId) memberIds.add(assessed.profileMemberId)
+    if (assessed.historyGroup === 'points') historyNeeded = true
+  }
+  return { memberIds: [...memberIds], historyNeeded }
 }

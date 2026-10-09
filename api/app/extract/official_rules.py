@@ -19,7 +19,7 @@ from urllib.parse import parse_qs, urlparse
 from .reviewed_sources import REVIEWED_SOURCES, reviewed_source_for_document
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-07-v9"
+PARSER_VERSION = "official-sections-2026-10-09-v10"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -33,9 +33,9 @@ PROVINCES = {
 def parser_version_usable(rule: dict, *, category: str = "", title: str = "", rules: list[dict] | None = None) -> bool:
     if rule.get("source") != "official_document_parser" or rule.get("parser_version") == PARSER_VERSION:
         return True
-    # v8 adds supply-scoped special selection metadata. Prior admission facts
-    # remain valid until their document is reparsed/corrected.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8"}:
+    # Later reviewed geography/admission supplements add source-bound facts.
+    # Prior valid facts remain available until their document is reparsed.
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -209,7 +209,7 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
     publication_id = (attachment_query.get("pblancNo") or [None])[0]
     if attachment_id and (expected_id and attachment_id != expected_id or publication_id != attachment_id):
         return {"rules": [], "offered_supply_types": [], "status": "unsupported",
-                "reason": "현재 공고번호와 첨부 문서의 공고번호가 일치하지 않습니다."}
+                "identity_status": "mismatch", "reason": "현재 공고번호와 첨부 문서의 공고번호가 일치하지 않습니다."}
     from .contract_schedule import parse_contract_schedule
     result = _parse_official_rules(pages, url=url, digest=digest, payload=payload)
     contract = parse_contract_schedule(pages, url=url, digest=digest, parser_version=PARSER_VERSION)
@@ -304,7 +304,8 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     classified = kind != "unknown" and not (official_kind and official_kind != kind)
     rules: list[dict] = []
     if context_conflict or (not cutoff and not (first_come or unranked)) or ("입주자모집공고" not in flat and not outside_apt and not first_come) or (not classified and not outside_apt and not first_come and not unranked):
-        return {"rules": [], "offered_supply_types": [], "status": "unsupported", "reason": "공식 주택 구분·기준일 또는 문서 맥락을 확인하지 못했습니다."}
+        return {"rules": [], "offered_supply_types": [], "status": "unsupported", "reason": "공식 주택 구분·기준일 또는 문서 맥락을 확인하지 못했습니다.",
+                **({"identity_status": "mismatch"} if context_conflict else {})}
 
     def make(kind_name: str, value=None, *, supply=None, quote="", page=None, **fields) -> dict:
         identity = json.dumps([digest, kind_name, supply, quote, fields], ensure_ascii=False, sort_keys=True)
@@ -686,6 +687,11 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
         rules=[r for r in rules if r.get("effect")=="metadata" and r.get("kind") not in {"rank_applicability","applicant_regions","offered_supplies"}]
         rules.extend(a17["rules"])
 
+    from .hangang_admission import hangang_admission
+    admission_review = hangang_admission(pages, digest=digest, reviewed=reviewed, rules=rules, make=make)
+    if admission_review:
+        rules = admission_review["rules"]
+
     # Remove duplicate tables/headings across pages without removing corrected
     # semantics. Scope completeness is never inferred from the count of facts.
     unique: dict[str, dict] = {}
@@ -698,10 +704,18 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     for supply in offered:
         conditions = [r for r in rules if r.get("effect") != "metadata" and r.get("purpose") != "first_rank" and (not r.get("supply_type") or r["supply_type"] == supply)]
         remaining = (reviewed or {}).get("remaining_topics_by_supply", {}).get(supply, ["재당첨·청약 제한 및 법령 예외", "예정 세대·동일 배우자 재혼 이력 및 사전청약 별도 경로" if a17 else "소득·자산 분기" if supply != "일반공급" or kind == "national" else "신청 제한·연령 예외의 전체 검토"])
+        if admission_review:
+            remaining = admission_review["missing_topics"].get(supply, remaining)
         topics = [{"topic":r.get("label") or r["kind"],"status":"partial" if r["kind"] == "unparsed" else "verified","required":True,"rule_ids":[r["id"]]} for r in conditions]
         topics.extend({"topic":topic,"status":"missing","required":True,"rule_ids":[]} for topic in remaining)
-        complete = bool(conditions and all(t["status"] == "verified" for t in topics))
-        scopes.append({"supply_type":supply,"complete":complete,"verified_rule_count":len(conditions),"topics":topics,"missing_topics":remaining})
+        if admission_review:
+            topics.extend(admission_review["exempt_topics"].get(supply, []))
+            topics.extend(admission_review["conditional_topics"].get(supply, []))
+        complete = bool(conditions and all(not t.get("required", True) or t["status"] in {"verified", "not_applicable"} for t in topics))
+        scopes.append({"supply_type":supply,"complete":complete,"verified_rule_count":len(conditions),"topics":topics,"missing_topics":remaining,
+                       **({"review_version": admission_review["review_version"], "reviewed_pages": admission_review["reviewed_pages"],
+                           "completion_basis": "document_hash_reviewed_standard_branch", "reviewed_branches": ["standard"],
+                           "unresolved_branches": [topic["topic"] for topic in admission_review["conditional_topics"].get(supply, [])]} if admission_review else {})})
     coverage_status = "complete" if scopes and all(s["complete"] for s in scopes) else "partial" if counts else "unsupported"
     rules.append(make("condition_coverage", effect="metadata", quote=cutoff_evidence["text"], page=cutoff_evidence["page"], status=coverage_status, offered_supply_types=offered, scopes=scopes, covered_supply_types=[s for s in offered if counts[s]], source="official_document_parser"))
     return {"rules": rules, "offered_supply_types": offered, "status": coverage_status, "parser_version": PARSER_VERSION}

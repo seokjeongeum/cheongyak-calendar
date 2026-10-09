@@ -179,7 +179,7 @@ export function eligibilityCombinations(notice: Notice, profile: LocalProfile = 
 }
 
 export function reasonKey(reason: EligibilityReason): string {
-  return JSON.stringify([reason.status, reason.category, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.evidenceUrl, reason.evidenceText, reason.profileField, reason.contractPreview, reason.historyGroup])
+  return JSON.stringify([reason.status, reason.category, reason.label, reason.detail, reason.input, reason.requirement, reason.criterionDate, reason.evidenceUrl, reason.evidenceText, reason.profileField, reason.contractPreview, reason.todayPreview, reason.historyGroup])
 }
 export function uniqueReasons(reasons: EligibilityReason[]): EligibilityReason[] {
   return [...new Map(reasons.map((reason) => [reasonKey(reason), reason])).values()]
@@ -199,7 +199,7 @@ export function conditionSourceStatus(notice: Notice): { diagnostics: SourceDiag
   for (const rule of notice.rules || []) {
     if (rule.effect !== 'metadata' || rule.verification !== 'official') continue
     if (rule.kind === 'document_diagnostics' && Array.isArray(rule.diagnostics)) for (const item of rule.diagnostics) {
-      if (!item || typeof item !== 'object' || item.status === 'ok' || typeof item.message !== 'string') continue
+      if (!item || typeof item !== 'object' || ['ok', 'resolved'].includes(String(item.status)) || typeof item.message !== 'string') continue
       const diagnostic = { stage: String(item.stage || 'interpretation'), code: String(item.code || ''), message: item.message,
         evidenceUrl: typeof item.evidence_url === 'string' ? item.evidence_url : undefined,
         sourceFormat: typeof item.source_format === 'string' ? item.source_format : undefined,

@@ -13,7 +13,8 @@ import { ChildFactsFields } from './ChildFactsFields'
 import { ParentSupportFields } from './ParentSupportFields'
 import { IncomeScopeHelp } from './IncomeScopeHelp'
 import { FactChangeFields } from './FactChangeFields'
-import { getParentSupportHistoryGroups, getProfileHistoryTarget, getProfileQuestionModel } from './profileQuestionModel'
+import { getFirstHomeChildQuestionState, getParentSupportHistoryGroups, getProfileHistoryTarget, getProfileQuestionModel } from './profileQuestionModel'
+import { accountWinningUsageAtDate } from './accountUsage'
 
 const LAW = 'https://www.law.go.kr/법령/주택공급에관한규칙/'
 // Step navigation changes visibility, not the facts inside the five forms.
@@ -29,7 +30,7 @@ const FIELD_STEPS: Partial<Record<keyof LocalProfile, number>> = {
   incomeHouseholdSize: 3, householdSize: 1, applicantOnRegister: 1, householdMembers: 1, householdMembersComplete: 1, additionalFamilyPresence: 1, householdSnapshotDate: 1, householdCompositionUnchanged: 1, householdHistoryConfirmations: 1, isHouseholdHead: 1, hasSpouse: 1, spouseSameRegister: 1, familyOnRegister: 1, householdScopeKnown: 1,
   applicantOwnsHome: 1, spouseOwnsHome: 1, familyOwnsHome: 1, ownershipFacts: 1, ownershipFactsKnown: 1, ownershipPropertyCounts: 1,
   applicantPreviouslyOwnedHome: 1, spousePreviouslyOwnedHome: 1, familyPreviouslyOwnedHome: 1,
-  accountType: 2, privateRankBaseDate: 2, nationalRankBaseDate: 2, privateDepositKrw: 2,
+  accountType: 2, privateRankBaseDate: 2, nationalRankBaseDate: 2, privateDepositKrw: 2, currentAccountUsedForWinning: 2, currentAccountFirstWinningDate: 2, currentAccountFactsAsOfDate: 2,
   nationalRecognizedPayments: 2, nationalRecognizedAmountKrw: 2, accountConversionUnclear: 2,
   previousWinning: 2, previousWinningDate: 2, restrictedFromApplying: 2, projectApplicationHistory: 2, applicationRestrictionFacts: 2, applicationRestrictionsAsOfDate: 2, applicationRestrictionsHistoryConfirmations: 2, citizenship: 0, overseasContinuousDays: 0, overseasFactsAsOfDate: 0, overseasOnlyApplicantForLivelihood: 0, overseasFactsHistoryConfirmations: 0,
   privateDepositAsOfDate: 2, privateDepositMaintained: 2, nationalPaymentsAsOfDate: 2,
@@ -74,6 +75,11 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
   const [step, setStep] = useState(() => initialField ? FIELD_STEPS[initialField] || 0 : 0)
   const [historyTarget, setHistoryTarget] = useState<FactChangeGroup | null>(null)
   const parentHistoryGroups = useMemo(() => getParentSupportHistoryGroups(profile, model), [profile, model])
+  const firstHomeChildQuestions = useMemo(() => getFirstHomeChildQuestionState(profile, model), [profile, model])
+  const pointsComparison = parentHistoryGroups.includes('points') || notices.some((notice) => (notice.selection_methods || notice.rules).some((rule) => rule.kind === 'selection_method' && rule.verification === 'official' && typeof rule.points_percent === 'number' && rule.points_percent > 0))
+  const accountUsageQuestions = useMemo(() => model.scopedRules.filter(({ rule, date }) => rule.kind === 'account_unused_after_winning' && date).map(({ date }) => accountWinningUsageAtDate(profile, date!)), [profile, model])
+  const accountWinningDateNeeded = accountUsageQuestions.some((entry) => entry.status === 'missing_input' && entry.profileField === 'currentAccountFirstWinningDate') || profile.currentAccountUsedForWinning === true && !!profile.currentAccountFirstWinningDate && model.pastKinds.has('account_unused_after_winning')
+  const accountWinningHistoryNeeded = accountUsageQuestions.some((entry) => entry.status === 'past_fact')
   const showHistory = useCallback((group: FactChangeGroup) => {
     setStep(group === 'points' ? 2 : 1)
     setHistoryTarget(group)
@@ -177,9 +183,10 @@ export const ProfileDialog = memo(function ProfileDialog({ open = true, onDraft,
     </StepFacts>,
 <StepFacts profile={profile} notices={notices} today={today} field={initialField}><div className="step-icon"><CalendarDays size={22} /></div><h3>민영·국민주택을 각각 비교합니다</h3><p>통장의 가입일과 순위기산일은 전환·미성년 납입 인정 등에 따라 다를 수 있습니다. 은행의 청약통장 내역이나 청약홈 ‘청약통장 순위확인서’에서 각 날짜와 인정 내역을 확인해 주세요.</p>
       <label data-profile-field="accountType">청약통장 종류<select value={profile.accountType} onChange={(event) => update({ accountType: event.target.value as LocalProfile['accountType'] })}><option value="unknown">미확인</option><option value="comprehensive">주택청약종합저축 (청년형 포함)</option><option value="savings">청약저축</option><option value="deposit">청약예금</option><option value="installment">청약부금</option><option value="none">통장 없음</option></select></label>
+      {model.needsAccountWinningUsage && profile.accountType !== 'none' && <section className="question-group"><h4>이번 신청에 사용할 통장의 당첨 사용 이력</h4>{fact('currentAccountUsedForWinning', '현재 사용할 청약통장이 당첨자 선정에 사용된 적이 있나요?', '같은 통장으로 이미 당첨됐다면 계약하지 않았어도 재사용할 수 없다는 공고 조건입니다. 다른 통장으로 당첨된 과거 이력은 이 답변에 포함하지 않습니다.')}{accountWinningDateNeeded && <>{date('currentAccountFirstWinningDate', '현재 청약통장이 가장 먼저 당첨자 선정에 사용된 날')}<p className="field-help">현재 이 통장의 실제 최초 당첨일을 공고 기준일과 비교합니다. 계약일·다른 통장의 당첨일·민영 또는 국민 순위기산일은 대신 사용하지 않습니다.</p></>}<FactChangeFields profile={profile} onChange={onChange} today={today} group="bank_account" label="현재 통장 당첨 사용 이력" needed={accountWinningHistoryNeeded} /></section>}
       {profile.accountType !== 'none' && <><section className="question-group"><h4>민영주택</h4><p className="field-help">민영주택 가입기간을 세는 은행 인정 시작일입니다. 가입기간과 지역·면적별 예치금을 비교합니다. 국민주택 기산일과 같은 날짜일 수 있으며, 통장 전환으로 인정되는 실적이 다르면 달라질 수 있습니다.</p>{date('privateRankBaseDate', '민영주택 순위기산일')}{money('privateDepositKrw', '민영주택 예치금 (원)')}<FactChangeFields profile={profile} onChange={onChange} today={today} group="bank_private" label="민영 예치금" needed={!!profile.privateDepositKrw && needsPastGroup('bank_private')} /><p className="field-help">은행에서 확인한 예치금을 입력하세요. 지역·전용면적별 공고 기준과 비교하며, 과거 금액이 필요한 경우 마지막 변경일을 사용합니다.</p></section><section className="question-group"><h4>국민주택</h4><p className="field-help">국민주택 가입기간을 세는 은행 인정 시작일입니다. 가입기간과 월 납입인정횟수·금액을 비교합니다. 민영 기산일과 구분해 청약홈 순위확인서 또는 가입 은행에서 확인한 날짜를 입력하세요.</p>{date('nationalRankBaseDate', '국민주택 순위기산일')}{number('nationalRecognizedPayments', '국민주택 납입인정횟수 (회)')}{money('nationalRecognizedAmountKrw', '국민주택 납입인정금액 (원)')}<FactChangeFields profile={profile} onChange={onChange} today={today} group="bank_national" label="납입인정 내역" needed={!!profile.nationalRecognizedPayments && needsPastGroup('bank_national')} /><p className="field-help">입력한 납입인정횟수·금액은 은행에서 확인된 내역으로 비교합니다.</p></section></>}
       {fact('restrictedFromApplying', '청약홈에서 재당첨 제한 등 현재 신청 제한이 확인되나요?', '확인하지 않았다면 모름으로 두세요. 당첨 이력이 있다고 항상 신청 제한이 생기는 것은 아닙니다.')}
-      {(parentHistoryGroups.includes('points') || notices.some((notice) => (notice.selection_methods || notice.rules).some((rule) => rule.kind === 'selection_method' && rule.verification === 'official' && typeof rule.points_percent === 'number' && rule.points_percent > 0))) && <PointsFields profile={profile} onChange={onChange} today={today} historyNeeded={parentHistoryGroups.includes('points')} />}
+      {(pointsComparison || firstHomeChildQuestions.memberIds.length > 0 || firstHomeChildQuestions.historyNeeded) && <PointsFields profile={profile} onChange={onChange} today={today} historyNeeded={parentHistoryGroups.includes('points') || firstHomeChildQuestions.historyNeeded} pointsComparison={pointsComparison} firstHomeChildIds={firstHomeChildQuestions.memberIds} />}
       <ApplicationFactsFields profile={profile} onChange={onChange} today={today} notices={notices} section="restrictions" />
       {needsProvider && <section className="question-group"><h4>공급기관의 임직원 매입 제한</h4><FactChangeFields profile={profile} onChange={onChange} today={today} group="provider_employee" label="공급기관 임직원·관련 가족 상태" needed={needsPastGroup('provider_employee') && profile.providerEmployeeOrRelatedFamily !== null} />{fact('providerEmployeeOrRelatedFamily', '공고가 정한 공급기관 임직원 또는 관련 가족에 해당하나요?', model.providerHelp)}{profile.providerEmployeeOrRelatedFamily === true && model.providerApproval && fact('providerPurchaseApproval', '공고가 허용하는 공식 매입 승인을 받았나요?')}</section>}
       <div className="step-tip"><Info size={16} /> 날짜만으로 1순위를 확정하지 않습니다. 1순위 조건을 충족하지 않아도 자동으로 2순위로 바꾸지 않습니다.</div><p className="help-link"><a href={`${LAW}제27조`} target="_blank" rel="noopener noreferrer">국민주택 · 제27조</a> · <a href={`${LAW}제28조`} target="_blank" rel="noopener noreferrer">민영주택 · 제28조</a></p>

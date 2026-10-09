@@ -241,7 +241,7 @@ export function createOwnershipFact(id = ''): OwnershipFact {
   return { id, projectId: '', ownerMemberId: '', ownerRelation: 'unknown', ownerDateOfBirth: '', propertyKind: 'unknown', underlyingPropertyKind: 'unknown', areaSqm: '', officialValueKrw: '', valueBasis: 'unknown', valueAsOfDate: '', acquisitionPriceKrw: '', propertyRegionCode: '', acquiredDate: '', disposedDate: '', acquisitionMethod: 'unknown', inheritedShare: null, ownedShare: null, notificationDate: '', buildingApprovalDate: '', outsideUrbanArea: null, inMyeon: null, ownerPreviouslyResided: null, movedToOtherConstructionArea: null, firstRegisteredDomicile: null, fromAscendantOrSpouse: null, builderForSale: null, saleCompleted: null, individualBusinessRegistered: null, employeeDormitoryUnderHousingAct: null, governmentEmployeeHousingPolicy: null, standardResidentialBuilding: null, abandonedOrDestroyedOrNonResidential: null, registerCorrectedDate: '', oldLawUnauthorized: null, lawfulAtConstructionEvidence: null, originalResidualFirstCome: null, unpaidRentalDeposit: null, auctionAcquisition: null, firstEverAcquisition: null, tenantResidenceStartDate: '' }
 }
 
-export type FactChangeGroup = 'household' | 'household_head' | 'domestic_residence' | 'restrictions' | 'overseas' | 'military' | 'income_tax' | 'income' | 'assets' | 'bank_private' | 'bank_national' | 'citizenship' | 'employment' | 'parent_support' | 'marital' | 'children' | 'pregnancy' | 'points' | 'provider_employee' | 'ownership'
+export type FactChangeGroup = 'household' | 'household_head' | 'domestic_residence' | 'restrictions' | 'overseas' | 'military' | 'income_tax' | 'income' | 'assets' | 'bank_private' | 'bank_national' | 'bank_account' | 'citizenship' | 'employment' | 'parent_support' | 'marital' | 'children' | 'pregnancy' | 'points' | 'provider_employee' | 'ownership'
 export interface FactChange { mode: 'known' | 'never_changed' | 'unknown'; date: string }
 export type ApplicationHistoryEventKind = 'winning' | 'reserve_winning' | 'contract' | 'additional_resident_contract'
 export interface ApplicationHistoryEvent { id: string; personId: string; projectId: string; eventKind: ApplicationHistoryEventKind; eventDate: string; specialSupply?: boolean | null }
@@ -320,6 +320,9 @@ export interface LocalProfile {
   spousePremarriageOwnershipDisposed?: boolean | null
   familyPreviouslyOwnedHome: boolean | null
   accountType: AccountType
+  currentAccountUsedForWinning: boolean | null
+  currentAccountFirstWinningDate: string
+  currentAccountFactsAsOfDate: string
   privateRankBaseDate: string
   nationalRankBaseDate: string
   privateDepositKrw: string
@@ -394,7 +397,7 @@ export const EMPTY_PROFILE: LocalProfile = {
   isHouseholdHead: null, hasSpouse: null, spouseSameRegister: null, familyOnRegister: null,
   householdScopeKnown: null, applicantOwnsHome: null, spouseOwnsHome: null, familyOwnsHome: null,
   ownershipException: null, ownershipFactsKnown: null, ownershipFacts: [], ownershipPropertyCounts: {}, applicantPreviouslyOwnedHome: null, spousePreviouslyOwnedHome: null, spousePremarriageOwnershipDisposed: null,
-  familyPreviouslyOwnedHome: null, accountType: 'unknown', privateRankBaseDate: '', nationalRankBaseDate: '',
+  familyPreviouslyOwnedHome: null, accountType: 'unknown', currentAccountUsedForWinning: null, currentAccountFirstWinningDate: '', currentAccountFactsAsOfDate: '', privateRankBaseDate: '', nationalRankBaseDate: '',
   privateDepositKrw: '', privateDepositAsOfDate: '', privateDepositMaintained: null, nationalRecognizedPayments: '', nationalRecognizedAmountKrw: '', nationalPaymentsAsOfDate: '',
   accountConversionUnclear: null, previousWinning: null, previousWinningDate: '',
   restrictedFromApplying: null, projectApplicationHistory: {}, citizenship: 'unknown', overseasContinuousDays: '', overseasFactsAsOfDate: '', overseasOnlyApplicantForLivelihood: null, overseasFactsHistoryConfirmations: [], ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, applicationRestrictionFacts: {}, applicationRestrictionsAsOfDate: '', applicationRestrictionsHistoryConfirmations: [], specialWinning: null,
