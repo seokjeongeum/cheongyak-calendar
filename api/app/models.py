@@ -56,7 +56,7 @@ class Notice(Base):
         back_populates="notice", cascade="all, delete-orphan", lazy="selectin", order_by="UnitPrice.id"
     )
     revisions: Mapped[list[NoticeRevision]] = relationship(
-        back_populates="notice", cascade="all, delete-orphan", lazy="selectin", order_by="NoticeRevision.version"
+        back_populates="notice", cascade="all, delete-orphan", lazy="select", order_by="NoticeRevision.version"
     )
     competitions: Mapped[list[UnitCompetition]] = relationship(
         back_populates="notice", cascade="all, delete-orphan", lazy="selectin", order_by="UnitCompetition.id"
@@ -108,7 +108,9 @@ class NoticeRevision(Base):
     notice_id: Mapped[str] = mapped_column(ForeignKey("notices.id", ondelete="CASCADE"), nullable=False, index=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # Public revision history uses metadata only. Load the preserved original
+    # snapshot only when a caller explicitly requests its payload.
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, deferred=True)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     notice: Mapped[Notice] = relationship(back_populates="revisions")

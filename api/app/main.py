@@ -19,7 +19,7 @@ from app.db import get_session, init_db
 from app.integration_settings import initialize_hosted_admin, router as integrations_router
 from app.collection import manual_collector, router as collection_router
 from app.models import Notice, NoticeEvent
-from app.repository import NON_APPLICATION_KINDS, canonical_id, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
+from app.repository import NON_APPLICATION_KINDS, notice_matches_window, notice_public, open_ended_application_clause, related_notices, source_coverage
 from app.schemas import CoveragePublic, HealthPublic, NoticeDetail, NoticePage, NoticePublic, SourceStatusPublic
 from app.static_web import mount_static_web
 
@@ -103,25 +103,34 @@ def list_notices(
     # Results use the same official reception-period overlap as the calendar,
     # including when a caller omits application_only or the date bounds.
     application_only = application_only or view == "results"
-    query = select(Notice)
+    # Discover identities without downloading current rules or historical
+    # snapshots, then fetch each canonical notice and its duplicates once.
+    query = select(Notice.id, Notice.duplicate_of_id)
     if start is not None or end is not None or application_only:
         query = query.where(_date_match(start, end, application_only=application_only))
-    matching = session.scalars(query).all()
-    superseded_notices = session.scalars(select(Notice).where(Notice.id.in_(
+    matching = session.execute(query).all()
+    superseded_notices = session.execute(select(Notice.id, Notice.duplicate_of_id).where(Notice.id.in_(
         select(Notice.correction_of_id).where(Notice.correction_of_id.is_not(None))
     ))).all()
-    superseded_ids = {canonical_id(item) for item in superseded_notices}
+    superseded_ids = {duplicate_id or notice_id for notice_id, duplicate_id in superseded_notices}
     corrected_refs = set(session.execute(select(Notice.source, Notice.correction_of_external_id).where(
         Notice.correction_of_external_id.is_not(None)
     )).all())
-    canonical_ids = {item.duplicate_of_id or item.id for item in matching} - superseded_ids
+    canonical_ids = {duplicate_id or notice_id for notice_id, duplicate_id in matching} - superseded_ids
     if not canonical_ids:
         return NoticePage(items=[], total=0, page=page, page_size=page_size)
-    canonical = [
-        item for item in session.scalars(select(Notice).where(Notice.id.in_(canonical_ids))).all()
-        if (item.source, item.external_id) not in corrected_refs
-    ]
-    notices: list[NoticePublic] = [notice_public(related_notices(session, item), start=start, end=end) for item in canonical]
+    loaded = session.scalars(select(Notice).where(or_(
+        Notice.id.in_(canonical_ids), Notice.duplicate_of_id.in_(canonical_ids)
+    ))).all()
+    canonical = [item for item in loaded if item.id in canonical_ids and
+                 (item.source, item.external_id) not in corrected_refs]
+    duplicates: dict[str, list[Notice]] = {}
+    for item in loaded:
+        if item.duplicate_of_id in canonical_ids:
+            duplicates.setdefault(item.duplicate_of_id, []).append(item)
+    notices: list[NoticePublic] = [notice_public(
+        [item, *sorted(duplicates.get(item.id, []), key=lambda duplicate: duplicate.source)],
+        start=start, end=end) for item in canonical]
     notices = [item for item in notices if notice_matches_window(item, start, end, application_only=application_only)]
     if category:
         notices = [item for item in notices if item.category == category]

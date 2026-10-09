@@ -22,6 +22,7 @@ import { IntegrationSettings } from './IntegrationSettings'
 import { isOpenEndedReception, nextDeadline, receptionEndDate, receptionOverlaps } from './deadlines'
 import { useEvaluations } from './useEvaluations'
 import { reuseUnchangedNotices } from './publicNoticeCache'
+import { needsAutomaticNoticeRefresh, type NoticeRefreshState } from './collectionRefresh'
 import { candidateInRange, evaluateNotice, type NoticeEvaluation } from './evaluation'
 export { selectBriefReasons as briefReasons } from './EligibilityDetails'
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -241,7 +242,7 @@ function App() {
   const [collectionRequesting, setCollectionRequesting] = useState(false)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [coverageRefreshVersion, setCoverageRefreshVersion] = useState(0)
-  const coverageSuccessRef = useRef<string | null>(null)
+  const coverageRefreshRef = useRef<NoticeRefreshState>({ applied: null, completed: null, refreshedAt: 0 })
   const queryKeyRef = useRef('')
 
   const effectiveMonth = maxDate(calendarMonth, today.slice(0, 7))
@@ -254,6 +255,7 @@ function App() {
   }, [])
 
   const refreshAll = useCallback(() => {
+    coverageRefreshRef.current.refreshedAt = Date.now()
     setToday(kstToday())
     setCompetitionNow(Date.now())
     setRefreshVersion((value) => value + 1)
@@ -361,14 +363,9 @@ function App() {
         if (collectionResult.status === 'fulfilled') setCollection(collectionResult.value)
         if (coverageResult.status === 'rejected') throw coverageResult.reason
         const value = coverageResult.value
-        const successSignature = value.sources.map((source) =>
-          `${source.source}:${source.last_success_at || ''}:${source.record_count ?? ''}${source.source === 'cheongyak_competition' ? `:${source.status}:${source.last_attempt_at || ''}` : ''}`,
-        ).sort().join('|')
-        const firstCompletedSource = coverageSuccessRef.current === null && value.sources.some((source) => !!source.last_success_at)
-        if (firstCompletedSource || (coverageSuccessRef.current !== null && coverageSuccessRef.current !== successSignature)) {
+        if (needsAutomaticNoticeRefresh(coverageRefreshRef.current, value, Date.now())) {
           setRefreshVersion((version) => version + 1)
         }
-        coverageSuccessRef.current = successSignature
         setCoverage(value)
         setCoverageError(false)
         setCoverageCheckedAt(Date.now())

@@ -4,13 +4,14 @@ from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event, select
 from sqlalchemy.orm import sessionmaker
 
 from app.db import get_session, init_db, make_engine
 from app.main import app
 from app.models import Notice, NoticeRevision
 from app.extract.official_rules import PARSER_VERSION
-from app.repository import record_source_status, resolve_pending_corrections, upsert_notice
+from app.repository import lock_notice, record_source_status, resolve_pending_corrections, upsert_notice
 
 
 @pytest.fixture()
@@ -911,3 +912,41 @@ def test_missing_end_without_explicit_ongoing_wording_stays_single_day(db, clien
     past = client.get("/api/notices", params={"start": "2026-09-01", "end": "2026-09-01", "application_only": True}).json()
     assert past["total"] == 1
     assert past["items"][0]["application_end_date"] == "2026-09-01"
+
+
+def test_list_and_collector_reads_do_not_download_preserved_revision_payloads(db, client):
+    notice = upsert_notice(db, example_notice())
+    notice_id = notice.id
+    db.commit()
+    # Large originals remain available, but neither the list nor a writer's
+    # concurrency refresh needs to transfer those historical snapshots.
+    snapshot = {"original_document": "public original " * 40_000}
+    revision = db.scalar(select(NoticeRevision).where(NoticeRevision.notice_id == notice_id))
+    revision.payload = snapshot
+    db.commit()
+    db.expunge_all()
+    statements = []
+    listener = lambda connection, cursor, statement, parameters, context, many: statements.append(statement)
+    event.listen(db.bind, "before_cursor_execute", listener)
+    try:
+        result = client.get("/api/notices", params={"start": "2026-10-01", "end": "2026-10-31"})
+        assert result.status_code == 200
+        assert result.json()["items"][0]["id"] == notice_id
+        assert not any("notice_revisions" in statement for statement in statements)
+        current_reads = [statement for statement in statements if "notices.rules," in statement]
+        assert len(current_reads) == 1
+        statements.clear()
+        lock_notice(db, "cheongyak_home", "A-100")
+        assert not any("notice_revisions" in statement for statement in statements)
+        statements.clear()
+        detail = client.get(f"/api/notices/{notice_id}")
+        assert detail.status_code == 200
+        assert len(detail.json()["revisions"]) == 1
+        revision_reads = [statement for statement in statements if "notice_revisions" in statement]
+        assert revision_reads
+        assert all("notice_revisions.payload" not in statement for statement in revision_reads)
+        db.expunge_all()
+        original = db.scalar(select(NoticeRevision).where(NoticeRevision.notice_id == notice_id))
+        assert original.payload == snapshot
+    finally:
+        event.remove(db.bind, "before_cursor_execute", listener)
