@@ -29,6 +29,27 @@ def diagnostics(result):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('stage,exception_type,expected', [
+    ('decode', 'MemoryError', 'MemoryError'),
+    ('interpretation', 'PdfReadError', 'PdfReadError'),
+    ('process', 'private-dynamic-class', 'UnknownError'),
+])
+async def test_runtime_failure_diagnostics_keep_stage_and_allowlisted_type_only(monkeypatch, stage, exception_type, expected):
+    async def process(*args, **kwargs):
+        return {'has_text': stage == 'interpretation', 'error_stage': stage,
+                'exception_type': exception_type, 'message': 'private-error-message'}
+    monkeypatch.setattr(pipeline, '_isolated_document_operation', process)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request:
+            httpx.Response(200, content=b'%PDF-public-runtime-test'))) as client:
+        result = await pipeline.extract_local_document(PDF_URL, client, payload=notice())
+    failure = next(entry for entry in result['diagnostics'] if entry['status'] == 'error')
+    assert failure['exception_type'] == expected and failure['error_stage'] == stage
+    assert failure['code'] == ('parser_failed' if stage == 'interpretation' else 'document_decode_failed')
+    encoded = json.dumps(result['diagnostics'])
+    assert 'private-error-message' not in encoded and 'private-dynamic-class' not in encoded
+
+
+@pytest.mark.asyncio
 async def test_exact_current_reviewed_pdf_resolves_failed_page_with_actual_source_provenance(monkeypatch):
     payload = notice()
     parsed = parse_official_rules(SOURCE["pages"], url=PDF_URL,

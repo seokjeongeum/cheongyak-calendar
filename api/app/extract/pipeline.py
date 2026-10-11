@@ -12,6 +12,7 @@ import base64
 import ipaddress
 from contextvars import ContextVar
 import asyncio
+from datetime import date, datetime
 import hashlib
 import io
 import json
@@ -35,7 +36,7 @@ from .official_rules import PARSER_VERSION, parse_official_rules, parser_version
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-10-v14"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-11-v15"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 MAX_DOWNLOAD_ATTEMPTS = 3
@@ -56,9 +57,29 @@ TRUSTED_HOSTS = (
 )
 DOCUMENT_EXTENSIONS = (".pdf", ".hwp", ".hwpx")
 _LINKED_DOCUMENT_URLS: ContextVar[frozenset[str]] = ContextVar("official_linked_documents", default=frozenset())
+DOCUMENT_EXCEPTION_TYPES = frozenset({
+    "MemoryError", "TypeError", "ValueError", "KeyError", "IndexError", "AttributeError",
+    "ImportError", "ModuleNotFoundError", "OSError", "TimeoutError", "RuntimeError",
+    "JSONDecodeError", "UnicodeDecodeError", "PdfReadError", "PdfStreamError",
+    "FileNotDecryptedError", "DependencyError", "EmptyFileError", "ParseError",
+})
 
 
-def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error", source_format: str | None = None, http_status: int | None = None) -> dict:
+def document_exception_type(error: BaseException | str) -> str:
+    """Expose only fixed exception names, never messages, paths or input values."""
+    name = error if isinstance(error, str) else type(error).__name__
+    return name if name in DOCUMENT_EXCEPTION_TYPES else "UnknownError"
+
+
+def _document_json_value(value):
+    # Stored notices/events retain real dates; the child protocol uses ISO dates.
+    # Reject other objects rather than serializing their arbitrary string values.
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    raise TypeError("Unsupported local document input type")
+
+
+def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error", source_format: str | None = None, http_status: int | None = None, exception_type: str | None = None, error_stage: str | None = None) -> dict:
     """Public diagnostics contain stable causes, never raw requests or secrets."""
     messages = {
         "provider_not_supported": "이 공식 기관의 첨부 연결은 아직 지원하지 않습니다.",
@@ -94,6 +115,10 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         result["source_format"] = source_format
     if http_status is not None:
         result["http_status"] = http_status
+    if exception_type is not None:
+        result["exception_type"] = document_exception_type(exception_type)
+    if error_stage in {"decode", "interpretation", "process"}:
+        result["error_stage"] = error_stage
     return result
 
 
@@ -499,7 +524,8 @@ async def _isolated_document_operation(operation: str, *, url: str, data: bytes,
                                        payload: dict | None = None, digest: str | None = None) -> dict:
     """Terminate local parsing and its converter descendants when interrupted."""
     request = json.dumps({'operation': operation, 'url': url, 'data': base64.b64encode(data).decode(),
-                          'content_type': content_type, 'payload': payload, 'digest': digest}).encode()
+                          'content_type': content_type, 'payload': payload, 'digest': digest},
+                         default=_document_json_value).encode()
     process = await asyncio.create_subprocess_exec(
         sys.executable, '-m', 'app.extract.document_process', stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
@@ -669,17 +695,19 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
     digest = hashlib.sha256(data).hexdigest()
     source_format = "pdf" if data.startswith(b"%PDF") else "hwp" if data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") else "hwpx" if data.startswith(b"PK") else "unknown"
     diagnostics.append(document_diagnostic("download", "document_downloaded", url, status="ok", source_format=source_format))
+    processed = {}
     try:
         processed = await _isolated_document_operation('interpret', url=url, data=data,
                     content_type=content_type, payload=payload, digest=digest)
-        if processed.get('error_stage') == 'decode':
+        if processed.get('error_stage') in {'decode', 'process'}:
             raise ValueError('Local document decoding failed')
     except TimeoutError:
         raise
-    except Exception:
+    except Exception as exc:
         result = {"rules": [], "offered_supply_types": [], "status": "unreadable", "local_status": "unreadable"}
         code = "hwp_converter_missing" if source_format == "hwp" and not (shutil.which("libreoffice") or shutil.which("soffice")) else "hwp_conversion_failed" if source_format == "hwp" else "unexpected_response" if source_format == "unknown" else "document_decode_failed"
-        diagnostics.append(document_diagnostic("conversion" if source_format == "hwp" else "decode", code, url, source_format=source_format))
+        diagnostics.append(document_diagnostic("conversion" if source_format == "hwp" else "decode", code, url, source_format=source_format,
+            exception_type=processed.get('exception_type') or document_exception_type(exc), error_stage=processed.get('error_stage') or 'process'))
     else:
         if not processed.get('has_text'):
             result = {"rules": [], "offered_supply_types": [], "status": "unreadable"}
@@ -690,9 +718,10 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
                 if processed.get('error_stage') == 'interpretation':
                     raise ValueError('Local document interpretation failed')
                 result = processed['result']
-            except Exception:
+            except Exception as exc:
                 result = {"rules": [], "offered_supply_types": [], "status": "error"}
-                diagnostics.append(document_diagnostic("interpretation", "parser_failed", url, source_format=source_format))
+                diagnostics.append(document_diagnostic("interpretation", "parser_failed", url, source_format=source_format,
+                    exception_type=processed.get('exception_type') or document_exception_type(exc), error_stage='interpretation'))
             else:
                 has_conditions = any(r.get("effect") != "metadata" for r in result.get("rules", [])) or _has_reviewed_geography(result.get("rules", []))
                 if result.get("identity_status") == "mismatch":

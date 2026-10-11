@@ -27,3 +27,11 @@ schemas. Earlier targeted startup/schema/API checks: 68 passed.
 Read-only production catalog verification confirmed RLS already enabled on
 all 11 application tables. No production schema or original records were
 modified for these tests.
+
+Commit `42470ee` deployed successfully to Render. The public health endpoint
+returned HTTP 200 and the site served `index-DkNPXBb1.js`. A fresh 375px
+Chromium session confirmed the collection refresh button increased coverage
+API requests from one to two and updated the KST confirmation time. Shared-key
+labels are consistent; password inputs contain no stored key values. The
+session issued only GET API requests, with no JavaScript errors or horizontal
+overflow.

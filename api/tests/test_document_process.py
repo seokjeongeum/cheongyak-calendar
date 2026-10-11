@@ -1,5 +1,6 @@
 """CPU timeouts stop the parser and converter, not just their awaiter."""
 import asyncio
+from datetime import date, datetime, timezone
 import io
 import json
 import os
@@ -7,9 +8,25 @@ from pathlib import Path
 import sys
 
 from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 import pytest
 
 from app.extract import pipeline
+
+
+def text_pdf():
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=600, height=800)
+    font = DictionaryObject({NameObject('/Type'): NameObject('/Font'),
+        NameObject('/Subtype'): NameObject('/Type1'), NameObject('/BaseFont'): NameObject('/Helvetica')})
+    page[NameObject('/Resources')] = DictionaryObject({NameObject('/Font'):
+        DictionaryObject({NameObject('/F1'): writer._add_object(font)})})
+    content = DecodedStreamObject()
+    content.set_data(b'BT /F1 12 Tf 30 700 Td (Public housing recruitment 2026.09.30) Tj ET')
+    page[NameObject('/Contents')] = writer._add_object(content)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
 
 
 @pytest.mark.asyncio
@@ -21,6 +38,61 @@ async def test_real_local_process_reads_public_pdf_without_thread_executor():
     result = await pipeline._isolated_document_operation('interpret', url='https://www.applyhome.co.kr/current.pdf',
         data=buffer.getvalue(), content_type='application/pdf', payload={}, digest='blank-public-document')
     assert result == {'has_text': False}
+
+
+@pytest.mark.asyncio
+async def test_real_child_reads_nonblank_pdf_with_retained_notice_and_event_dates():
+    from app.models import Notice, NoticeEvent
+    from app.repository import _existing_payload
+
+    notice = Notice(source='lh', external_id='new-public-notice', category='public_sale',
+        title='New public housing recruitment', announcement_date=date(2026, 9, 30),
+        official_url='https://apply.lh.or.kr/current.pdf', rules=[], rules_complete=False,
+        events=[NoticeEvent(kind='application', label='Application',
+            start_date=date(2026, 10, 27), end_date=date(2027, 8, 31))])
+    payload = _existing_payload(notice)
+    assert isinstance(payload['announcement_date'], date)
+    assert isinstance(payload['events'][0]['start_date'], date)
+    payload['rules'].append({'kind': 'public_record', 'recorded_at': datetime(2026, 10, 1, tzinfo=timezone.utc)})
+    result = await pipeline._isolated_document_operation('interpret', url=notice.official_url,
+        data=text_pdf(), content_type='application/pdf', payload=payload, digest='new-public-document')
+    assert result['has_text'] is True and 'result' in result and 'error_stage' not in result
+    # Sending to the child must not rewrite the retained source snapshot.
+    assert payload['events'][0]['end_date'] == date(2027, 8, 31)
+    assert isinstance(payload['rules'][0]['recorded_at'], datetime)
+
+
+@pytest.mark.asyncio
+async def test_child_protocol_rejects_unknown_objects_without_stringifying_them():
+    class Unsupported:
+        def __str__(self):
+            raise AssertionError('Arbitrary object values must not be serialized')
+    with pytest.raises(TypeError, match='Unsupported local document input type'):
+        await pipeline._isolated_document_operation('interpret', url='https://apply.lh.or.kr/current.pdf',
+            data=text_pdf(), content_type='application/pdf', payload={'unexpected': Unsupported()}, digest='new-document')
+
+
+@pytest.mark.parametrize('stage,error', [('decode', MemoryError('private-value')),
+                                      ('interpretation', ValueError('private-value'))])
+def test_child_failure_reports_only_allowed_exception_name(monkeypatch, stage, error):
+    import base64
+    import resource
+    from types import SimpleNamespace
+    from app.extract import document_process
+    monkeypatch.setattr(resource, 'setrlimit', lambda *args: None)
+    request = {'operation': 'interpret', 'url': 'https://apply.lh.or.kr/current.pdf',
+        'data': base64.b64encode(text_pdf()).decode(), 'content_type': 'application/pdf',
+        'payload': {}, 'digest': 'new-document'}
+    monkeypatch.setattr(sys, 'stdin', SimpleNamespace(buffer=io.BytesIO(json.dumps(request).encode())))
+    def fail(*args, **kwargs):
+        raise error
+    monkeypatch.setattr(pipeline, 'document_pages', fail if stage == 'decode' else lambda *args: [{'page': 1, 'text': 'Public text'}])
+    if stage == 'interpretation':
+        monkeypatch.setattr('app.extract.official_rules.parse_official_rules', fail)
+    result = document_process.main()
+    assert result == {'has_text': stage == 'interpretation', 'error_stage': stage,
+                      'exception_type': type(error).__name__}
+    assert 'private-value' not in json.dumps(result)
 
 
 def running(pid):

@@ -9,6 +9,8 @@ import base64
 import json
 import sys
 
+from .pipeline import document_exception_type
+
 
 def main():
     try:
@@ -29,16 +31,16 @@ def main():
         raise ValueError('Unknown local operation')
     try:
         pages = document_pages(request['url'], data, request['content_type'])
-    except Exception:
-        return {'has_text': False, 'error_stage': 'decode'}
+    except Exception as exc:
+        return {'has_text': False, 'error_stage': 'decode', 'exception_type': document_exception_type(exc)}
     has_text = any(page['text'].strip() for page in pages)
     if not has_text:
         return {'has_text': False}
     try:
         payload = {**(request.get('payload') or {}), 'document_page_count': len(pages)}
         result = parse_official_rules(pages, url=request['url'], digest=request['digest'], payload=payload)
-    except Exception:
-        return {'has_text': True, 'error_stage': 'interpretation'}
+    except Exception as exc:
+        return {'has_text': True, 'error_stage': 'interpretation', 'exception_type': document_exception_type(exc)}
     return {'has_text': True, 'result': result}
 
 
@@ -46,5 +48,6 @@ if __name__ == '__main__':
     try:
         result = main()
         sys.stdout.write(json.dumps(result, ensure_ascii=False))
-    except Exception:
-        sys.exit(1)
+    except Exception as exc:
+        sys.stdout.write(json.dumps({'has_text': False, 'error_stage': 'process',
+                                    'exception_type': document_exception_type(exc)}))
