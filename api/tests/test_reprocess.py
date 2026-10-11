@@ -203,6 +203,73 @@ async def test_old_parser_facts_are_retired_even_if_same_hash_cannot_be_reparsed
 
 
 @pytest.mark.asyncio
+async def test_partial_same_hash_audit_persists_unanswered_review_with_original_provenance(store, monkeypatch):
+    old = {**document_rule('old-file'), 'id': 'earlier-parent-age', 'kind': 'parent_age_min',
+        'value': 65, 'effect': 'eligibility', 'supply_type': '노부모부양 특별공급',
+        'parser_version': 'official-sections-2026-10-09-v13'}
+    fresh = {**document_rule('old-file'), 'id': 'current-adult-age', 'kind': 'age_min',
+        'value': 19, 'effect': 'eligibility', 'supply_type': '일반공급'}
+    coverage = {**fresh, 'id': 'current-partial-review', 'kind': 'condition_coverage',
+        'effect': 'metadata', 'status': 'partial', 'scopes': [], 'offered_supply_types': ['일반공급', '노부모부양 특별공급']}
+    notice_id = seed(store, rules=[*feed()['rules'], old])
+    async def partial(snapshot, **kwargs):
+        from app.extract.pipeline import _retain_same_hash_conditions
+        retained = _retain_same_hash_conditions(snapshot['rules'], [fresh, coverage], 'old-file', snapshot)
+        return {**snapshot, 'rules': retained, 'replace_rules': True}
+    monkeypatch.setattr(reprocess, 'enrich_notice', partial)
+    first = await reprocess.reprocess(ids=[notice_id])
+    assert first['updated'] == 1 and first['failed'] == 0
+    with store() as session:
+        notice = lock_notice(session, 'cheongyak_home', 'public-1')
+        assert old in notice.rules and fresh in notice.rules and coverage in notice.rules
+        assert old['parser_version'] == 'official-sections-2026-10-09-v13'
+        assert notice.document_hash == 'old-file' and notice.rules_complete is False
+        assert notice.revisions[0].payload['rules'] == [*feed()['rules'], old]
+        assert notice.prices[0].amount_krw == 600_000_000
+        assert notice.events[0].start_date == date(2026, 10, 12)
+        version = notice.version
+    assert (await reprocess.reprocess(ids=[notice_id]))['updated'] == 0
+    with store() as session:
+        assert lock_notice(session, 'cheongyak_home', 'public-1').version == version
+
+
+@pytest.mark.parametrize('case', ['changed_hash', 'incompatible_parser', 'waiver', 'replacement'])
+def test_document_patch_does_not_resurrect_changed_or_explicitly_replaced_requirements(case):
+    from test_document_condition_retention import rule, waiver_coverage, replacement_fact
+    old = rule('household_head', '신혼부부 특별공급', value=True)
+    fresh = rule('age_min', '일반공급', value=19, parser_version=PARSER_VERSION)
+    digest = 'same-file'
+    if case == 'changed_hash':
+        digest = 'changed-file'
+        fresh['document_hash'] = digest
+    elif case == 'incompatible_parser':
+        old['parser_version'] = 'obsolete-parser'
+    elif case == 'waiver':
+        fresh = waiver_coverage()
+    else:
+        old = rule('tax_years_min', '생애최초 특별공급', value=5)
+        fresh = replacement_fact()
+    current = feed(document_hash='same-file', rules=[old])
+    patch = reprocess._document_patch(current, {**current, 'document_hash': digest, 'rules': [fresh]})
+    assert old not in patch['rules'] and fresh in patch['rules']
+    assert patch['document_hash'] == digest
+
+
+def test_complete_whole_source_document_patch_retires_unmatched_legacy_admission():
+    from test_document_condition_retention import rule
+    sources = json.loads((Path(__file__).parent / 'fixtures/current-private-v5.json').read_text())
+    source = next(row for row in sources if row['external_id'] == '2026000468')
+    parsed = parse_official_rules(source['pages'], url=source['document_url'],
+        digest=source['document_hash'], payload=source['payload'])
+    old = rule('household_head', '신혼부부 특별공급', value=True, document_hash=source['document_hash'])
+    current = {**source['payload'], 'source': 'cheongyak_home', 'external_id': source['external_id'],
+               'document_hash': source['document_hash'], 'rules': [old]}
+    patch = reprocess._document_patch(current, {**current, 'rules': parsed['rules']})
+    assert old not in patch['rules']
+    assert patch['rules'] == parsed['rules']
+
+
+@pytest.mark.asyncio
 async def test_worker_refreshes_concurrent_state_and_does_not_revert_corrected_hash(store, monkeypatch):
     seed(store)
 

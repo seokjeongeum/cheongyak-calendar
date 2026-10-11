@@ -21,7 +21,7 @@ from sqlalchemy import func, or_, select
 from app.db import SessionLocal
 from app.models import DocumentExtractionState, Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, notice_patch_changed, open_ended_application_clause, upsert_notice, record_source_status
-from .pipeline import enrich_notice
+from .pipeline import _retain_same_hash_conditions, enrich_notice
 from .official_rules import PARSER_VERSION, parser_version_usable
 from app.qualification import public_contract_schedule, requirements_complete
 
@@ -55,6 +55,11 @@ def _document_patch(current: dict, enriched: dict) -> dict:
                                 if k in {"original_announcement_date", "application_announcement_date", "application_criterion_date", "application_criterion_basis"} or (k == "public_housing" and v is True)}
             rule["value"] = {**current_context, **document_context}
     parsed_document = any(r.get("kind") != "document_diagnostics" for r in local)
+    if parsed_document and digest and digest == current.get("document_hash"):
+        # Enrichment keeps unanswered compatible facts for identical bytes.
+        # Its current-version filter above must not discard that evidence on
+        # persistence; the same source-aware replacement/waiver rules apply.
+        local = _retain_same_hash_conditions(current.get("rules", []), local, digest, current)
     rules = [copy.deepcopy(r) for r in current.get("rules", [])
              if (not parsed_document or r.get("source") != "official_document_parser") and r.get("kind") != "document_diagnostics"
              and parser_version_usable(r, category=current.get("category", ""), title=current.get("title", ""), rules=current.get("rules", []))

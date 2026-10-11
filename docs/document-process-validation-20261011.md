@@ -27,3 +27,24 @@ Runtime, diagnostics, retry, condition-retention and region/contract regression:
 installed-wheel environment using the production dependencies, with retained
 date values in the request. Earlier requests with those dates raised `TypeError`
 before creating a child process.
+
+Production reprocess run `38135794640` completed successfully. Hangang,
+Hyangnam, Sangok and Busan Yeonji now have V15 source interpretation and
+successful PDF decode diagnostics. Busan Yeonji's general branch is complete;
+private-document special branches retain their explicit conditional gaps.
+Seonun's official attachment remains unavailable and is reported as a discovery
+failure without a fabricated document hash or regional eligibility.
+
+The four existing document hashes and all existing price/competition rows
+were retained. Each updated public snapshot adds a revision rather than
+deleting history. Comparing the previous revision against the actual new rule
+set with the source-aware retention policy found no missing compatible
+admission facts in the three private documents.
+
+A separate persistence regression was also corrected: partial same-hash
+reprocessing could filter out a compatible unanswered fact solely because its
+original parser version differed. Persistence now reuses the same existing
+retention policy as enrichment. Explicit waivers, replacements, complete
+source reviews and changed document hashes still retire old facts. The
+reprocess/condition-retention checks pass 48 tests, including preserved dates,
+prices, source provenance, history and idempotence.
