@@ -6,6 +6,16 @@ on:
   schedule:
     - cron: '17 */3 * * *'
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Collect feeds or reprocess saved official documents
+        type: choice
+        options: [collect, reprocess]
+        default: collect
+      notice_ids:
+        description: Comma-separated saved notice UUIDs for reprocessing; empty selects up to 50 active notices
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -48,8 +58,43 @@ jobs:
         run: python -m pip install ./api
 
       - name: Collect official notices once
+        if: github.event.inputs.operation != 'reprocess'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           # Service keys are read from this database, never Actions variables.
           LOG_LEVEL: WARNING
         run: python -m app.ingest.worker --once
+
+      - name: Reprocess saved official documents
+        if: github.event.inputs.operation == 'reprocess'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NOTICE_IDS: ${{ inputs.notice_ids }}
+          LOG_LEVEL: WARNING
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          import sys
+          import uuid
+
+          ids = [value.strip() for value in os.environ.get("NOTICE_IDS", "").split(",") if value.strip()]
+          if len(ids) > 50:
+              raise SystemExit("At most 50 saved notices can be selected.")
+          args = [sys.executable, "-m", "app.extract.reprocess", "--limit", "50", "--report", "/tmp/document-review.json"]
+          if ids:
+              for value in dict.fromkeys(ids):
+                  args.extend(["--notice-id", str(uuid.UUID(value))])
+          else:
+              args.append("--active")
+          subprocess.run(args, check=True)
+          PY
+
+      - name: Save public document review report
+        if: always() && github.event.inputs.operation == 'reprocess'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: public-document-review
+          path: /tmp/document-review.json
+          if-no-files-found: ignore
+          retention-days: 7

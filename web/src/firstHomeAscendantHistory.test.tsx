@@ -37,6 +37,27 @@ describe('source-bound first-home ancestor historical ownership', () => {
     expect(evaluateRule(rule, spouse, notice).status).toBe('pass')
     expect(evaluateRule(rule, { ...spouse, spousePremarriageOwnershipDisposed: null }, notice).status).toBe('review')
   })
+  it('reuses an older exact spouse exemption child with the same verified document scope', () => {
+    const spouseClause: NoticeRule = { kind: 'unparsed', verification: 'official', supply_type: supply, document_hash: digest, evidence_url: source,
+      evidence_text: '청약신청자의 배우자가 혼인 전 주택을 소유하였다가 혼인 전 처분한 이력은 배제합니다', label: '배우자 혼인 전 주택 소유·처분의 공식 예외 확인' }
+    const legacy = { ...rule, exclude_spouse_pre_marriage_disposed: undefined, exceptions: [clause, spouseClause] }
+    const p = profile({ hasSpouse: true, maritalStatus: 'married', spousePreviouslyOwnedHome: true, spousePremarriageOwnershipDisposed: true })
+    const n = { ...notice, rules: [legacy] }
+    expect(evaluateRule(legacy, p, n)).toMatchObject({ status: 'pass', legalEvidenceUrl: FIRST_HOME_ANCESTOR_GUIDANCE_URL })
+    expect(evaluateRule(legacy, { ...p, spousePremarriageOwnershipDisposed: null }, n)).toMatchObject({ status: 'review', category: 'missing_input', profileField: 'spousePremarriageOwnershipDisposed' })
+    for (const invalid of [{ ...spouseClause, verification: 'ai_unverified' }, { ...spouseClause, document_hash: 'f'.repeat(64) }, { ...spouseClause, supply_type: '노부모부양 특별공급' }, { ...spouseClause, evidence_text: '배우자의 과거 소유 이력을 검토합니다.' }]) {
+      const changed = { ...legacy, exceptions: [clause, invalid] }
+      expect(evaluateRule(changed, p, { ...n, rules: [changed] }).status).not.toBe('pass')
+    }
+    expect(evaluateRule(legacy, { ...p, applicantPreviouslyOwnedHome: true }, n)).toMatchObject({ status: 'review', category: 'source_gap' })
+  })
+  it('does not add a missing ancestor clause to an older stored source and links an actual missing family fact', () => {
+    const legacy = { ...rule, exclude_spouse_pre_marriage_disposed: undefined, exceptions: [],
+      evidence_text: '모든 세대구성원이 과거 주택을 소유한 사실이 없는 경우를 말함' }
+    expect(evaluateRule(legacy, profile(), { ...notice, rules: [legacy] })).toMatchObject({ status: 'review', category: 'source_gap' })
+    const child = { ...parent, relation: 'applicant_child' as const, previouslyOwnedHome: null }
+    expect(evaluateRule(rule, profile({ householdMembers: [child] }), notice)).toMatchObject({ status: 'review', category: 'missing_input', profileField: 'householdMembers', profileMemberId: child.id })
+  })
   it('requires the verified matching document clause and private first-home scope', () => {
     for (const exception of [{ ...clause, verification: 'ai_unverified' }, { ...clause, document_hash: 'f'.repeat(64) }, { ...clause, supply_type: '노부모부양 특별공급' }, { ...clause, evidence_text: '주택 소유의 일부 예외를 검토합니다.' }]) {
       expect(evaluateRule({ ...rule, exceptions: [exception] }, profile(), notice).status).not.toBe('pass')

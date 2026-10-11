@@ -137,6 +137,10 @@ def _condition_model(pages, *, digest, reviewed, rules, offered, make, layout, v
         conditional.setdefault(first, []).append({"topic": "생애최초의 제53조 과거 주택 소유 예외", "status": "partial", "required": False,
                                    "phase": "conditional_admission", "rule_ids": [], "reason": "생애최초의 제53조 과거 주택 소유 예외"})
     else:
+        # The ownership paragraph was acquired independently of the family,
+        # tax and financial branches; an unrelated missing paragraph must not
+        # erase its already source-bound exemptions.
+        output.extend(rule for rule in rules if rule["kind"] == "never_owned_home" and rule.get("supply_type") == first)
         missing.setdefault(first, []).append("생애최초의 미혼·동일 등본 자녀·1인가구 면적 분기와 소득세·최근 납부 인정기간")
 
     for supply, prefix in ((first, "first"), (SPECIALS[5], "newborn")):
@@ -233,6 +237,7 @@ def _find(pages, pattern):
 
 def _deposit_values(pages):
     candidates = []
+    incomplete = False
     for page in pages:
         compact = re.sub(r"\s+", "", page["text"])
         marker = compact.find("청약예금의예치금액")
@@ -244,18 +249,31 @@ def _deposit_values(pages):
         if min(positions.values()) < 0:
             continue
         order = sorted(positions, key=positions.get)
+        evidence = _find([page], r"\[\s*청약예금의\s*예치금액\s*\].{0,1000}?모든\s*면적\s*[\d,]+만원\s*[\d,]+만원\s*[\d,]+만원")
+        if not evidence:
+            if re.search(r"전용면적\d+(?:\.\d+)?[㎡m²]|모든면적", body):
+                incomplete = True
+            continue
+        body = re.sub(r"\s+", "", evidence["quote"])
+        printed_limits = [float(match[1]) if match[1] else None for match in re.finditer(
+            r"(?:전용면적(?:이하)?(\d+(?:\.\d+)?)[㎡m²]+(?:이하)?|(모든면적))", body)]
         rows = []
         for match in re.finditer(r"(?:전용면적(?:이하)?(\d+(?:\.\d+)?)[㎡m²]+(?:이하)?|(모든면적))([\d,]+)만원([\d,]+)만원([\d,]+)만원", body):
             rows.append({"max_area_sqm": float(match[1]) if match[1] else None,
                          "amounts_krw": dict(zip(order, [int(v.replace(',', '')) * 10000 for v in match.groups()[2:]]))})
         if len(rows) < 2 or rows[-1]["max_area_sqm"] is not None:
+            incomplete = True
+            continue
+        # A readable larger-area row cannot replace an unreadable smaller
+        # row. Compare every printed boundary without fixing legal defaults.
+        if [row["max_area_sqm"] for row in rows] != printed_limits:
+            incomplete = True
             continue
         if any(row["max_area_sqm"] is None for row in rows[:-1]) or any(rows[i]["max_area_sqm"] >= rows[i + 1]["max_area_sqm"] for i in range(len(rows) - 2)):
+            incomplete = True
             continue
-        evidence = _find([page], r"\[\s*청약예금의\s*예치금액\s*\].{0,1000}?모든\s*면적\s*[\d,]+만원\s*[\d,]+만원\s*[\d,]+만원")
-        if evidence:
-            candidates.append((rows, evidence))
-    if not candidates or any(rows != candidates[0][0] for rows, _ in candidates):
+        candidates.append((rows, evidence))
+    if incomplete or not candidates or any(rows != candidates[0][0] for rows, _ in candidates):
         return None, None
     return candidates[0]
 
@@ -391,6 +409,29 @@ def _section_pages(section):
     return [{'page': page, 'text': '\n'.join(lines)} for page, lines in result.items()]
 
 
+def _first_home_ownership(pages, applicant_pages, rules, make):
+    """Keep a source-backed ownership comparison when another topic is missing.
+
+    A missing bank table or tax paragraph prevents whole-branch certification,
+    but does not invalidate the separately acquired first-home ownership clause.
+    Scope is the actual applicant paragraph, not a summary or a project title.
+    """
+    first = SPECIALS[4]
+    past = _find(applicant_pages, r"생애최초로\s*주택을\s*구입하는\s*분\s*[-–]?\s*모든\s*세대구성원이\s*과거\s*주택을\s*소유한\s*사실이\s*없는\s*경우를\s*말함")
+    if not past:
+        return rules
+    spouse = _find(applicant_pages, r"청약신청자의\s*배우자가\s*혼인\s*전\s*주택을\s*소유하였다가\s*혼인\s*전\s*처분한\s*이력은\s*배제합니다")
+    ancestry = _find(pages, r"만\s*60세\s*이상의\s*직계존속.{0,180}?주택\s*또는\s*분양권등을\s*소유하고\s*있는\s*경우\s*\(단,\s*노부모(?:부양자|부양)?\s*특별공급\s*신청자\s*제외\)")
+    fields = dict(supply=first, scope="household", supersedes_rule_kinds=["never_owned_home"], **past)
+    if spouse:
+        fields.update(exclude_spouse_pre_marriage_disposed=True,
+                      spouse_exception_evidence_page=spouse["page"], spouse_exception_evidence_text=spouse["quote"])
+    ownership = make("never_owned_home", True, **fields)
+    ownership["exceptions"] = [make("unparsed", supply=first, label="생애최초의 제53조 과거 주택 소유 예외",
+        text="법령상 소유 예외와 과거 소유 사실의 적용 범위를 대조해야 합니다.", **(ancestry or past))]
+    return [*[rule for rule in rules if not (rule["kind"] == "never_owned_home" and rule.get("supply_type") == first)], ownership]
+
+
 def generic_private_admission(pages, *, digest, payload, rules, offered, sections, make):
     """Discover and review a supported document structure, independent of IDs."""
     sections_by_supply = {}
@@ -404,6 +445,8 @@ def generic_private_admission(pages, *, digest, payload, rules, offered, section
     if not offered or not set(offered) <= {GENERAL, *SPECIALS}:
         return None
     scoped = {supply: _section_pages(section) for supply, section in sections_by_supply.items()}
+    if SPECIALS[4] in offered:
+        rules = _first_home_ownership(pages, scoped.get(SPECIALS[4], []), rules, make)
     income_applies, summary_anchor = _summary_applies(pages)
     def e(key, pattern):
         if key == "summary":

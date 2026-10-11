@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-10-v14"
+PARSER_VERSION = "official-sections-2026-10-11-v15"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -277,6 +277,10 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
                 "identity_status": "mismatch", "reason": "현재 공고번호와 첨부 문서의 공고번호가 일치하지 않습니다."}
     from .contract_schedule import parse_contract_schedule
     result = _parse_official_rules(pages, url=url, digest=digest, payload=payload)
+    # A source rejected for this notice's identity must not acquire verified
+    # schedules, regional scopes or selection facts from its unrelated bytes.
+    if result.get("identity_status") == "mismatch":
+        return result
     contract = parse_contract_schedule(pages, url=url, digest=digest, parser_version=PARSER_VERSION)
     if contract:
         context_rule = next((r for r in result.get("rules", []) if "criterion_date" in r), None)

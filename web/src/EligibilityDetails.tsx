@@ -64,6 +64,18 @@ export function reasonStatusLabel(reason: EligibilityReason): string {
 }
 const needsProfile = (reason: EligibilityReason) => ['missing_input', 'past_fact'].includes(reason.category || '') && !!reason.profileField
 
+// Rank evidence includes area selection and source gaps. Hiding those categories
+// leaves a "확인 필요" result beside only passing facts, concealing its cause.
+function rankPendingReasons(rank: RankResult, comparisons: NoticeEvaluation['rankComparisons']): EligibilityReason[] {
+  const pending = uniqueReasons(rank.reasons.filter((reason) => reason.status !== 'pass'))
+  // The tiers below retain each amount. A common missing amount/date still
+  // points to its one shared input, even when several tiers need that fact.
+  for (const reason of comparisons.flatMap((comparison) => comparison.reasons).filter(needsProfile)) {
+    if (!pending.some((item) => item.profileField === reason.profileField && item.historyGroup === reason.historyGroup)) pending.push({ ...reason, requirement: undefined })
+  }
+  return pending
+}
+
 function sourceForComparedSupplies(notice: Notice, profile: LocalProfile | undefined, compared: { supplyType: string; unitType?: string; result: EligibilityResult }[]) {
   const source = conditionSourceStatus(notice, profile)
   if (!compared.length) return source
@@ -153,7 +165,9 @@ export function EligibilityBrief({ result, notice, profile, decision, onProfile,
   const comparedReasons = supplies.length ? supplies.filter((supply) => supply.result.status !== 'mismatch').flatMap((supply) => supply.result.reasons) : fallback.reasons
   const hasGap = comparedReasons.some((reason) => ['source_gap', 'unverified'].includes(reason.category || ''))
   const rankConfirmed = (rankResult?.reasons || []).filter((reason) => reason.status === 'pass')
-  const rankQuestion = (rankResult?.reasons || []).find(needsProfile)
+  const rankConfirmedKeys = new Set(rankConfirmed.map(reasonKey))
+  const rankComparisons = snapshot?.rankComparisons || (notice && profile ? rankUnitComparisons(notice, profile) : [])
+  const rankPending = rankResult ? rankPendingReasons(rankResult, rankComparisons) : []
   const rankedUnits = snapshot?.rankedUnits || (notice && profile ? rankGroups(notice, profile) : [])
   const showUnitRanks = rankedUnits.length > 1 || rankedUnits.some((group) => group.result.rank === 'first' && rankResult?.rank !== 'first')
   const source = notice ? sourceForComparedSupplies(notice, profile, supplies) : { diagnostics: [], topics: [] }
@@ -171,11 +185,14 @@ export function EligibilityBrief({ result, notice, profile, decision, onProfile,
     scopes.add(supply.supplyType)
     sharedScopes.set(key, scopes)
   }
-  const hasRankComparison = rankResult && (actionableReasons(rankResult.reasons).length > 0 || rankResult.rank === 'not_applicable')
+  const hasRankComparison = rankResult && (rankResult.rank === 'not_applicable' || actionableReasons(rankResult.reasons).length > 0 ||
+    rankPending.some((reason) => reason.category === 'source_gap' && (reason.label !== '공고의 순위 적용 방식' ||
+      (notice?.rules || []).some((rule) => rule.kind === 'document_diagnostics' && rule.verification === 'official' && Array.isArray(rule.diagnostics) && rule.diagnostics.some((entry) =>
+        !!entry && typeof entry === 'object' && typeof entry.message === 'string' && !['ok', 'resolved'].includes(String(entry.status)))))))
   return <div className="qualification-brief" aria-label="자격 판단 이유">
     <InventorySummary notice={notice} />
     {candidateReason && <p className="qualification-candidate"><MapPin size={13} /><span>{candidateReason}</span></p>}
-    {hasRankComparison && <div className="qualification-account-summary"><small>청약통장·순위 조건</small><strong>{rankResult.label}</strong>{rankConfirmed.length > 0 && <span>{rankConfirmed.map((reason) => `${reason.label} 충족`).join(' · ')}</span>}{rankQuestion && <button type="button" className="qualification-input-action" onClick={() => onProfile(rankQuestion.profileField, rankQuestion.historyGroup)}>{rankQuestion.label} 입력하기</button>}</div>}
+    {hasRankComparison && <div className="qualification-account-summary"><small>청약통장·순위 조건</small><strong>{rankResult.label}</strong>{rankConfirmed.length > 0 && <span>{rankConfirmed.map((reason) => `${reason.label} 충족`).join(' · ')}</span>}{rankPending.map((reason) => <div className="qualification-account-pending" key={reasonKey(reason)}><strong>{reasonStatusLabel(reason)} · {reason.label}</strong><span>{reason.detail}</span>{reason.requirement && <span>공고 요구: {reason.requirement}</span>}{needsProfile(reason) && <button type="button" className="qualification-input-action" onClick={() => onProfile(reason.profileField, reason.historyGroup)}>{reason.label} 입력하기</button>}</div>)}{rankComparisons.length > 0 && <div className="qualification-account-tiers" aria-label="주택형별 청약통장 조건">{rankComparisons.map((comparison) => <div key={comparison.units.join(',')}><small>{comparison.units.join(' · ')}</small>{comparison.reasons.filter((reason) => reason.requirement && !rankConfirmedKeys.has(reasonKey(reason))).map((reason) => <span key={reasonKey(reason)}>{reasonStatusLabel(reason)} · {reason.label}: {reason.requirement}{reason.input ? ` · 내 입력 ${reason.input}` : ''}</span>)}</div>)}</div>}</div>}
     {showUnitRanks && <div className="qualification-unit-ranks" aria-label="주택형별 청약순위">{rankedUnits.map((group) => <div key={group.units.join(',')}><span>{group.units.join(' · ')}</span><strong>{group.result.label}</strong></div>)}</div>}
     {!!shownShared.length && <div className="qualification-brief-common"><strong>묶어서 비교하는 신청 조건</strong>{shownShared.map((reason) => <div className="qualification-brief-row" key={reasonKey(reason)}><ReasonIcon reason={reason} /><div><strong>{reasonStatusLabel(reason)} · {reason.label}</strong><small>적용: {[...(sharedScopes.get(reasonKey(reason)) || [])].join(' / ')}</small><span>{reason.detail}</span>{needsProfile(reason) && <button type="button" className="qualification-input-action" onClick={() => onProfile(reason.profileField, reason.historyGroup)}>{reason.label} 입력하기</button>}</div></div>)}</div>}
     {visibleSupplies.length > 0 ? <div className="qualification-supply-overview" aria-label="모집 유형별 신청 가능성"><strong className="qualification-application-heading">{visibleSupplies.some((supply) => actionableReasons(supply.result.reasons).length > 0) ? '이 공고의 신청 조건' : '공식 모집 유형'}</strong>{visibleSupplies.map((supply, index) => {
@@ -202,7 +219,10 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
   const rankedUnits = snapshot?.rankedUnits || rankGroups(notice, profile)
   const showUnitRanks = rankedUnits.length > 1 || rankedUnits.some((group) => group.result.rank === 'first' && ranked.rank !== 'first')
   const areaComparisons = snapshot?.rankComparisons || rankUnitComparisons(notice, profile)
-  const rankReasons = actionableReasons(ranked.reasons).filter((reason) => !commonKeys.has(reasonKey(reason)))
+  const rankReasons = uniqueReasons(ranked.reasons).filter((reason) => !commonKeys.has(reasonKey(reason)))
+  const displayedRankKeys = new Set([...commonKeys, ...rankReasons.map(reasonKey)])
+  const areaReasons = areaComparisons.map((comparison) => ({ ...comparison, reasons: comparison.reasons.filter((reason) => !displayedRankKeys.has(reasonKey(reason))) })).filter((comparison) => comparison.reasons.length > 0)
+  const shownRankSourceKeys = new Set(rankReasons.filter((reason) => ['source_gap', 'unverified'].includes(reason.category || '')).map(reasonKey))
   const activeReasons = combinations.filter((combo) => combo.result.status !== 'mismatch').flatMap((combo) => combo.result.reasons)
   const activeKeys = new Set(activeReasons.map(reasonKey))
   const sourceGaps = uniqueReasons([...commonResult.reasons.filter((reason) => !combinations.length || activeKeys.has(reasonKey(reason))), ...ranked.reasons, ...activeReasons].filter((reason) => reason.category === 'source_gap'))
@@ -210,6 +230,7 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
   const coverage = conditionCoverage(notice)
   const source = sourceForComparedSupplies(notice, profile, combinations)
   const additionalSourceGaps = sourceGaps.filter((reason) =>
+    !shownRankSourceKeys.has(reasonKey(reason)) &&
     !['공고 조건 정리 중', '나머지 공고 조건'].includes(reason.label) &&
     !(reason.label === '미확보 공고 조항' && source.topics.length > 0) &&
     !source.topics.some((topic) => topic.label === reason.label))
@@ -252,8 +273,7 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
     {!!inventory.length && <section className="qualification-section qualification-inventory"><h5>공식 모집 주택형·공급유형</h5><InventorySummary notice={notice} demoMode={demoMode} /><ul>{inventory.map((item, index) => <li key={`${item.supply_type}-${item.unit_type}-${index}`}><strong>{item.supply_type}</strong><span>{item.unit_type || '전체 주택형'}{item.supply_count != null ? ` · 모집 ${item.supply_count.toLocaleString('ko-KR')}세대` : ''}</span>{!demoMode && safeHref(item.evidence_url) && <a href={safeHref(item.evidence_url)} target="_blank" rel="noopener noreferrer">모집표 원문 <ExternalLink size={12} /></a>}</li>)}</ul></section>}
     {!!commonReasons.length && <section className="qualification-section"><h5>이 공고의 공통 신청 조건</h5><ReasonList reasons={commonReasons} demoMode={demoMode} onProfile={onProfile} /></section>}
     {!!sharedGroups.size && <section className="qualification-section qualification-shared"><h5>유형 간 공통 조건</h5>{[...sharedGroups.entries()].map(([key, group]) => <div key={key}><p>적용: {group.scopes.join(' · ')}</p><ReasonList reasons={group.reasons} demoMode={demoMode} onProfile={onProfile} /></div>)}</section>}
-    {!!rankReasons.length && <section className="qualification-section"><div className="qualification-section-head"><h5>청약통장·순위 조건</h5><span className={`qualification-badge qualification-${tone(ranked)}`}>{ranked.label}</span></div><ReasonList reasons={rankReasons} demoMode={demoMode} onProfile={onProfile} /></section>}
-    {!!areaComparisons.length && <section className="qualification-section"><h5>면적별 청약통장 조건</h5>{areaComparisons.map((comparison) => <div className="qualification-unit-comparison" key={comparison.units.join(',')}><h6>{comparison.units.join(' · ')}</h6><ReasonList reasons={comparison.reasons} demoMode={demoMode} onProfile={onProfile} /></div>)}</section>}
+    {(rankReasons.length > 0 || areaReasons.length > 0) && <section className="qualification-section qualification-rank-section"><div className="qualification-section-head"><h5>청약통장·순위 조건</h5><span className={`qualification-badge qualification-${tone(ranked)}`}>{ranked.label}</span></div><ReasonList reasons={rankReasons} demoMode={demoMode} onProfile={onProfile} />{!!areaReasons.length && <div><h5>면적별 청약통장 조건</h5>{areaReasons.map((comparison) => <div className="qualification-unit-comparison" key={comparison.units.join(',')}><h6>{comparison.units.join(' · ')}</h6><ReasonList reasons={comparison.reasons} demoMode={demoMode} onProfile={onProfile} /></div>)}</div>}</section>}
     {showUnitRanks && <section className="qualification-section"><h5>주택형별 청약순위</h5>{rankedUnits.map((group) => <div className="qualification-unit-comparison" key={group.units.join(',')}><div className="qualification-section-head"><h6>{group.units.join(' · ')}</h6><span className={`qualification-badge qualification-${tone(group.result)}`}>{group.result.label}</span></div><ReasonList reasons={actionableReasons(group.result.reasons).filter((reason) => reason.status !== 'pass')} demoMode={demoMode} onProfile={onProfile} /></div>)}</section>}
     {[...grouped.entries()].map(([key, group]) => {
       const className = `qualification-section qualification-supply${group.result.status === 'mismatch' ? ' qualification-unavailable' : ''}`
@@ -262,7 +282,7 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
       return <section className={className} key={key}>{heading}{!!group.reasons.length && <ReasonList reasons={group.reasons} demoMode={demoMode} onProfile={onProfile} />}</section>
     })}
     <ApplicationInstructions notice={notice} demoMode={demoMode} />
-    {(sourceGaps.length > 0 || source.diagnostics.length > 0 || source.topics.length > 0 || !coverage.verifiedCount && !grouped.size) && <section className="qualification-source-gap" aria-label="서비스 원문 검토 부족"><strong>서비스 원문 검토 부족 · 미확보 조항과 처리 단계</strong><p>{commonReasons.length || sharedGroups.size || grouped.size || rankReasons.length || areaComparisons.length ? '확인한 조건은 위에서 비교했습니다. 아래 공식 조항은 서비스의 원문 검토가 더 필요합니다.' : '현재 확보한 자료로 신청 조건을 비교할 수 없습니다. 개인 정보 미입력이나 신청 자격 불일치로 판단하지 않습니다.'}</p>
+    {(additionalSourceGaps.length > 0 || source.diagnostics.length > 0 || source.topics.length > 0 || !coverage.verifiedCount && !grouped.size) && <section className="qualification-source-gap" aria-label="서비스 원문 검토 부족"><strong>서비스 원문 검토 부족 · 미확보 조항과 처리 단계</strong><p>{commonReasons.length || sharedGroups.size || grouped.size || rankReasons.length || areaComparisons.length ? '확인한 조건은 위에서 비교했습니다. 아래 공식 조항은 서비스의 원문 검토가 더 필요합니다.' : '현재 확보한 자료로 신청 조건을 비교할 수 없습니다. 개인 정보 미입력이나 신청 자격 불일치로 판단하지 않습니다.'}</p>
       {!!source.diagnostics.length && <ul className="qualification-source-diagnostics">{source.diagnostics.map((item, index) => <li key={`${item.stage}-${item.code}-${index}`}><strong>{SOURCE_STAGE_LABEL[item.stage] || '공고 자료 확인'}</strong><span>{item.message}</span>{!!item.missingItems?.length && <small>미확보 항목: {item.missingItems.join(' · ')}</small>}{!demoMode && safeHref(item.evidenceUrl) && <a href={safeHref(item.evidenceUrl)} target="_blank" rel="noopener noreferrer">관련 원문 <ExternalLink size={12} /></a>}</li>)}</ul>}
       {!!source.topics.length && <MissingSourceTopics topics={source.topics} demoMode={demoMode} />}
       {!!additionalSourceGaps.length && <ReasonList reasons={additionalSourceGaps} demoMode={demoMode} />}

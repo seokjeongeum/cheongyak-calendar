@@ -61,7 +61,15 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     # Ordinary initial shinhee applications (including A17) use the complete
     # numbered-section parser. Do not mistake later first-come instructions
     # within an ordinary announcement for the present application method.
-    firstcome = bool(re.search(r"선착순.{0,25}(?:동.?호|일반매각|계약)|일반매각.{0,15}선착순", head))
+    # Some PDFs draw a heading repeatedly to make outlined letters. The
+    # resulting text can repeat '선착순' and the 동·호 tokens far apart. A
+    # direct declaration about the present offering establishes the same
+    # method without interpreting later leftover-contract instructions.
+    firstcome_clause = _match(pages,
+        r"(?:금회\s*공급(?:하는|되는)\s*주택(?:은|는)|본\s*공고(?:는|의\s*공급방식은))"
+        r"[^■•。.]{0,150}?선착순\s*동[·ㆍ∙.]?\s*호(?:\s*지정)?"
+        r"[^■•。.]{0,100}?(?:현장\s*계약|계약(?:체결)?)(?:만)?\s*(?:가능|진행|합니다|방식)")
+    firstcome = bool(firstcome_clause or re.search(r"선착순.{0,25}(?:동.?호|일반매각|계약)|일반매각.{0,15}선착순", head))
     residual = bool(re.search(r"잔여|공가세대", head)) and ("일반매각" in head or "입주자모집" in head)
     relaxed = "자격완화" in head
     if not (firstcome or residual or relaxed) or not re.search(r"금회공급|신청자격|자격요건", flat):
@@ -105,7 +113,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         if supply:
             result["supply_type"] = supply
         return result
-    rules.append(make("application_method", method, effect="metadata", evidence={"page": 1, "text": _normal(pages[0]["text"])[:800]},
+    rules.append(make("application_method", method, effect="metadata", evidence=firstcome_clause or {"page": pages[0]["page"], "text": _normal(pages[0]["text"])[:800]},
                       offer_mode="relaxed_sale" if relaxed else "shinhee_residual" if shinhee else "residual_general_sale"))
     rules.append(make("rank_applicability", effect="metadata", status="not_applicable", account_required=False, evidence=exemption,
                       reason=("신혼희망타운 잔여주택" if shinhee else "선착순 계약" if firstcome else "잔여주택 자격완화·무순위 추첨") + " · 청약통장 불필요 · 아파트 1·2순위 적용 없음"))
@@ -276,12 +284,16 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     if duplicate:
         instructions.append({"label": "동일 세대·블록 중복 신청과 공고의 부부 예외", "detail": duplicate["text"],
             "phase": "application", "evidence_page": duplicate["page"], "evidence_text": duplicate["text"], "evidence_url": url, "document_hash": digest})
+    one_home = _match(pages, r"1인\s*1주택\s*기준으로\s*공급(?:합니다|하며)")
+    if one_home:
+        instructions.append({"label": "1인 1주택 신청·계약", "detail": one_home["text"],
+            "phase": "application", "evidence_page": one_home["page"], "evidence_text": one_home["text"], "evidence_url": url, "document_hash": digest})
     post = _match(pages, r"당첨자\(?예비입주자\)?[^■]{0,100}(?:제출서류|서류제출)[^■]{0,200}")
     if post:
         instructions.append({"label": "당첨 후 서류 제출·계약 절차", "detail": post["text"], "phase": "post_selection",
             "evidence_page": post["page"], "evidence_text": post["text"], "evidence_url": url, "document_hash": digest})
     if instructions:
-        rules.append(make("application_instructions", effect="metadata", evidence=duplicate or post, instructions=instructions))
+        rules.append(make("application_instructions", effect="metadata", evidence=duplicate or one_home or post, instructions=instructions))
     # Coverage is built from the current operative clauses, not a remembered
     # hash or project. Unknown eligibility terms remain concrete source gaps.
     scopes = []

@@ -408,12 +408,22 @@ function firstHomeAscendantExceptionAvailable(rule: NoticeRule, notice: Notice):
     return child.verification === 'official' && child.document_hash === rule.document_hash && exceptionScopeMatches(rule, child) && /60세이상의직계존속.*주택(?:또는분양권등)?을?소유/.test(compact(child.evidence_text || ''))
   })
 }
+function firstHomeSpouseOwnershipExceptionAvailable(rule: NoticeRule): boolean {
+  if (rule.verification !== 'official' || rule.kind !== 'never_owned_home' || specialType(rule.supply_type || '') !== 'first_home' || typeof rule.document_hash !== 'string' || !/^[a-f0-9]{64}$/.test(rule.document_hash)) return false
+  // Older persisted rules kept the exact exemption as an unparsed child.
+  // Reuse that document-bound fact without importing an unrelated paragraph.
+  return Array.isArray(rule.exceptions) && rule.exceptions.some((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const child = entry as NoticeRule
+    return child.verification === 'official' && child.document_hash === rule.document_hash && exceptionScopeMatches(rule, child) && /청약신청자의배우자가혼인전주택을소유하였다가혼인전처분한이력은배제합니다/.test(compact(child.evidence_text || ''))
+  })
+}
 function firstHomeHistoricalOwnersExempt(rule: NoticeRule, profile: LocalProfile, notice: Notice): boolean {
   const date = criterionDate(rule, notice)
   if (!date) return false
   const household = deriveHousehold(profile, date), members = household.members.filter((member) => member.included === true)
   if (!household.complete || members.some((member) => member.previouslyOwnedHome === null && !(['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60))) return false
-  return members.filter((member) => member.previouslyOwnedHome === true).every((member) => ['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60 || member.id === 'spouse' && rule.exclude_spouse_pre_marriage_disposed === true && profile.spousePremarriageOwnershipDisposed === true)
+  return members.filter((member) => member.previouslyOwnedHome === true).every((member) => ['ascendant', 'spouse_ascendant'].includes(member.ownerRelation) && (ageAt(member.dateOfBirth, date) ?? -1) >= 60 || member.id === 'spouse' && (rule.exclude_spouse_pre_marriage_disposed === true || firstHomeSpouseOwnershipExceptionAvailable(rule)) && profile.spousePremarriageOwnershipDisposed === true)
 }
 function allKinds(rules: NoticeRule[]): string[] { return rules.flatMap((r) => [r.kind, ...allKinds(conditionChildren(r))]) }
 function scopeProblem(rule: NoticeRule, notice: Notice): string | null {
@@ -479,6 +489,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   if (problem) return unsupported(rule, notice, problem, '적용 범위')
   if (rule.effect === 'priority') return unsupported(rule, notice, '당첨 우선순위 조건입니다. 신청 가능 여부와 별개로 공고문의 배정 순서를 확인하세요.', '공급 우선순위')
   if (rule.kind === 'recommendation' && (profile.recommendationReason === 'none' || profile.recommendationStatus === 'none')) return reason(rule, notice, 'fail', '기관추천', profile.recommendationReason === 'none' ? '기관추천 대상 사유에 해당 없음으로 입력했습니다.' : '기관 추천이 없다고 입력했습니다.', profile.recommendationReason === 'none' ? '해당 없음' : '추천 없음', '기관추천 대상 및 기관의 확정 추천')
+  if (firstHomeSpouseOwnershipExceptionAvailable(rule)) rule = { ...rule, exclude_spouse_pre_marriage_disposed: true }
   if (firstHomeAscendantExceptionAvailable(rule, notice)) rule = { ...rule, exclude_article53_ascendants_over_60: true }
   if (Array.isArray(rule.exceptions) && rule.exceptions.length) {
     const exceptionRules = rule.exceptions.filter((r): r is NoticeRule => !!r && typeof r === 'object' && typeof r.kind === 'string')
@@ -992,7 +1003,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     }
     const members = included.filter((member) => !exemptAncestors.includes(member))
     const missing = members.find((member) => member.previouslyOwnedHome === null)
-    if (missing) return missingInput(rule, notice, '과거 주택 소유', `${missing.label}의 과거 주택·권리 소유 이력을 입력하세요.`, '공고가 인정하는 과거 주택 미소유', missing.id === 'applicant' ? 'applicantPreviouslyOwnedHome' : missing.id === 'spouse' ? 'spousePreviouslyOwnedHome' : 'householdMembers')
+    if (missing) return { ...missingInput(rule, notice, '과거 주택 소유', `${missing.label}의 과거 주택·권리 소유 이력을 입력하세요.`, '공고가 인정하는 과거 주택 미소유', missing.id === 'applicant' ? 'applicantPreviouslyOwnedHome' : missing.id === 'spouse' ? 'spousePreviouslyOwnedHome' : 'householdMembers'), ...(!['applicant', 'spouse'].includes(missing.id) ? { profileMemberId: missing.id } : {}) }
     const owned = members.filter((member) => member.previouslyOwnedHome === true)
     if (owned.length) {
       const spouseException = rule.exclude_spouse_pre_marriage_disposed === true && owned.every((member) => member.id === 'spouse')
@@ -1176,9 +1187,18 @@ export function deriveRank(notice: Notice, profile: LocalProfile, unitType?: str
   }
   const kind = notice.housing_kind, prefix = kind === 'private' ? '민영주택' : '국민주택'
   const evidence = notice.housing_kind_evidence
-  if (!['private', 'national'].includes(kind || '') || evidence?.verification !== 'official') return {
-    rank: 'unknown', status: 'review', label: '순위 적용 조건 정리 중',
-    reasons: [{ status: 'review', category: 'source_gap', label: '공고의 순위 적용 방식', detail: '공고의 주택 종류와 순위 적용 방식을 아직 정리하지 못했습니다.', evidenceUrl: evidence?.evidence_url || notice.official_url }],
+  if (!['private', 'national'].includes(kind || '') || evidence?.verification !== 'official') {
+    const diagnostics = (notice.rules || []).filter((rule) => rule.kind === 'document_diagnostics' && rule.verification === 'official').reverse()
+      .flatMap((rule) => Array.isArray(rule.diagnostics) ? rule.diagnostics : [])
+      .filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === 'object' && typeof entry.message === 'string' && !['ok', 'resolved'].includes(String(entry.status)))
+    const failure = diagnostics.find((entry) => entry.code === 'current_document_mismatch') || diagnostics[0]
+    const stages: Record<string, string> = { discovery: '공고문 찾기', download: '공고문 다운로드', conversion: '문서 형식 변환', decode: '텍스트 추출', interpretation: '순위 적용 조건 판독', identity: '공고번호·날짜 확인', processing: '공고문 확인 실행' }
+    const missing = failure && Array.isArray(failure.missing_items) ? failure.missing_items.filter((item): item is string => typeof item === 'string' && !!item.trim()) : []
+    return { rank: 'unknown', status: 'review', label: '순위 적용 조건 정리 중',
+      reasons: [{ status: 'review', category: 'source_gap', label: '공고의 순위 적용 방식',
+        detail: failure ? `${stages[String(failure.stage)] || '공고 자료 확인'} · ${failure.message}${missing.length ? ` 미확보 항목: ${missing.join(' · ')}` : ''}` : '공고의 주택 종류와 순위 적용 방식을 아직 정리하지 못했습니다.',
+        evidenceUrl: failure && typeof failure.evidence_url === 'string' ? failure.evidence_url : evidence?.evidence_url || notice.official_url }],
+    }
   }
   const rankRules = (notice.rules || []).filter((r) => r.effect !== 'metadata' && !r.supply_type && r.kind !== 'first_rank' && (r.purpose === 'first_rank' || ['private_rank_months', 'national_rank_months'].includes(r.kind)))
   const applicable = rankRules.filter((r) => (!r.housing_kind || r.housing_kind === kind) && (!r.unit_type || r.unit_type === unitType)).filter((r) => kind === 'private' ? r.kind !== 'national_rank_months' : r.kind !== 'private_rank_months')
@@ -1195,6 +1215,18 @@ export function deriveRank(notice: Notice, profile: LocalProfile, unitType?: str
   const complete = metadata?.complete === true || applicable.some((r) => r.rank_rules_complete === true && r.verification === 'official')
   const unitScopeMissing = !unitType && rankRules.some((r) => r.unit_type)
   if (!hasDuration || !hasMoney || !kinds.includes('account_type') || !complete || required.some((k) => !kinds.includes(k)) || unitScopeMissing) reasons.push({ status: 'review', category: 'source_gap', label: '공고별 1순위 요건', detail: unitScopeMissing ? '주택형별 예치금·통장 요건이 다릅니다. 각 주택형의 순위 비교를 확인하세요.' : `${prefix} 기간·${kind === 'private' ? '지역·전용면적별 예치금' : '납입인정횟수'}·통장 종류와 공고의 추가 1순위 요건을 확인하고 있습니다.`, evidenceUrl: metadata?.evidence_url || (kind === 'private' ? law28 : law27) })
+  if (!unitType && (unitScopeMissing || reasons.some((reason) => reason.category === 'selection'))) {
+    const units = [...new Set([...(notice.prices || []).map((price) => price.unit_type), ...(officialOfferedSupplies(notice) || []).map((supply) => supply.unit_type)].filter((unit): unit is string => typeof unit === 'string' && !!unit.trim()))]
+    // A choice is unnecessary when every real offered/priced unit independently
+    // passes complete official rank rules. Missing inventory areas and any unit
+    // failing a higher tier retain review; unrelated eligibility is unchanged.
+    if (units.length > 0 && units.every((unit) => deriveRank(notice, profile, unit).rank === 'first')) return {
+      status: 'possible', rank: 'first', label: `${prefix} 1순위 조건 충족`,
+      reasons: [...reasons.filter((reason) => reason.status === 'pass'), { status: 'pass', category: 'condition', label: '주택형별 1순위 요건',
+        detail: `모집 주택형 ${units.length}개 각각의 공식 가입기간·${kind === 'private' ? '지역·전용면적별 예치금' : '납입인정횟수'}·통장 종류와 추가 1순위 요건을 모두 충족했습니다.`,
+        requirement: units.join(' · '), criterionDate: typeof metadata?.criterion_date === 'string' ? metadata.criterion_date : notice.announcement_date, evidenceUrl: metadata?.evidence_url || notice.official_url }],
+    }
+  }
   const assessed = result(reasons), first = assessed.status === 'possible'
   return { ...assessed, rank: first ? 'first' : 'unknown', label: first ? `${prefix} 1순위 조건 충족` : `${prefix} 1순위 ${assessed.status === 'mismatch' ? '요건 불일치' : '확인 필요'}` }
 }

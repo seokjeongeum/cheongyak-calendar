@@ -51,6 +51,10 @@ details.qualification-supply-brief{display:block}
 .qualification-unit-ranks { display: grid; gap: 6px; }
 .qualification-unit-ranks > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .qualification-account-summary>small{font-size:10px;font-weight:700;color:#526a88}
+.qualification-account-pending,.qualification-account-tiers,.qualification-account-tiers>div{display:grid;gap:4px;min-width:0}
+.qualification-account-pending{border-top:1px solid #d9e5f4;margin-top:4px;padding-top:8px;font-size:11px;line-height:1.7}
+.qualification-account-pending strong{font-size:11px}.qualification-account-tiers{margin-top:6px;gap:8px}
+.qualification-account-tiers small{font-size:10px;line-height:1.6;overflow-wrap:anywhere}
 .qualification-application-heading{color:#405773;font-size:12px}
 .qualification-supply-brief.qualification-unavailable,.qualification-supply.qualification-unavailable{background:#f0f2f5;border-color:#cbd3dd;color:#4e5d72}
 .qualification-unavailable .qualification-supply-title>span,.qualification-unavailable .qualification-badge{background:#e5e9ee;color:#435267}
