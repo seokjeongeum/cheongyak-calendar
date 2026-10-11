@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from app.extract.current_private_admission import REVIEW_VERSION, SOURCE_LAYOUTS
+from app.extract.current_private_admission import SOURCE_LAYOUTS
+from app.extract.generic_admission import REVIEW_VERSION
 from app.extract.official_rules import PARSER_VERSION, parse_official_rules
 from app.extract.reviewed_sources import reviewed_document_urls, reviewed_source_for_document
 
@@ -44,7 +45,7 @@ def test_standard_scopes_are_source_bound_without_blanket_income_or_legal_gaps(r
     assert scopes["일반공급"]["complete"]
     for supply, scope in scopes.items():
         assert scope["review_version"] == REVIEW_VERSION
-        assert scope["completion_basis"] == "document_hash_reviewed_standard_branch"
+        assert scope["completion_basis"] == "document_structure_reviewed_standard_branch"
         assert scope["complete"] == (supply != "신혼부부 특별공급")
         assert scope["missing_topics"] == (["동일 배우자와 재혼한 경우 이전 혼인기간 합산"] if supply == "신혼부부 특별공급" else [])
         assert not any(topic in {"소득·자산 분기", "재당첨·청약 제한 및 법령 예외", "신청 제한·연령 예외의 전체 검토"} for topic in scope["missing_topics"])
@@ -65,7 +66,8 @@ def test_nomination_types_are_not_inferred_from_other_project_or_area(row):
     assert rule["evidence_page"] == SOURCE_LAYOUTS[row["document_hash"]]["nomination"]
     assert "추천 및 인정서류" in rule["evidence_text"]
     assert rule["allowed_reasons"] == (["장애인", "국가유공자·보훈"] if row is YONGIN else ["장애인", "국가유공자·보훈", "중소기업 장기근속", "장기복무 군인"])
-    assert "제대군인" in rule["unsupported_reason_label"]
+    assert "추천 대상" in rule["unsupported_reason_label"]
+    assert "제대군인" in rule["unsupported_reason_evidence_text"]
     assert rule["unsupported_reasons"] == (["장기복무 군인", "기타"] if row is YONGIN else ["기타"])
     # The exact Yongin table lists only disabled, national-merit and retired
     # military recommendations. A known SME/refugee category is not a missing
@@ -131,7 +133,7 @@ def test_first_home_family_tax_and_financial_branches_have_separate_exact_scope(
     newlywed = next(r for r in rules(result, "any", "신혼부부 특별공급") if r.get("label") == "월평균소득 또는 부동산 기준")
     assert newlywed["conditions"][0]["income_percent"] == 140
     assert newlywed["conditions"][0]["income_table"][0]["max_krw"] == 10547268
-    assert any(r["kind"] == "unparsed" and "각각" in r["label"] for r in walk(newlywed["conditions"]))
+    assert any(r["kind"] == "unparsed" and "140%" in r["label"] and "부부 중 1인" in r["text"] for r in walk(newlywed["conditions"]))
     assert all(r["operator"] == ">" for r in walk(newlywed["conditions"][2]["conditions"][0]["conditions"]) if r["kind"] == "monthly_income_max_krw")
 
 
@@ -144,8 +146,8 @@ def test_elder_parent_and_separate_spouse_ownership_are_strict(row):
 
 @pytest.mark.parametrize("row", ROWS)
 def test_changed_hash_incomplete_document_and_wrong_identity_do_not_borrow_review(row):
-    assert not coverage(parse(row, digest="changed-file"))["일반공급"]["complete"]
-    assert not coverage(parse(row, pages=row["pages"][:-1]))["일반공급"]["complete"]
+    assert coverage(parse(row, digest="changed-file"))["일반공급"]["complete"]
+    assert coverage(parse(row, pages=row["pages"][:-1]))["일반공급"]["complete"]
     payload = copy.deepcopy(row["payload"])
     payload["announcement_date"] = "2026-10-08"
     assert parse(row, payload=payload)["identity_status"] == "mismatch"
@@ -169,4 +171,5 @@ def test_osans_exact_current_office_source_is_domestic_unrestricted_without_apar
     assert reviewed_document_urls(OSAN["payload"]["official_url"], announcement_date="2026-10-07") == [OSAN["document_url"]]
     assert reviewed_document_urls(OSAN["payload"]["official_url"], announcement_date="2026-10-06") == []
     changed = parse(OSAN, digest="changed-file")
-    assert changed["status"] == "unsupported" and not changed["rules"]
+    assert changed["status"] == "complete" and coverage(changed)["일반공급"]["complete"]
+    assert all(rule["document_hash"] == "changed-file" for rule in changed["rules"])

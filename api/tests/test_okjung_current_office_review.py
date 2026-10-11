@@ -5,8 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from app.extract.official_rules import parse_official_rules
-from app.extract.pipeline import _with_diagnostics
-from app.extract.reviewed_sources import focused_review_version, reviewed_document_urls
+from app.extract.pipeline import _with_diagnostics, _persisted_document_urls
 from app.ingest.worker import _failed_document_needs_new_pipeline
 from app.models import Notice
 
@@ -36,8 +35,10 @@ def test_okjung_current_advertisement_domestic_adult_and_unrestricted_region():
     assert all(r["document_hash"] == FIXTURE["document_hash"] and r["criterion_date"] == "2026-10-08" for r in result["rules"])
 
 
-def test_changed_document_or_missing_applicant_page_cannot_use_completed_review():
-    assert parse(digest="0" * 64)["status"] != "complete"
+def test_new_hash_rechecks_current_clauses_and_missing_applicant_page_cannot_complete():
+    changed = parse(digest="0" * 64)
+    assert changed["status"] == "complete"
+    assert all(rule["document_hash"] == "0" * 64 for rule in changed["rules"])
     pages = [p for p in FIXTURE["pages"] if p["page"] != 7]
     assert parse(pages=pages)["status"] != "complete"
     payload = copy.deepcopy(FIXTURE["payload"])
@@ -52,13 +53,13 @@ def test_changed_document_or_missing_applicant_page_cannot_use_completed_review(
     assert not any(r["kind"] in {"age_min", "domestic_residence", "applicant_regions", "condition_coverage"} for r in result["rules"])
 
 
-def test_only_current_notice_and_date_receive_fallback_and_focused_reprocessing():
-    payload = {**FIXTURE["payload"], "external_id": "2026950077"}
-    assert reviewed_document_urls(payload["official_url"], announcement_date="2026-10-08") == [FIXTURE["url"]]
-    assert reviewed_document_urls(payload["official_url"], announcement_date="2026-04-09") == []
-    assert focused_review_version(payload["official_url"], "2026-10-08") == "okjung-office-2026-10-10-v1"
-    assert focused_review_version(payload["official_url"], "2026-04-09") is None
+def test_retained_document_provenance_and_parser_version_control_generic_retries():
+    payload = {**FIXTURE["payload"], "external_id": "2026950077", "document_hash": FIXTURE["document_hash"], "rules": parse()["rules"]}
+    assert _persisted_document_urls(payload) == [FIXTURE["url"]]
+    assert _persisted_document_urls({**payload, "document_hash": "changed-file"}) == []
     row = Notice(source="cheongyak_home", external_id="2026950077", official_url=payload["official_url"], announcement_date=date(2026, 10, 8), rules=[])
+    row.rules = _with_diagnostics(dict(payload), [], "complete")["rules"]
+    next(rule for rule in row.rules if rule['kind'] == 'document_diagnostics')['parser_version'] = 'previous-parser'
     assert _failed_document_needs_new_pipeline(row) is True
-    row.rules = _with_diagnostics(payload, [], "complete")["rules"]
+    row.rules = _with_diagnostics(dict(payload), [], "complete")["rules"]
     assert _failed_document_needs_new_pipeline(row) is False

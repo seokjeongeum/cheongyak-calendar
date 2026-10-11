@@ -72,6 +72,121 @@ def test_selection_or_procedure_children_do_not_replace_admission_requirements()
         assert old in retain([old], [selection])
 
 
+def test_generic_partial_review_keeps_an_unanswered_prior_verified_fact_for_same_bytes():
+    old = rule("parent_age_min", "노부모부양 특별공급", value=65)
+    current = [rule("age_min", value=19, parser_version=PARSER_VERSION),
+               coverage({"supply_type": "노부모부양 특별공급", "complete": False,
+                         "review_version": "generic-admission-new-version", "reviewed_pages": [1, 2, 3],
+                         "completion_basis": "document_structure_reviewed_standard_branch",
+                         "topics": [{"topic": "부모 부양 조항", "required": True, "status": "missing"}]})]
+    assert old in retain([old], current)
+
+
+def waiver_coverage(supply="신혼부부 특별공급", *, kind="household_head", **fields):
+    scope = {"supply_type": supply, "complete": False, "verified_rule_count": 1,
+             "review_version": "generic-admission-future-source", "reviewed_pages": [1, 7],
+             "completion_basis": "document_structure_reviewed_standard_branch", "missing_topics": ["미확보 조건"],
+             "topics": [{"topic": "해당 유형은 세대주 요건 면제", "status": "not_applicable", "required": False,
+                         "waived_rule_kind": kind, "evidence_page": 7, "evidence_text": "세대주 요건: 신혼부부 X"}]}
+    return coverage(scope) | {"evidence_url": "https://official.example/future-notice.pdf", **fields}
+
+
+def test_source_exemption_retires_only_waived_fact_in_partial_review():
+    waived = rule("household_head", "신혼부부 특별공급", value=True)
+    unanswered = rule("homeless", "신혼부부 특별공급", value=True)
+    other_supply = rule("household_head", "노부모부양 특별공급", value=True)
+    global_fact = rule("household_head", supply=None, value=True)
+    ranked = rule("household_head", "신혼부부 특별공급", purpose="first_rank", value=True)
+    fresh = [waiver_coverage()]
+    merged = retain([waived, unanswered, other_supply, global_fact, ranked], fresh)
+    assert waived not in merged
+    assert all(old in merged for old in [unanswered, other_supply, global_fact, ranked])
+
+
+@pytest.mark.parametrize("change", [{"document_hash": "other-file"}, {"source": "other_collector"},
+                                    {"parser_version": OLD_PARSER}, {"evidence_url": ""}])
+def test_exemption_without_current_source_provenance_cannot_retire_fact(change):
+    old = rule("household_head", "신혼부부 특별공급", value=True)
+    assert old in retain([old], [waiver_coverage(**change)])
+
+
+def test_source_exemption_retires_whole_old_branch_and_keeps_selection_children():
+    child = rule("household_head", supply=None, value=True)
+    child.pop("supply_type")
+    old_branch = rule("all", "신혼부부 특별공급", conditions=[child])
+    selection = {**old_branch, "effect": "priority"}
+    fresh = [waiver_coverage()]
+    assert old_branch not in retain([old_branch], fresh)
+    # Selection facts are not reconsidered as admission facts.
+    assert retain([selection], fresh) == fresh
+
+
+@pytest.mark.parametrize("malformed", [{"topics": [None]}, {"topics": [{"required": [], "status": "verified"}]},
+                                       {"reviewed_pages": [True]}, {"reviewed_pages": [0]},
+                                       {"verified_rule_count": 0}, {"verified_rule_count": True},
+                                       {"missing_topics": ["still missing"]}])
+def test_malformed_generic_complete_review_cannot_erase_unanswered_fact(malformed):
+    old = rule("homeless", value=True)
+    scope = {"supply_type": "일반공급", "complete": True, "verified_rule_count": 1,
+             "review_version": "generic-admission-new-source", "reviewed_pages": [1], "missing_topics": [],
+             "completion_basis": "document_structure_reviewed_standard_branch", "topics": [], **malformed}
+    fresh = [rule("age_min", value=19, parser_version=PARSER_VERSION),
+             coverage(scope) | {"status": "complete", "offered_supply_types": ["일반공급"]}]
+    assert old in retain([old], fresh)
+
+
+def test_malformed_scope_is_not_filtered_out_before_whole_review_check():
+    old = rule("parent_age_min", "노부모부양 특별공급", value=65)
+    valid_scope = {"supply_type": "일반공급", "complete": True, "verified_rule_count": 1,
+                   "review_version": "generic-admission-new-source", "reviewed_pages": [1], "missing_topics": [],
+                   "completion_basis": "document_structure_reviewed_standard_branch", "topics": []}
+    fresh = [rule("age_min", value=19, parser_version=PARSER_VERSION),
+             coverage(valid_scope, None) | {"status": "complete", "offered_supply_types": ["일반공급", "노부모부양 특별공급"]}]
+    assert old in retain([old], fresh)
+
+
+def test_generic_complete_coverage_alone_cannot_replace_prior_admission_proof():
+    old = rule("homeless", value=True)
+    scope = {"supply_type": "일반공급", "complete": True, "verified_rule_count": 1,
+             "review_version": "generic-admission-new-source", "reviewed_pages": [1], "missing_topics": [],
+             "completion_basis": "document_structure_reviewed_standard_branch"}
+    fresh = [coverage(scope) | {"status": "complete", "offered_supply_types": ["일반공급"],
+                               "evidence_url": "https://official.example/current-document.pdf"}]
+    assert old in retain([old], fresh)
+
+
+def test_unparsed_exception_is_not_a_replacement_for_an_unmodelled_known_branch():
+    old = rule("tax_years_min", "생애최초 특별공급", value=5,
+               exceptions=[rule("unparsed", "생애최초 특별공급", label="세액공제 인정 범위")])
+    fresh = [rule("unparsed", "생애최초 특별공급", parser_version=PARSER_VERSION,
+                  label="다른 미확보 신청 조항")]
+    assert old in retain([old], fresh)
+
+
+def replacement_fact(**fields):
+    return rule("first_home_tax_activity", "생애최초 특별공급", value=True, parser_version=PARSER_VERSION,
+                supersedes_rule_kinds=["tax_years_min"], evidence_page=17,
+                evidence_url="https://official.example/future-notice.pdf", evidence_text="5년 이상 소득세 및 최근 1년 납부 인정", **fields)
+
+
+def test_current_source_model_explicitly_supersedes_only_the_scoped_older_kind():
+    old = rule("tax_years_min", "생애최초 특별공급", value=5)
+    other = rule("tax_years_min", "다른 공급", value=5)
+    global_fact = rule("tax_years_min", supply=None, value=5)
+    unanswered = rule("homeless", "생애최초 특별공급", value=True)
+    new = replacement_fact()
+    merged = retain([old, other, global_fact, unanswered], [new])
+    assert old not in merged and new in merged
+    assert all(item in merged for item in (other, global_fact, unanswered))
+
+
+@pytest.mark.parametrize("change", [{"document_hash": "other-file"}, {"source": "other_collector"},
+                                    {"evidence_page": 0}, {"evidence_text": ""}, {"supersedes_rule_kinds": "tax_years_min"}])
+def test_replacement_descriptor_requires_real_current_source_evidence(change):
+    old = rule("tax_years_min", "생애최초 특별공급", value=5)
+    assert old in retain([old], [replacement_fact() | change])
+
+
 def test_exact_whole_source_hangang_review_replaces_unmatched_legacy_admission_set():
     rows = json.loads((Path(__file__).parent / "fixtures/current-private-v5.json").read_text())
     source = next(row for row in rows if row["external_id"] == "2026000468")

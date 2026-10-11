@@ -7,7 +7,8 @@ import json
 import re
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.orm import defer, lazyload
 
 from app.models import Notice
 from app.repository import lock_notice
@@ -89,9 +90,37 @@ async def collect_winning_scores(client: httpx.AsyncClient, key: str, house_no: 
 
 
 def record_winning_scores(session, notice_id: str, rows: list[dict], status: str, *, expected_version: int, criterion_date: str | None):
-    current = session.get(Notice, notice_id)
-    notice = lock_notice(session, current.source, current.external_id) if current else None
+    # The identity may not already exist in this session. Avoid loading the
+    # complete condition document even before acquiring the narrow writer lock.
+    current = session.get(Notice, notice_id, options=[defer(Notice.rules), lazyload(Notice.competitions)])
+    notice = lock_notice(session, current.source, current.external_id, include_rules=False) if current else None
     if notice is None or notice.version != expected_version:
+        return
+    if session.get_bind().dialect.name == "postgresql":
+        # Merge a small score record in the database. Copying the entire
+        # document condition JSON to the worker wastes the free transfer cap.
+        if status == "error":
+            previous = session.scalar(text("""
+                SELECT coalesce(jsonb_agg(item), '[]'::jsonb)
+                FROM notices, jsonb_array_elements(notices.rules::jsonb) AS item
+                WHERE notices.id = :notice_id AND item->>'kind' = 'winning_scores'
+            """), {"notice_id": notice.id}) or []
+            rows = [{**row, "collection_status": "error"} for rule in previous for row in rule.get("rows", [])]
+        rows = [{**row, "criterion_date": criterion_date, "collection_status": status} for row in rows]
+        rule = {"kind": "winning_scores", "effect": "metadata", "source": "cheongyak_competition",
+                "verification": "official", "status": status,
+                "observed_at": datetime.now(timezone.utc).isoformat(), "rows": rows}
+        session.execute(text("""
+            UPDATE notices SET rules = (
+                (SELECT coalesce(jsonb_agg(item ORDER BY position), '[]'::jsonb)
+                 FROM jsonb_array_elements(notices.rules::jsonb) WITH ORDINALITY AS entries(item, position)
+                 WHERE item->>'kind' IS DISTINCT FROM 'winning_scores')
+                || CAST(:score_rules AS jsonb)
+            )::json
+            WHERE id = :notice_id AND version = :expected_version
+        """), {"notice_id": notice.id, "expected_version": expected_version,
+               "score_rules": json.dumps([rule], ensure_ascii=False)})
+        session.expire(notice, ["rules"])
         return
     previous = [r for r in notice.rules if r.get("kind") == "winning_scores"]
     retained = [r for r in notice.rules if r.get("kind") != "winning_scores"]

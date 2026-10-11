@@ -126,7 +126,7 @@ def test_first_home_review_keeps_strict_family_and_tax_waivers_and_newlywed_unre
 def test_standard_special_paths_do_not_require_unused_waiver_branches(supply):
     scope = scopes(parse())[supply]
     assert scope["complete"] and scope["missing_topics"] == []
-    assert scope["completion_basis"] == "document_hash_reviewed_standard_branch"
+    assert scope["completion_basis"] == "document_structure_reviewed_standard_branch"
     conditional = [topic for topic in scope["topics"] if topic.get("phase") == "conditional_admission"]
     assert conditional and all(topic["status"] == "partial" and not topic["required"] for topic in conditional)
     assert all("미혼 자녀의 혼인" not in topic["topic"] for topic in scope["topics"])
@@ -147,10 +147,10 @@ def test_nine_plus_income_scales_official_base_before_rounding(percent, expected
     assert threshold(9) == expected_nine and threshold(13) == expected_thirteen
 
 
-def test_exact_hash_complete_page_set_and_original_identity_are_required_for_review():
+def test_current_source_is_reinterpreted_without_hash_or_page_count_gate_but_identity_matches():
     assert SOURCE["document_hash"] == HANGANG_HASH
-    assert not scopes(parse(digest="changed-document"))["일반공급"]["complete"]
-    assert not scopes(parse(pages=[page for page in SOURCE["pages"] if page["page"] != 62]))["일반공급"]["complete"]
+    assert scopes(parse(digest="changed-document"))["일반공급"]["complete"]
+    assert scopes(parse(pages=[page for page in SOURCE["pages"] if page["page"] != 62]))["일반공급"]["complete"]
     payload = copy.deepcopy(SOURCE["payload"])
     payload["announcement_date"] = "2026-10-08"
     assert parse(payload=payload)["identity_status"] == "mismatch"

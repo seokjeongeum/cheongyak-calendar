@@ -122,8 +122,10 @@ def test_multi_child_municipality_label_cannot_be_widened_to_province_quota():
              {"kind": "offered_supplies", "verification": "official", "supplies": [
                  {"unit_type": "84A", "supply_type": "다자녀가구 특별공급", "supply_count": 2}]}]
     text = "1. 다자녀가구 특별공급\n대상자 입주자모집공고일 현재 무주택세대구성원\n■ ①지역 : 해당시·도 거주자 50%(경기도 양평군 거주자) → 기타지역 거주자 50%(서울특별시 및 인천광역시 거주자)"
-    assert parse_selection_rules([{"page": 1, "text": text}], url="https://official.example/notice.pdf", digest="document",
-                                 rules=rules, parser_version="test") == []
+    quota = parse_selection_rules([{"page": 1, "text": text}], url="https://official.example/notice.pdf", digest="document",
+                                 rules=rules, parser_version="test")[0]
+    assert quota["regional_shares"][0]["region_codes"] == ["41830"]
+    assert "41" not in quota["regional_shares"][0]["region_codes"]
 
 
 def test_v7_admission_facts_survive_until_current_reprocessing_replaces_metadata():

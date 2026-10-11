@@ -139,7 +139,7 @@ def normalize(row: dict[str, Any], category: str) -> dict[str, Any] | None:
     return omit_empty_enrichment(payload)
 
 
-async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -> list[dict[str, Any]]:
+async def collect(client: httpx.AsyncClient, key: str, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     for operation, category in OPERATIONS:
         for page in range(1, 101):
@@ -151,8 +151,13 @@ async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -
                 "yearMtEnd": end.strftime("%Y%m"),
             })
             rows, total = body_rows(body, "item")
-            for row in rows:
-                normalized = normalize(row, category)
+            batch = [(row, normalize(row, category)) for row in rows]
+            batch = [(row, normalized) for row, normalized in batch if normalized]
+            if on_rows and batch:
+                # A slow detail endpoint must not discard a successfully read
+                # list page or restart at its first row forever.
+                await on_rows([normalized for _, normalized in batch])
+            for row, normalized in batch:
                 if normalized:
                     if category == "public_sale":
                         try:

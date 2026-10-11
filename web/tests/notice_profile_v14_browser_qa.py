@@ -13,6 +13,7 @@ import os
 import re
 import sys
 from copy import deepcopy
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -44,6 +45,8 @@ def fixture(identifier, title, rules, supplies=None):
 def fixtures():
     outside = fixture("qa-outside", "더샵 동인센트리체", [rule("applicant_regions", None, effect="metadata", regions=[{"region_code": "27", "region_name": "대구광역시"}, {"region_code": "47", "region_name": "경상북도"}], scope_complete=True, exceptions=[])])
     possible = fixture("qa-possible", "천안 아이파크 시티 2단지(2회차)", [rule("age_min", 19, supply_type="일반공급")])
+    outside["hogangnono_url"] = "https://hogangnono.com/apt/fq81f"
+    possible["hogangnono_url"] = "https://hogangnono.com/apt/ghL9c"
     unknown = fixture("qa-unknown", "미확인 국적 회귀 검증", [rule("citizenship", ["korean"], supply_type="일반공급")])
     mixed = fixture("qa-mixed", "일반공급 가능·노부모 불일치 검증", [rule("age_min", 19, supply_type="일반공급"), rule("parent_age_min", 65, supply_type="노부모부양 특별공급")], ["일반공급", "노부모부양 특별공급"])
     return [outside, possible, unknown, mixed]
@@ -52,15 +55,30 @@ def fixtures():
 def sangok_official_fixture():
     """Parse the exact local official PDF text rather than mock its conditions."""
     root = Path(__file__).resolve().parents[2]
+    # Final QA can use the current notice_public projection generated offline
+    # from these exact PDF pages plus previously recorded public feed rows.
+    # This exercises stock, schedules, prices and selection as one API DTO.
+    dto_path = os.environ.get("CHEONGYAK_QA_SANGOK_DTO")
+    if dto_path:
+        row = json.loads(Path(dto_path).read_text())
+        source = next(item for item in json.loads((root / "api/tests/fixtures/current-oct8-regions.json").read_text()) if item["external_id"] == "2026000458")
+        assert row["document_hash"] == source["document_hash"]
+        assert row["official_url"] == source["payload"]["official_url"]
+        assert len(row["offered_supplies"]) == 62
+        assert sum(item["supply_count"] for item in row["offered_supplies"]) == 1289
+        return row
     sys.path.insert(0, str(root / "api"))
     from app.extract.official_rules import parse_official_rules
     source = next(row for row in json.loads((root / "api/tests/fixtures/current-oct8-regions.json").read_text()) if row["external_id"] == "2026000458")
-    stock = json.loads((root / "api/tests/fixtures/sangok-current-feed-inventory.json").read_text())
+    stock = json.loads((root / "api/tests/fixtures/sangok-current-six-feed.json").read_text())
     payload = deepcopy(source["payload"])
     payload["rules"] = [{"kind": "offered_supplies", "effect": "metadata", "source": "cheongyak_home", "verification": "official", "evidence_url": stock["official_url"], "supplies": stock["supplies"]}]
     parsed = parse_official_rules(source["pages"], url=source["document_url"], digest=source["document_hash"], payload=payload)
     row = fixture("qa-sangok-official", "산곡역자이힐스테이트앤하늘채", parsed["rules"])
-    row.update({"address": "인천광역시 부평구 산곡동 10번지 일원", "region_code": "28", "region_name": "인천광역시", "announcement_date": "2026-10-08", "official_url": payload["official_url"], "document_hash": source["document_hash"], "rules_complete": False, "offered_supplies": stock["supplies"]})
+    offered = next(rule["supplies"] for rule in parsed["rules"] if rule["kind"] == "offered_supplies")
+    # The parser does not resolve external links. This public DTO field uses
+    # the independently checked public Hogangnono detail URL, as the API does.
+    row.update({"address": "인천광역시 부평구 산곡동 10번지 일원", "region_code": "28", "region_name": "인천광역시", "announcement_date": "2026-10-08", "official_url": payload["official_url"], "document_hash": source["document_hash"], "rules_complete": False, "offered_supplies": offered, "hogangnono_url": "https://hogangnono.com/apt/faQec"})
     return row
 
 
@@ -94,7 +112,7 @@ async def main():
     assert (DIST / "index.html").is_file(), "Run the final web build first"
     index = (DIST / "index.html").read_text()
     asset = re.search(r'src="([^"]+\.js)"', index).group(1)
-    checks, errors, requests = [], [], []
+    checks, errors, requests, input_times = [], [], [], []
 
     def check(label, value=True):
         assert value, label
@@ -104,7 +122,7 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(executable_path="/usr/bin/chromium", headless=True, args=["--no-sandbox", "--disable-background-networking", "--disable-component-update", "--disable-sync"])
 
-        async def create(width, rows=None, facts=None):
+        async def create(width, rows=None, facts=None, midnight=False):
             context = await browser.new_context(viewport={"width": width, "height": 900}, timezone_id="Asia/Seoul", service_workers="block")
             value = facts or profile(region="경기도", regionCode="41", district="화성시", districtCode="41590", citizenship="unknown", parentDateOfBirth="1966-01-01", householdMembers=[], pointsFamily={}, additionalFamilyPresence=False, applicantOnRegister=None)
             await context.add_init_script(f"localStorage.setItem({json.dumps(PROFILE_KEY)}, {json.dumps(json.dumps(value))})")
@@ -112,7 +130,11 @@ async def main():
             await context.route("**/*", router.offline)
             page = await context.new_page()
             page.on("pageerror", lambda error: errors.append(str(error)))
-            await page.clock.set_fixed_time(NOW)
+            if midnight:
+                await page.clock.install(time=datetime(2026, 10, 9, 14, 59, 58, tzinfo=timezone.utc))
+            else:
+                # Keep performance.now and frames native for input latency.
+                await page.clock.set_fixed_time(NOW)
             await page.goto(BASE, wait_until="domcontentloaded")
             await expect(page.locator(".notice-card")).to_have_count(len(router.rows), timeout=20000)
             await expect(page.locator('.notice-card[data-evaluation-ready="true"]')).to_have_count(len(router.rows), timeout=20000)
@@ -212,7 +234,15 @@ async def main():
         await expect(card.locator("details.notice-content-fold")).to_have_js_property("open", True)
         await expect(card.get_by_role("link", name="산곡역자이힐스테이트앤하늘채 호갱노노 단지 보기", exact=True)).to_have_attribute("href", "https://hogangnono.com/apt/faQec")
         check("375px exact Sangok official parser standard general conditions are possible without a generic source gap")
+        shared = card.locator(".qualification-brief-common .qualification-brief-row").filter(has_text="주택 보유 상태 변경일")
+        await expect(shared).to_have_count(1)
+        await expect(shared.locator("small")).to_contain_text("특별공급")
+        await expect(shared.locator("small")).not_to_contain_text("일반공급")
+        check("375px Sangok shared ownership history states its special-only supply scope")
+        await expect(card.get_by_text("모집 유형에 공통으로 적용되는 조건", exact=True)).to_have_count(0)
+        check("375px Sangok shared special conditions do not imply a general-supply requirement")
         check("375px Sangok source-backed qualification has no horizontal overflow", await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        await general.scroll_into_view_if_needed()
         await page.screenshot(path=str(OUT / "sangok-official-general-375.png"))
         await privacy(page, router, before, "375px actual Sangok conditions are evaluated locally with no new request")
         requests.extend(router.requests)
@@ -312,10 +342,56 @@ async def main():
         requests.extend(router.requests)
         await page.context.close()
 
+        page, router = await create(375)
+        before = len(router.requests)
+        await page.get_by_role("button", name="내 조건 설정", exact=True).click()
+        dialog = await step(page, "소득·자산")
+        amount = dialog.get_by_label("가구 연 소득 합계 (원)", exact=True)
+        await amount.fill("")
+        await amount.focus()
+        await page.evaluate("""() => {window.__qa_input_times=[]; document.activeElement.addEventListener('input',()=>{const started=performance.now(); requestAnimationFrame(()=>window.__qa_input_times.push(performance.now()-started));});}""")
+        await amount.press_sequentially("60000000", delay=70)
+        await expect(amount).to_have_value("60,000,000")
+        await page.wait_for_timeout(450)
+        input_times = await page.evaluate("window.__qa_input_times")
+        print(json.dumps({"input_to_paint_samples_ms": input_times}), flush=True)
+        check("375px income input reaches next paint within 100ms", len(input_times) == 8 and max(input_times) < 100)
+        check("375px income input has no horizontal overflow", await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        await dialog.locator(".dialog-close").click()
+        await privacy(page, router, before, "375px measured income typing remains local with no API request")
+        requests.extend(router.requests)
+        await page.context.close()
+
+        contract = fixture("qa-contract-midnight", "계약일 오늘 비교 자정 검증", [rule("age_min", 19, supply_type="일반공급", criterion_basis="contract_date")])
+        contract["contract_schedule"] = {"status": "range", "start_date": "2026-10-27", "end_date": "2027-08-31", "verification": "official", "evidence_url": EVIDENCE}
+        cutoff = fixture("qa-cutoff-midnight", "공고일 기준 유지 자정 검증", [rule("age_min", 19, supply_type="일반공급", criterion_basis="announcement_date", criterion_date="2026-10-02")])
+        facts = profile(region="경기도", regionCode="41", district="화성시", districtCode="41590", dateOfBirth="2007-10-10", householdMembers=[], pointsFamily={}, additionalFamilyPresence=False)
+        page, router = await create(375, [contract, cutoff], facts, midnight=True)
+        preview = page.locator('.notice-card').filter(has=page.get_by_role("heading", name=contract["title"], exact=True))
+        announced = page.locator('.notice-card').filter(has=page.get_by_role("heading", name=cutoff["title"], exact=True))
+        await expect(preview).to_have_attribute("data-unavailable", "true")
+        check("KST before midnight compares contract facts on October 9", "오늘의 내 상태로 미리 비교 · 한국 시간 2026-10-09" in await preview.text_content())
+        before = len(router.requests)
+        await page.clock.fast_forward(3_000)
+        await expect(preview).not_to_have_attribute("data-unavailable", "true")
+        await expect(preview.locator(".qualification-supply-brief")).to_contain_text("조건상 가능성 있음")
+        await expect(preview.locator(".contract-comparison-note")).to_contain_text("한국 시간 2026-10-10")
+        check("actual KST midnight updates contract preview and birthday eligibility")
+        await expect(preview.locator(".contract-comparison-note")).to_contain_text("공식 계약기간 2026-10-27 – 2027-08-31")
+        await expect(preview.locator(".contract-comparison-note")).to_contain_text("실제 계약일까지 현재 상태가 유지된다는 전제로")
+        check("KST midnight preserves official future contract period and continuation assumption")
+        await expect(announced).to_have_attribute("data-unavailable", "true")
+        check("KST midnight preserves announcement-date age cutoff", "2026-10-02" in await announced.text_content())
+        check("KST midnight refreshes only the public calendar window", len(router.requests) > before and any(parse_qs(urlsplit(item["url"]).query).get("start") == ["2026-10-10"] for item in router.requests[before:]) and all(item["method"] == "GET" and item["body"] is None for item in router.requests) and not router.errors)
+        check("375px midnight reevaluation has no horizontal overflow", await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"))
+        await page.screenshot(path=str(OUT / "contract-midnight-375.png"))
+        requests.extend(router.requests)
+        await page.context.close()
+
         check("all offline Chromium pages have no JavaScript exceptions", not errors)
         await browser.close()
 
-    result = {"offline_only": True, "synthetic_profiles_only": True, "public_api_fixtures_only": True, "base": BASE, "build_asset": asset, "build_asset_sha256": hashlib.sha256((DIST / asset.lstrip("/")).read_bytes()).hexdigest(), "checks_passed": len(checks), "checks": checks, "api_requests": requests, "javascript_errors": errors}
+    result = {"offline_only": True, "synthetic_profiles_only": True, "public_api_fixtures_only": True, "base": BASE, "build_asset": asset, "build_asset_sha256": hashlib.sha256((DIST / asset.lstrip("/")).read_bytes()).hexdigest(), "checks_passed": len(checks), "checks": checks, "api_requests": requests, "javascript_errors": errors, "input_to_paint_ms": {"samples": len(input_times), "max": round(max(input_times), 2), "mean": round(sum(input_times) / len(input_times), 2)}}
     (OUT / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"checks_passed": len(checks), "build_asset": asset}, ensure_ascii=False))
 

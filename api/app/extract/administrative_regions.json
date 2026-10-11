@@ -1,0 +1,1750 @@
+{
+  "effectiveDate": "2026-09-30",
+  "sourceTitle": "행정안전부 주민등록 행정기관 및 관할구역 변경내역(2026.9.30. 시행)",
+  "sourceUrl": "https://www.mois.go.kr/frt/bbs/type001/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000052&nttId=129824",
+  "downloadUrl": "https://www.mois.go.kr/cmm/fms/FileDown.do?atchFileId=FILE_00149355_BR8t5D&fileSn=1",
+  "sourceFile": "KIKcd_B.20260930.xlsx",
+  "sourceFileSha256": "9823602855556a38cc8463c282062d566078ab30376f2cbc7fd487d13fce6cf3",
+  "sourceArchiveSha256": "c9c2583919adfff992edc098fe7ea522e625fedabbfefedbd85564942c059d43",
+  "levels": [
+    "시도",
+    "시군구"
+  ],
+  "provinces": [
+    {
+      "code": "11",
+      "name": "서울특별시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "12",
+      "name": "전남광주통합특별시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "26",
+      "name": "부산광역시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27",
+      "name": "대구광역시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "28",
+      "name": "인천광역시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "30",
+      "name": "대전광역시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "31",
+      "name": "울산광역시",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "36",
+      "name": "세종특별자치시",
+      "validFrom": "2012-07-01"
+    },
+    {
+      "code": "41",
+      "name": "경기도",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43",
+      "name": "충청북도",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44",
+      "name": "충청남도",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47",
+      "name": "경상북도",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48",
+      "name": "경상남도",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "50",
+      "name": "제주특별자치도",
+      "validFrom": "2006-07-01"
+    },
+    {
+      "code": "51",
+      "name": "강원특별자치도",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "52",
+      "name": "전북특별자치도",
+      "validFrom": "2024-01-18"
+    }
+  ],
+  "districts": [
+    {
+      "code": "11110",
+      "provinceCode": "11",
+      "name": "종로구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11140",
+      "provinceCode": "11",
+      "name": "중구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11170",
+      "provinceCode": "11",
+      "name": "용산구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11200",
+      "provinceCode": "11",
+      "name": "성동구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11215",
+      "provinceCode": "11",
+      "name": "광진구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "11230",
+      "provinceCode": "11",
+      "name": "동대문구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11260",
+      "provinceCode": "11",
+      "name": "중랑구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11290",
+      "provinceCode": "11",
+      "name": "성북구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11305",
+      "provinceCode": "11",
+      "name": "강북구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "11320",
+      "provinceCode": "11",
+      "name": "도봉구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11350",
+      "provinceCode": "11",
+      "name": "노원구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11380",
+      "provinceCode": "11",
+      "name": "은평구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11410",
+      "provinceCode": "11",
+      "name": "서대문구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11440",
+      "provinceCode": "11",
+      "name": "마포구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11470",
+      "provinceCode": "11",
+      "name": "양천구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11500",
+      "provinceCode": "11",
+      "name": "강서구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11530",
+      "provinceCode": "11",
+      "name": "구로구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11545",
+      "provinceCode": "11",
+      "name": "금천구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "11560",
+      "provinceCode": "11",
+      "name": "영등포구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11590",
+      "provinceCode": "11",
+      "name": "동작구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11620",
+      "provinceCode": "11",
+      "name": "관악구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11650",
+      "provinceCode": "11",
+      "name": "서초구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11680",
+      "provinceCode": "11",
+      "name": "강남구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11710",
+      "provinceCode": "11",
+      "name": "송파구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "11740",
+      "provinceCode": "11",
+      "name": "강동구",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "12110",
+      "provinceCode": "12",
+      "name": "목포시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12130",
+      "provinceCode": "12",
+      "name": "여수시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12150",
+      "provinceCode": "12",
+      "name": "순천시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12170",
+      "provinceCode": "12",
+      "name": "나주시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12190",
+      "provinceCode": "12",
+      "name": "광양시",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12210",
+      "provinceCode": "12",
+      "name": "동구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12240",
+      "provinceCode": "12",
+      "name": "서구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12270",
+      "provinceCode": "12",
+      "name": "남구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12300",
+      "provinceCode": "12",
+      "name": "북구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12330",
+      "provinceCode": "12",
+      "name": "광산구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12710",
+      "provinceCode": "12",
+      "name": "담양군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12720",
+      "provinceCode": "12",
+      "name": "곡성군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12730",
+      "provinceCode": "12",
+      "name": "구례군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12740",
+      "provinceCode": "12",
+      "name": "고흥군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12750",
+      "provinceCode": "12",
+      "name": "보성군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12760",
+      "provinceCode": "12",
+      "name": "화순군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12770",
+      "provinceCode": "12",
+      "name": "장흥군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12780",
+      "provinceCode": "12",
+      "name": "강진군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12790",
+      "provinceCode": "12",
+      "name": "해남군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12800",
+      "provinceCode": "12",
+      "name": "영암군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12810",
+      "provinceCode": "12",
+      "name": "무안군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12820",
+      "provinceCode": "12",
+      "name": "함평군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12830",
+      "provinceCode": "12",
+      "name": "영광군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12840",
+      "provinceCode": "12",
+      "name": "장성군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12850",
+      "provinceCode": "12",
+      "name": "완도군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12860",
+      "provinceCode": "12",
+      "name": "진도군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "12870",
+      "provinceCode": "12",
+      "name": "신안군",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "26110",
+      "provinceCode": "26",
+      "name": "중구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26140",
+      "provinceCode": "26",
+      "name": "서구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26170",
+      "provinceCode": "26",
+      "name": "동구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26200",
+      "provinceCode": "26",
+      "name": "영도구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26230",
+      "provinceCode": "26",
+      "name": "부산진구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26260",
+      "provinceCode": "26",
+      "name": "동래구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26290",
+      "provinceCode": "26",
+      "name": "남구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26320",
+      "provinceCode": "26",
+      "name": "북구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26350",
+      "provinceCode": "26",
+      "name": "해운대구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26380",
+      "provinceCode": "26",
+      "name": "사하구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26410",
+      "provinceCode": "26",
+      "name": "금정구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26440",
+      "provinceCode": "26",
+      "name": "강서구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "26470",
+      "provinceCode": "26",
+      "name": "연제구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "26500",
+      "provinceCode": "26",
+      "name": "수영구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "26530",
+      "provinceCode": "26",
+      "name": "사상구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "26710",
+      "provinceCode": "26",
+      "name": "기장군",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "27110",
+      "provinceCode": "27",
+      "name": "중구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27140",
+      "provinceCode": "27",
+      "name": "동구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27170",
+      "provinceCode": "27",
+      "name": "서구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27200",
+      "provinceCode": "27",
+      "name": "남구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27230",
+      "provinceCode": "27",
+      "name": "북구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27260",
+      "provinceCode": "27",
+      "name": "수성구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27290",
+      "provinceCode": "27",
+      "name": "달서구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "27710",
+      "provinceCode": "27",
+      "name": "달성군",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "27720",
+      "provinceCode": "27",
+      "name": "군위군",
+      "validFrom": "2023-07-01"
+    },
+    {
+      "code": "28125",
+      "provinceCode": "28",
+      "name": "제물포구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "28155",
+      "provinceCode": "28",
+      "name": "영종구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "28177",
+      "provinceCode": "28",
+      "name": "미추홀구",
+      "validFrom": "2018-07-01"
+    },
+    {
+      "code": "28185",
+      "provinceCode": "28",
+      "name": "연수구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "28200",
+      "provinceCode": "28",
+      "name": "남동구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "28237",
+      "provinceCode": "28",
+      "name": "부평구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "28245",
+      "provinceCode": "28",
+      "name": "계양구",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "28275",
+      "provinceCode": "28",
+      "name": "서해구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "28290",
+      "provinceCode": "28",
+      "name": "검단구",
+      "validFrom": "2026-07-01"
+    },
+    {
+      "code": "28710",
+      "provinceCode": "28",
+      "name": "강화군",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "28720",
+      "provinceCode": "28",
+      "name": "옹진군",
+      "validFrom": "1995-03-01"
+    },
+    {
+      "code": "30110",
+      "provinceCode": "30",
+      "name": "동구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "30140",
+      "provinceCode": "30",
+      "name": "중구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "30170",
+      "provinceCode": "30",
+      "name": "서구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "30200",
+      "provinceCode": "30",
+      "name": "유성구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "30230",
+      "provinceCode": "30",
+      "name": "대덕구",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "31110",
+      "provinceCode": "31",
+      "name": "중구",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "31140",
+      "provinceCode": "31",
+      "name": "남구",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "31170",
+      "provinceCode": "31",
+      "name": "동구",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "31200",
+      "provinceCode": "31",
+      "name": "북구",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "31710",
+      "provinceCode": "31",
+      "name": "울주군",
+      "validFrom": "1997-07-15"
+    },
+    {
+      "code": "36110",
+      "provinceCode": "36",
+      "name": "세종특별자치시",
+      "validFrom": "2012-07-01"
+    },
+    {
+      "code": "41110",
+      "provinceCode": "41",
+      "name": "수원시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41111",
+      "provinceCode": "41",
+      "name": "수원시 장안구",
+      "validFrom": "1988-07-01",
+      "parentCityCode": "41110"
+    },
+    {
+      "code": "41113",
+      "provinceCode": "41",
+      "name": "수원시 권선구",
+      "validFrom": "1988-07-01",
+      "parentCityCode": "41110"
+    },
+    {
+      "code": "41115",
+      "provinceCode": "41",
+      "name": "수원시 팔달구",
+      "validFrom": "1993-01-15",
+      "parentCityCode": "41110"
+    },
+    {
+      "code": "41117",
+      "provinceCode": "41",
+      "name": "수원시 영통구",
+      "validFrom": "2003-11-24",
+      "parentCityCode": "41110"
+    },
+    {
+      "code": "41130",
+      "provinceCode": "41",
+      "name": "성남시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41131",
+      "provinceCode": "41",
+      "name": "성남시 수정구",
+      "validFrom": "1989-05-01",
+      "parentCityCode": "41130"
+    },
+    {
+      "code": "41133",
+      "provinceCode": "41",
+      "name": "성남시 중원구",
+      "validFrom": "1989-05-01",
+      "parentCityCode": "41130"
+    },
+    {
+      "code": "41135",
+      "provinceCode": "41",
+      "name": "성남시 분당구",
+      "validFrom": "1991-09-16",
+      "parentCityCode": "41130"
+    },
+    {
+      "code": "41150",
+      "provinceCode": "41",
+      "name": "의정부시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41170",
+      "provinceCode": "41",
+      "name": "안양시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41171",
+      "provinceCode": "41",
+      "name": "안양시 만안구",
+      "validFrom": "1992-10-01",
+      "parentCityCode": "41170"
+    },
+    {
+      "code": "41173",
+      "provinceCode": "41",
+      "name": "안양시 동안구",
+      "validFrom": "1992-10-01",
+      "parentCityCode": "41170"
+    },
+    {
+      "code": "41190",
+      "provinceCode": "41",
+      "name": "부천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41192",
+      "provinceCode": "41",
+      "name": "부천시 원미구",
+      "validFrom": "2024-01-01",
+      "parentCityCode": "41190"
+    },
+    {
+      "code": "41194",
+      "provinceCode": "41",
+      "name": "부천시 소사구",
+      "validFrom": "2024-01-01",
+      "parentCityCode": "41190"
+    },
+    {
+      "code": "41196",
+      "provinceCode": "41",
+      "name": "부천시 오정구",
+      "validFrom": "2024-01-01",
+      "parentCityCode": "41190"
+    },
+    {
+      "code": "41210",
+      "provinceCode": "41",
+      "name": "광명시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41220",
+      "provinceCode": "41",
+      "name": "평택시",
+      "validFrom": "1995-05-10"
+    },
+    {
+      "code": "41250",
+      "provinceCode": "41",
+      "name": "동두천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41270",
+      "provinceCode": "41",
+      "name": "안산시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41271",
+      "provinceCode": "41",
+      "name": "안산시 상록구",
+      "validFrom": "2002-11-01",
+      "parentCityCode": "41270"
+    },
+    {
+      "code": "41273",
+      "provinceCode": "41",
+      "name": "안산시 단원구",
+      "validFrom": "2002-11-01",
+      "parentCityCode": "41270"
+    },
+    {
+      "code": "41280",
+      "provinceCode": "41",
+      "name": "고양시",
+      "validFrom": "1992-05-04"
+    },
+    {
+      "code": "41281",
+      "provinceCode": "41",
+      "name": "고양시 덕양구",
+      "validFrom": "1996-03-01",
+      "parentCityCode": "41280"
+    },
+    {
+      "code": "41285",
+      "provinceCode": "41",
+      "name": "고양시 일산동구",
+      "validFrom": "2005-05-16",
+      "parentCityCode": "41280"
+    },
+    {
+      "code": "41287",
+      "provinceCode": "41",
+      "name": "고양시 일산서구",
+      "validFrom": "2005-05-16",
+      "parentCityCode": "41280"
+    },
+    {
+      "code": "41290",
+      "provinceCode": "41",
+      "name": "과천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41310",
+      "provinceCode": "41",
+      "name": "구리시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41360",
+      "provinceCode": "41",
+      "name": "남양주시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "41370",
+      "provinceCode": "41",
+      "name": "오산시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "41390",
+      "provinceCode": "41",
+      "name": "시흥시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "41410",
+      "provinceCode": "41",
+      "name": "군포시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "41430",
+      "provinceCode": "41",
+      "name": "의왕시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "41450",
+      "provinceCode": "41",
+      "name": "하남시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "41460",
+      "provinceCode": "41",
+      "name": "용인시",
+      "validFrom": "1996-03-01"
+    },
+    {
+      "code": "41461",
+      "provinceCode": "41",
+      "name": "용인시 처인구",
+      "validFrom": "2005-10-31",
+      "parentCityCode": "41460"
+    },
+    {
+      "code": "41463",
+      "provinceCode": "41",
+      "name": "용인시 기흥구",
+      "validFrom": "2005-10-31",
+      "parentCityCode": "41460"
+    },
+    {
+      "code": "41465",
+      "provinceCode": "41",
+      "name": "용인시 수지구",
+      "validFrom": "2005-10-31",
+      "parentCityCode": "41460"
+    },
+    {
+      "code": "41480",
+      "provinceCode": "41",
+      "name": "파주시",
+      "validFrom": "1996-03-01"
+    },
+    {
+      "code": "41500",
+      "provinceCode": "41",
+      "name": "이천시",
+      "validFrom": "1996-03-01"
+    },
+    {
+      "code": "41550",
+      "provinceCode": "41",
+      "name": "안성시",
+      "validFrom": "1998-04-01"
+    },
+    {
+      "code": "41570",
+      "provinceCode": "41",
+      "name": "김포시",
+      "validFrom": "1998-04-01"
+    },
+    {
+      "code": "41590",
+      "provinceCode": "41",
+      "name": "화성시",
+      "validFrom": "2001-03-21"
+    },
+    {
+      "code": "41591",
+      "provinceCode": "41",
+      "name": "화성시 만세구",
+      "validFrom": "2026-02-01",
+      "parentCityCode": "41590"
+    },
+    {
+      "code": "41593",
+      "provinceCode": "41",
+      "name": "화성시 효행구",
+      "validFrom": "2026-02-01",
+      "parentCityCode": "41590"
+    },
+    {
+      "code": "41595",
+      "provinceCode": "41",
+      "name": "화성시 병점구",
+      "validFrom": "2026-02-01",
+      "parentCityCode": "41590"
+    },
+    {
+      "code": "41597",
+      "provinceCode": "41",
+      "name": "화성시 동탄구",
+      "validFrom": "2026-02-01",
+      "parentCityCode": "41590"
+    },
+    {
+      "code": "41610",
+      "provinceCode": "41",
+      "name": "광주시",
+      "validFrom": "2001-03-21"
+    },
+    {
+      "code": "41630",
+      "provinceCode": "41",
+      "name": "양주시",
+      "validFrom": "2003-10-19"
+    },
+    {
+      "code": "41650",
+      "provinceCode": "41",
+      "name": "포천시",
+      "validFrom": "2003-10-19"
+    },
+    {
+      "code": "41670",
+      "provinceCode": "41",
+      "name": "여주시",
+      "validFrom": "2013-09-23"
+    },
+    {
+      "code": "41800",
+      "provinceCode": "41",
+      "name": "연천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41820",
+      "provinceCode": "41",
+      "name": "가평군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "41830",
+      "provinceCode": "41",
+      "name": "양평군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43110",
+      "provinceCode": "43",
+      "name": "청주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43111",
+      "provinceCode": "43",
+      "name": "청주시 상당구",
+      "validFrom": "1995-01-01",
+      "parentCityCode": "43110"
+    },
+    {
+      "code": "43112",
+      "provinceCode": "43",
+      "name": "청주시 서원구",
+      "validFrom": "2014-07-01",
+      "parentCityCode": "43110"
+    },
+    {
+      "code": "43113",
+      "provinceCode": "43",
+      "name": "청주시 흥덕구",
+      "validFrom": "1995-01-01",
+      "parentCityCode": "43110"
+    },
+    {
+      "code": "43114",
+      "provinceCode": "43",
+      "name": "청주시 청원구",
+      "validFrom": "2014-07-01",
+      "parentCityCode": "43110"
+    },
+    {
+      "code": "43130",
+      "provinceCode": "43",
+      "name": "충주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43150",
+      "provinceCode": "43",
+      "name": "제천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43720",
+      "provinceCode": "43",
+      "name": "보은군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43730",
+      "provinceCode": "43",
+      "name": "옥천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43740",
+      "provinceCode": "43",
+      "name": "영동군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43745",
+      "provinceCode": "43",
+      "name": "증평군",
+      "validFrom": "2003-08-30"
+    },
+    {
+      "code": "43750",
+      "provinceCode": "43",
+      "name": "진천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43760",
+      "provinceCode": "43",
+      "name": "괴산군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43770",
+      "provinceCode": "43",
+      "name": "음성군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "43800",
+      "provinceCode": "43",
+      "name": "단양군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44130",
+      "provinceCode": "44",
+      "name": "천안시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44131",
+      "provinceCode": "44",
+      "name": "천안시 동남구",
+      "validFrom": "2008-06-23",
+      "parentCityCode": "44130"
+    },
+    {
+      "code": "44133",
+      "provinceCode": "44",
+      "name": "천안시 서북구",
+      "validFrom": "2008-06-23",
+      "parentCityCode": "44130"
+    },
+    {
+      "code": "44150",
+      "provinceCode": "44",
+      "name": "공주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44180",
+      "provinceCode": "44",
+      "name": "보령시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "44200",
+      "provinceCode": "44",
+      "name": "아산시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "44210",
+      "provinceCode": "44",
+      "name": "서산시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "44230",
+      "provinceCode": "44",
+      "name": "논산시",
+      "validFrom": "1996-03-01"
+    },
+    {
+      "code": "44250",
+      "provinceCode": "44",
+      "name": "계룡시",
+      "validFrom": "2003-09-19"
+    },
+    {
+      "code": "44270",
+      "provinceCode": "44",
+      "name": "당진시",
+      "validFrom": "2012-01-01"
+    },
+    {
+      "code": "44710",
+      "provinceCode": "44",
+      "name": "금산군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44760",
+      "provinceCode": "44",
+      "name": "부여군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44770",
+      "provinceCode": "44",
+      "name": "서천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44790",
+      "provinceCode": "44",
+      "name": "청양군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44800",
+      "provinceCode": "44",
+      "name": "홍성군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44810",
+      "provinceCode": "44",
+      "name": "예산군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "44825",
+      "provinceCode": "44",
+      "name": "태안군",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "47110",
+      "provinceCode": "47",
+      "name": "포항시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47111",
+      "provinceCode": "47",
+      "name": "포항시 남구",
+      "validFrom": "1995-01-01",
+      "parentCityCode": "47110"
+    },
+    {
+      "code": "47113",
+      "provinceCode": "47",
+      "name": "포항시 북구",
+      "validFrom": "1995-01-01",
+      "parentCityCode": "47110"
+    },
+    {
+      "code": "47130",
+      "provinceCode": "47",
+      "name": "경주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47150",
+      "provinceCode": "47",
+      "name": "김천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47170",
+      "provinceCode": "47",
+      "name": "안동시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47190",
+      "provinceCode": "47",
+      "name": "구미시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47210",
+      "provinceCode": "47",
+      "name": "영주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47230",
+      "provinceCode": "47",
+      "name": "영천시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47250",
+      "provinceCode": "47",
+      "name": "상주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47280",
+      "provinceCode": "47",
+      "name": "문경시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "47290",
+      "provinceCode": "47",
+      "name": "경산시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "47730",
+      "provinceCode": "47",
+      "name": "의성군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47750",
+      "provinceCode": "47",
+      "name": "청송군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47760",
+      "provinceCode": "47",
+      "name": "영양군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47770",
+      "provinceCode": "47",
+      "name": "영덕군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47820",
+      "provinceCode": "47",
+      "name": "청도군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47830",
+      "provinceCode": "47",
+      "name": "고령군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47840",
+      "provinceCode": "47",
+      "name": "성주군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47850",
+      "provinceCode": "47",
+      "name": "칠곡군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47900",
+      "provinceCode": "47",
+      "name": "예천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47920",
+      "provinceCode": "47",
+      "name": "봉화군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47930",
+      "provinceCode": "47",
+      "name": "울진군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "47940",
+      "provinceCode": "47",
+      "name": "울릉군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48120",
+      "provinceCode": "48",
+      "name": "창원시",
+      "validFrom": "2010-07-01"
+    },
+    {
+      "code": "48121",
+      "provinceCode": "48",
+      "name": "창원시 의창구",
+      "validFrom": "2010-07-01",
+      "parentCityCode": "48120"
+    },
+    {
+      "code": "48123",
+      "provinceCode": "48",
+      "name": "창원시 성산구",
+      "validFrom": "2010-07-01",
+      "parentCityCode": "48120"
+    },
+    {
+      "code": "48125",
+      "provinceCode": "48",
+      "name": "창원시 마산합포구",
+      "validFrom": "2010-07-01",
+      "parentCityCode": "48120"
+    },
+    {
+      "code": "48127",
+      "provinceCode": "48",
+      "name": "창원시 마산회원구",
+      "validFrom": "2010-07-01",
+      "parentCityCode": "48120"
+    },
+    {
+      "code": "48129",
+      "provinceCode": "48",
+      "name": "창원시 진해구",
+      "validFrom": "2010-07-01",
+      "parentCityCode": "48120"
+    },
+    {
+      "code": "48170",
+      "provinceCode": "48",
+      "name": "진주시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48220",
+      "provinceCode": "48",
+      "name": "통영시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "48240",
+      "provinceCode": "48",
+      "name": "사천시",
+      "validFrom": "1995-05-10"
+    },
+    {
+      "code": "48250",
+      "provinceCode": "48",
+      "name": "김해시",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48270",
+      "provinceCode": "48",
+      "name": "밀양시",
+      "validFrom": "1989-01-01"
+    },
+    {
+      "code": "48310",
+      "provinceCode": "48",
+      "name": "거제시",
+      "validFrom": "1995-01-01"
+    },
+    {
+      "code": "48330",
+      "provinceCode": "48",
+      "name": "양산시",
+      "validFrom": "1996-03-01"
+    },
+    {
+      "code": "48720",
+      "provinceCode": "48",
+      "name": "의령군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48730",
+      "provinceCode": "48",
+      "name": "함안군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48740",
+      "provinceCode": "48",
+      "name": "창녕군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48820",
+      "provinceCode": "48",
+      "name": "고성군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48840",
+      "provinceCode": "48",
+      "name": "남해군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48850",
+      "provinceCode": "48",
+      "name": "하동군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48860",
+      "provinceCode": "48",
+      "name": "산청군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48870",
+      "provinceCode": "48",
+      "name": "함양군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48880",
+      "provinceCode": "48",
+      "name": "거창군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "48890",
+      "provinceCode": "48",
+      "name": "합천군",
+      "validFrom": "1988-04-23"
+    },
+    {
+      "code": "50110",
+      "provinceCode": "50",
+      "name": "제주시",
+      "validFrom": "2006-07-01"
+    },
+    {
+      "code": "50130",
+      "provinceCode": "50",
+      "name": "서귀포시",
+      "validFrom": "2006-07-01"
+    },
+    {
+      "code": "51110",
+      "provinceCode": "51",
+      "name": "춘천시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51130",
+      "provinceCode": "51",
+      "name": "원주시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51150",
+      "provinceCode": "51",
+      "name": "강릉시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51170",
+      "provinceCode": "51",
+      "name": "동해시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51190",
+      "provinceCode": "51",
+      "name": "태백시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51210",
+      "provinceCode": "51",
+      "name": "속초시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51230",
+      "provinceCode": "51",
+      "name": "삼척시",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51720",
+      "provinceCode": "51",
+      "name": "홍천군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51730",
+      "provinceCode": "51",
+      "name": "횡성군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51750",
+      "provinceCode": "51",
+      "name": "영월군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51760",
+      "provinceCode": "51",
+      "name": "평창군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51770",
+      "provinceCode": "51",
+      "name": "정선군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51780",
+      "provinceCode": "51",
+      "name": "철원군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51790",
+      "provinceCode": "51",
+      "name": "화천군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51800",
+      "provinceCode": "51",
+      "name": "양구군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51810",
+      "provinceCode": "51",
+      "name": "인제군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51820",
+      "provinceCode": "51",
+      "name": "고성군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "51830",
+      "provinceCode": "51",
+      "name": "양양군",
+      "validFrom": "2023-06-11"
+    },
+    {
+      "code": "52110",
+      "provinceCode": "52",
+      "name": "전주시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52111",
+      "provinceCode": "52",
+      "name": "전주시 완산구",
+      "validFrom": "2024-01-18",
+      "parentCityCode": "52110"
+    },
+    {
+      "code": "52113",
+      "provinceCode": "52",
+      "name": "전주시 덕진구",
+      "validFrom": "2024-01-18",
+      "parentCityCode": "52110"
+    },
+    {
+      "code": "52130",
+      "provinceCode": "52",
+      "name": "군산시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52140",
+      "provinceCode": "52",
+      "name": "익산시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52180",
+      "provinceCode": "52",
+      "name": "정읍시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52190",
+      "provinceCode": "52",
+      "name": "남원시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52210",
+      "provinceCode": "52",
+      "name": "김제시",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52710",
+      "provinceCode": "52",
+      "name": "완주군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52720",
+      "provinceCode": "52",
+      "name": "진안군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52730",
+      "provinceCode": "52",
+      "name": "무주군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52740",
+      "provinceCode": "52",
+      "name": "장수군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52750",
+      "provinceCode": "52",
+      "name": "임실군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52770",
+      "provinceCode": "52",
+      "name": "순창군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52790",
+      "provinceCode": "52",
+      "name": "고창군",
+      "validFrom": "2024-01-18"
+    },
+    {
+      "code": "52800",
+      "provinceCode": "52",
+      "name": "부안군",
+      "validFrom": "2024-01-18"
+    }
+  ]
+}

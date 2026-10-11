@@ -59,8 +59,9 @@ def test_jamsil_exact_review_has_no_rank_and_individual_eligibility_not_an_ai_qu
     assert len(result["prices"]) == 4
     source = next(s for s in SOURCES if s["house_manage_no"] == "2026950085")
     changed = parse_official_rules(source["pages"], url=source["document_url"], digest="replaced-document")
-    assert not changed.get("prices")
-    assert next(r for r in changed["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["complete"] is False
+    assert len(changed.get("prices", [])) == 4
+    assert all(price["document_hash"] == "replaced-document" for price in changed["prices"])
+    assert next(r for r in changed["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["complete"] is True
 
 
 @pytest.mark.parametrize("number,kinds", [("2026000494", {"account_type", "private_rank_months", "deposit_min_krw"}), ("2026000414", {"account_type", "national_rank_months", "recognized_payments_min"})])
@@ -68,7 +69,7 @@ def test_rank_coverage_complete_independently_of_whole_eligibility(number, kinds
     result = official(number)
     rank = next(r for r in result["rules"] if r["kind"] == "rank_requirements")
     assert rank["complete"] is True and set(rank["required_kinds"]) == kinds
-    assert rank["completion_basis"] == "document_hash_review"
+    assert rank["completion_basis"] == "validated_source_rank_table"
     assert all(s["complete"] is False for s in next(r for r in result["rules"] if r["kind"] == "condition_coverage")["scopes"])
     money = next(r for r in result["rules"] if r["kind"] in {"deposit_min_krw", "recognized_payments_min"} and r.get("purpose") == "first_rank")
     assert money["require_as_of_date"] is True
@@ -85,9 +86,10 @@ def test_dongin_applicant_regions_and_active_military_exception_are_explicit():
 
 def test_gwangmyeong_general_priority_is_not_a_special_supply_percentage():
     result = official("2026000453")
-    r = next(r for r in result["rules"] if r["kind"] == "regional_allocation")
-    assert r["supply_type"] == "일반공급" and r["allocation_method"] == "all_local_first"
-    assert r["local_share_percent"] == 100
+    r = next(r for r in result["rules"] if r["kind"] == "regional_allocation" and r.get("supply_type") == "일반공급")
+    assert r["allocation_method"] == "region_priority"
+    assert r["local_share_percent"] is None  # An order does not declare a percentage quota.
+    assert "regional_shares" not in r
     assert r["local_region"]["region_code"] == "41210" and r["local_region"]["min_months"] == 24
     assert r["evidence_page"] == 26 and "해당지역 거주자" in r["evidence_text"]
     rank = next(r for r in result["rules"] if r["kind"] == "rank_requirements")

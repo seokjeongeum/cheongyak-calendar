@@ -66,7 +66,7 @@ def test_reviewed_public_sale_admission_can_be_complete_without_apt_rank(row):
     assert rules_of(result,'rank_applicability')[0]['status']=='not_applicable'
     assert not rules_of(result,'homeless')  # Explicit homeowner permission.
     assert 'home_ownership' in rules_of(result,'condition_exemptions')[0]['topics']
-    assert parse(row,changed=True)['status']=='partial'
+    assert parse(row,changed=True)['status']=='complete'  # Current clauses, independent of hash registry.
 
 def test_contract_date_is_not_replaced_by_announcement_date():
     result=parse(PUBLIC[1])
@@ -97,7 +97,7 @@ def test_suwon_shinhee_residual_does_not_require_six_months_or_income():
     result=parse(PUBLIC[4])
     assert result['offered_supply_types']==['신혼부부(신혼희망타운)','예비신혼부부(신혼희망타운)','한부모가족(신혼희망타운)']
     assert not rules_of(result,'national_rank_months') and not rules_of(result,'subscription_months')
-    assert rules_of(result,'application_restriction')[0]['project_id']=='LH-SUWON-DANGSU-A3'
+    assert rules_of(result,'application_restriction')[0]['project_id']=='0000061181'
 
 def test_discovery_failure_retains_current_reviewed_facts_and_adds_safe_stage():
     from app.extract.official_rules import PARSER_VERSION

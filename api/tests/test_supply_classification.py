@@ -1,4 +1,4 @@
-"""Tenure corrections use the provider's exact current announcement identity."""
+"""Explicit official rental declarations generalize to new notice identities."""
 from __future__ import annotations
 
 import copy
@@ -20,9 +20,8 @@ IDENTITY = {
 
 
 @pytest.mark.parametrize("changes", [
-    {"announcement_date": "2026-09-08"}, {"provider": "다른 공급기관"},
-    {"title": "익산 부송에코르 공공임대주택 이전 공고"},
-    {"official_url": IDENTITY["official_url"].replace("2026000402", "2026000999")},
+    {"announcement_date": "not-a-date"}, {"title": "새로운 국민주택 입주자 모집공고"},
+    {"title": "공공임대 및 민간임대 복합 공고"},
     {"official_url": IDENTITY["official_url"].replace("www.applyhome.co.kr", "example.com")},
     {"official_url": IDENTITY["official_url"] + "&houseManageNo=2026000999"},
 ])
@@ -39,10 +38,10 @@ def test_apt_national_and_rental_codes_keep_rank_classification_separate_from_te
     assert result["category"] == "public_rental"
     assert result["price_cap_status"] == "not_applicable"
     assert next(r for r in result["rules"] if r["kind"] == "housing_classification")["housing_kind"] == "national"
-    assert next(r for r in result["rules"] if r["kind"] == "supply_classification")["evidence_url"].startswith("https://www.jbdc.co.kr/")
+    assert next(r for r in result["rules"] if r["kind"] == "supply_classification")["evidence_url"] == IDENTITY["official_url"]
     assert result["prices"][0]["price_kind"] == "deposit" and result["prices"][0]["amount_krw"] is None
     # 국민주택 and a rental flag alone do not establish a legal public rental.
-    other = normalize({**detail, "HOUSE_MANAGE_NO": "2026000999", "PBLANC_NO": "2026000999",
+    other = normalize({**detail, "HOUSE_NM": "새로운 국민주택", "HOUSE_MANAGE_NO": "2026000999", "PBLANC_NO": "2026000999",
                        "PBLANC_URL": IDENTITY["official_url"].replace("2026000402", "2026000999")}, [], PAIRS[0])
     assert other["category"] == "apt"
 
@@ -59,3 +58,10 @@ def test_retained_apt_row_is_excluded_by_reviewed_public_rental_projection_witho
     assert list_notices(exclude_public_rental=True, page=1, page_size=20, session=db).total == 0
     assert list_notices(exclude_public_rental=False, page=1, page_size=20, session=db).total == 1
     assert notice.category == "apt" and notice.rules == before
+
+
+def test_new_official_notice_name_and_date_need_no_project_override():
+    row = {**IDENTITY, "title": "새로운 3블록 공공임대주택", "announcement_date": "2027-02-04", "provider": "새 공급기관", "official_url": IDENTITY["official_url"].replace("2026000402", "2027999123")}
+    fact = reviewed_supply_classification(**row)
+    assert fact["category"] == "public_rental" and fact["criterion_date"] == "2027-02-04"
+    assert fact["evidence_url"] == row["official_url"] and row["title"] in fact["evidence_text"]

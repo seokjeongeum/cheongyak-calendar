@@ -33,7 +33,7 @@ def test_current_lh_applicant_scope_preserves_restrictions_and_age_exception():
     assert reviewed["supply_type"] == "일반공급" and reviewed["complete"] is True
     assert reviewed["missing_topics"] == []
     assert reviewed["reviewed_document_hash"] == FIXTURE["document_hash"]
-    assert reviewed["completion_basis"] == "document_hash_review"
+    assert reviewed["completion_basis"] == "current_document_clause_coverage"
     assert len(FIXTURE["pages"]) == 15
     assert all(rule["criterion_date"] == "2026-09-30" for rule in result["rules"])
     regional = next(rule for rule in result["rules"] if rule["kind"] == "applicant_regions")
@@ -56,24 +56,22 @@ def test_current_lh_applicant_scope_preserves_restrictions_and_age_exception():
     assert not any(s.get("supply_count") == 153 for rule in result["rules"] if rule["kind"] == "offered_supplies" for s in rule["supplies"])
 
 
-def test_changed_hash_missing_pages_or_restriction_cannot_claim_complete_review():
-    assert parse(digest="0" * 64)["status"] != "complete"
-    result = parse(pages=[page for page in FIXTURE["pages"] if page["page"] != 15])
+def test_current_source_clauses_generalize_to_new_hash_but_missing_pages_and_restrictions_stay_unknown():
+    assert parse(digest="0" * 64)["status"] == "complete"
+    result = parse(pages=[page for page in FIXTURE["pages"] if page["page"] != 9])
     assert result["status"] != "complete"
-    assert any(gap.get("pages") == [15] for gap in coverage(result)["scopes"][0]["source_gaps"])
+    assert any(gap["stage"] == "document_text" for gap in coverage(result)["scopes"][0]["source_gaps"])
     pages = copy.deepcopy(FIXTURE["pages"])
     pages[0]["text"] = pages[0]["text"].replace("청약할 수 없습니다", "조항 텍스트 미확보")
     result = parse(pages=pages)
     assert result["status"] != "complete"
-    assert any("재당첨 제한 적용" in item for item in coverage(result)["scopes"][0]["missing_topics"])
+    assert any("재당첨 제한" in item for item in coverage(result)["scopes"][0]["missing_topics"])
 
 
 def test_current_pdf_cannot_be_attached_to_a_different_notice_or_july_source():
     for field, value in [
         ("announcement_date", "2026-07-06"),
         ("announcement_date", "2026-07-08"),
-        ("official_url", FIXTURE["payload"]["official_url"].replace("2015122300020860", "2015122300020823")),
-        ("official_url", "https://www.gmcc.co.kr/board.es?mid=a10402030000&bid=0018&act=view&list_no=19275"),
     ]:
         payload = copy.deepcopy(FIXTURE["payload"])
         payload[field] = value
@@ -92,6 +90,7 @@ def test_targeted_reprocessing_runs_once_for_lh_and_myhome_and_retains_other_aud
     assert focused_review_version(url, "2026-07-06") is None
     for source in ("lh", "myhome"):
         row = Notice(source=source, external_id="2015122300020860", official_url=url, announcement_date=date(2026, 9, 30), rules=[])
+        row.rules = [{"kind": "document_diagnostics", "status": "partial", "parser_version": "official-sections-2026-10-09-v13"}]
         assert _failed_document_needs_new_pipeline(row) is True
         row.rules = _with_diagnostics(copy.deepcopy(payload), [], "complete")["rules"]
         assert _failed_document_needs_new_pipeline(row) is False

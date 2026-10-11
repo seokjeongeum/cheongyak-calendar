@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from app.extract.official_rules import parse_official_rules
-from app.extract.reviewed_sources import reviewed_document_urls, reviewed_source_for_document
 
 SOURCE = json.loads((Path(__file__).parent / "fixtures/cheonan-corrected-20261008.json").read_text())
 
@@ -15,21 +14,14 @@ def parsed(**overrides):
         digest=overrides.get("digest", SOURCE["document_hash"]), payload={**SOURCE["payload"], **overrides.get("payload", {})})
 
 
-def test_current_corrected_bytes_have_own_review_and_original_qualification_date():
+def test_current_corrected_bytes_keep_original_qualification_date_from_current_text():
     assert len(SOURCE["pages"]) == 65
     assert "2026.10.08." in SOURCE["pages"][0]["text"]
     assert "2026.10.02." in SOURCE["pages"][4]["text"]
-    review = reviewed_source_for_document(SOURCE["document_url"], SOURCE["document_hash"])
-    assert review["correction_publication_date"] == "2026-10-08"
-    assert review["announcement_date"] == "2026-10-02"
-    assert review["document_page_count"] == 65
-    assert review["supersedes_document_hash"] != review["document_hash"]
-    assert SOURCE["document_url"] in reviewed_document_urls(SOURCE["payload"]["official_url"], announcement_date="2026-10-02")
-    assert SOURCE["document_url"] not in reviewed_document_urls(SOURCE["payload"]["official_url"], announcement_date="2026-10-08")
-    assert reviewed_source_for_document(SOURCE["document_url"], review["supersedes_document_hash"]) is None
     result = parsed()
     assert result["status"] == "partial" and result.get("identity_status") != "mismatch"
     assert all(rule.get("criterion_date") == "2026-10-02" for rule in result["rules"])
+    assert all(rule.get("document_hash") == SOURCE["document_hash"] for rule in result["rules"])
 
 
 def test_corrected_region_and_local_military_exception_are_from_new_pages():
@@ -65,11 +57,32 @@ def test_new_supply_table_has_fourteen_positive_rows_total_sixty_one_without_adm
 
 
 @pytest.mark.parametrize("changes", [
-    {"digest": "changed-current-file"},
     {"payload": {"announcement_date": "2026-10-08"}},
     {"payload": {"official_url": SOURCE["payload"]["official_url"].replace("2026000498", "2026000999")}},
 ])
-def test_changed_bytes_notice_or_qualification_date_do_not_borrow_current_region(changes):
+def test_wrong_notice_or_qualification_date_do_not_borrow_current_region(changes):
     result = parsed(**changes)
     assert result["status"] == "unsupported"
     assert not any(rule["kind"] == "applicant_regions" for rule in result["rules"])
+
+
+def test_new_hash_and_identity_use_their_own_current_region_and_moved_evidence():
+    new_id = "2027000723"
+    pages = [{"page": page["page"] + 6, "text": page["text"].replace("2026000498", new_id)} for page in SOURCE["pages"]]
+    payload = {**SOURCE["payload"], "external_id": new_id,
+               "official_url": SOURCE["payload"]["official_url"].replace("2026000498", new_id)}
+    result = parse_official_rules(pages, url=SOURCE["document_url"].replace("2026000498", new_id),
+                                 digest="new-corrected-document", payload=payload)
+    region = next(rule for rule in result["rules"] if rule["kind"] == "applicant_regions")
+    assert {item["region_code"] for item in region["regions"]} == {"44", "30", "36"}
+    assert region["evidence_page"] == 11 and region["document_hash"] == "new-corrected-document"
+    assert region["local_priority"]["region_code"] == "44130"
+    assert region["exceptions"][0]["evidence_page"] == 12
+    assert region["exceptions"][0]["document_hash"] == "new-corrected-document"
+
+
+def test_missing_current_priority_clause_cannot_borrow_previous_reviewed_priority():
+    pages = [page for page in SOURCE["pages"] if page["page"] != 5]
+    result = parse_official_rules(pages, url=SOURCE["document_url"], digest="without-common-qualification", payload=SOURCE["payload"])
+    regions = [rule for rule in result["rules"] if rule["kind"] == "applicant_regions"]
+    assert all(not region.get("local_priority") and not region.get("priority_applicable") for region in regions)

@@ -12,35 +12,6 @@ interface IncomeScopeSource {
   minimumTableSize: number | null
 }
 
-const HYANGNAM_HASH = 'b5668bcd00f9606b110b21c9703fdce3994f5f690b43299fadeaf9ed2a73c61e'
-const A17_HASH = 'f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0'
-
-// These two scope paragraphs were reviewed in the full official documents in
-// api/tests/fixtures. An exact hash and supply match are required: neither the
-// address nor a similar project name establishes the same income scope.
-function reviewedScope(rule: NoticeRule): Pick<IncomeScopeSource, 'scope' | 'income' | 'url' | 'page'> | null {
-  const supply = rule.supply_type || ''
-  if (rule.document_hash === HYANGNAM_HASH && ['신혼부부 특별공급', '생애최초 특별공급', '신생아 특별공급'].includes(supply)) {
-    return {
-      scope: '무주택세대구성원 전원으로 산정. 단, 임신 중인 태아는 태아 수만큼 인정하되, 공급신청자의 직계존속(공급신청자의 배우자의 직계존속을 포함)은 입주자모집공고일을 기준으로 최근 1년 이상 계속하여 공급신청자 또는 그 배우자와 같은 세대별 주민등록표에 등재되어 있는 경우에만 포함',
-      income: '가구원수에 포함되는 가구원 중 만19세 이상인 성년자(세대주인 미성년자(자녀양육, 형제자매 부양) 포함). 단, 세대원의 실종 등으로 소득파악이 불가능한 경우에는 주민등록표등본 말소를 확인하고 소득산정 대상에서 제외',
-      url: 'https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf',
-      page: supply.startsWith('신혼') ? 18 : supply.startsWith('생애') ? 22 : 24,
-    }
-  }
-  if (rule.document_hash === A17_HASH && ['신혼부부(신혼희망타운)', '예비신혼부부(신혼희망타운)', '한부모가족(신혼희망타운)'].includes(supply)) {
-    return {
-      scope: supply.startsWith('예비')
-        ? '청약 시 제출한 ‘혼인으로 구성될 세대’에 해당하는 자 전원. 임신 중인 태아도 태아의 수만큼 가구원수로 산정'
-        : '‘무주택세대구성원’에 해당하는 자 전원. 임신 중인 태아도 태아의 수만큼 가구원수로 산정. 신청자 또는 (예비)배우자의 주민등록표등본에 등재되지 아니한 신청자의 직계존비속은 인정하지 아니함.',
-      income: '위 ‘가구원수 적용 기준’에 따라 산정된 가구원 중 만 19세 이상 무주택세대구성원 전원의 합산 소득. 단, 세대원의 실종, 별거 등으로 소득파악이 불가능한 경우에는 주민등록표등본 말소를 확인하고 소득산정 대상에서 제외',
-      url: 'https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68807314',
-      page: 12,
-    }
-  }
-  return null
-}
-
 function text(value: unknown): string {
   if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim()
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -91,27 +62,42 @@ function incomeRules(rules: NoticeRule[], parent?: NoticeRule): NoticeRule[] {
   return result
 }
 
+function sameIncomeScope(scope: NoticeRule, rule: NoticeRule): boolean {
+  return (!scope.supply_type || scope.supply_type === rule.supply_type)
+    && (!scope.unit_type || scope.unit_type === rule.unit_type)
+    && (!scope.document_hash || !rule.document_hash || scope.document_hash === rule.document_hash)
+    && (!scope.criterion_date || !rule.criterion_date || scope.criterion_date === rule.criterion_date)
+}
+
 export function incomeScopeSources(notices: Notice[]): IncomeScopeSource[] {
   const grouped = new Map<string, IncomeScopeSource>()
   for (const notice of notices) {
-    for (const rule of incomeRules(notice.rules)) {
+    const rules = incomeRules(notice.rules).filter(rule => rule.verification === 'official'
+      && (!notice.document_hash || !rule.document_hash || rule.document_hash === notice.document_hash))
+    const scopeRules = rules.filter(rule => rule.kind === 'income_household_scope' && scopeFromEvidence(rule).scope)
+    for (const rule of rules) {
       // An AI excerpt and an income ceiling alone do not establish which
-      // relatives are counted. Show only an official family-scope paragraph.
-      if (rule.verification !== 'official' || rule.effect === 'waiver') continue
-      const reviewed = reviewedScope(rule)
-      const extracted = scopeFromEvidence(rule)
-      const scope = extracted.scope || reviewed?.scope || ''
-      const income = extracted.income || reviewed?.income || ''
-      const date = text(rule.criterion_date) || notice.announcement_date
-      const url = safeUrl(rule.household_scope_evidence_url) || safeUrl(reviewed?.url) || safeUrl(rule.evidence_url) || safeUrl(notice.official_url)
-      const pageValue = rule.household_scope_evidence_page ?? reviewed?.page ?? rule.evidence_page
-      const page = typeof pageValue === 'number' && Number.isInteger(pageValue) && pageValue > 0 ? pageValue : undefined
-      const minimumTableSize = typeof rule.min_household_size === 'number' && rule.min_household_size > 0 ? rule.min_household_size : null
-      const key = JSON.stringify([notice.id, date, scope, income, url, page, minimumTableSize])
-      const supply = rule.supply_type || '공고 공통'
-      const existing = grouped.get(key)
-      if (existing) { if (!existing.supplies.includes(supply)) existing.supplies.push(supply); continue }
-      grouped.set(key, { title: notice.title, supplies: [supply], date, scope, income, url, page, minimumTableSize })
+      // relatives are counted. The matching source paragraph may be stored
+      // separately from the financial ceiling, but must share its context.
+      const direct = scopeFromEvidence(rule)
+      const matchingScopes = scopeRules.filter(scope => sameIncomeScope(scope, rule))
+      for (const sourceRule of direct.scope || !matchingScopes.length ? [rule] : matchingScopes) {
+        const extracted = scopeFromEvidence(sourceRule)
+        const scope = extracted.scope
+        const income = extracted.income || direct.income
+        const date = text(sourceRule.criterion_date) || text(rule.criterion_date) || notice.announcement_date
+        const url = safeUrl(sourceRule.household_scope_evidence_url) || safeUrl(sourceRule.evidence_url) || safeUrl(rule.evidence_url) || safeUrl(notice.official_url)
+        const pageValue = sourceRule.household_scope_evidence_page ?? sourceRule.evidence_page
+        const page = typeof pageValue === 'number' && Number.isInteger(pageValue) && pageValue > 0 ? pageValue : undefined
+        const sizes = [...new Set(rules.filter(financial => financial.kind !== 'income_household_scope' && sameIncomeScope(sourceRule, financial))
+          .map(financial => financial.min_household_size).filter((size): size is number => typeof size === 'number' && size > 0))]
+        const minimumTableSize = typeof rule.min_household_size === 'number' && rule.min_household_size > 0 ? rule.min_household_size : sizes.length === 1 ? sizes[0] : null
+        const key = JSON.stringify([notice.id, date, scope, income, url, page, minimumTableSize])
+        const supply = rule.supply_type || '공고 공통'
+        const existing = grouped.get(key)
+        if (existing) { if (!existing.supplies.includes(supply)) existing.supplies.push(supply); continue }
+        grouped.set(key, { title: notice.title, supplies: [supply], date, scope, income, url, page, minimumTableSize })
+      }
     }
   }
   return [...grouped.values()]

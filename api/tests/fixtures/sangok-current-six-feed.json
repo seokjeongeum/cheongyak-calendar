@@ -1,0 +1,483 @@
+{
+  "description": "Actual current public cheongyak_home six-column supply feed; newborn column absent. Counts are compared with the independently read current PDF.",
+  "official_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+  "supplies": [
+    {
+      "supply_type": "일반공급",
+      "unit_type": "050.2600A",
+      "supply_count": 54,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, SUPLY_HSHLDCO=54",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "050.2600A",
+      "supply_count": 11,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, INSTT_RECOMEND_HSHLDCO=11",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "050.2600A",
+      "supply_count": 10,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, MNYCH_HSHLDCO=10",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "050.2600A",
+      "supply_count": 16,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, NWWDS_HSHLDCO=16",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "050.2600A",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, OLD_PARNTS_SUPORT_HSHLDCO=3",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "050.2600A",
+      "supply_count": 7,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600A, LFE_FRST_HSHLDCO=7",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "050.2600B",
+      "supply_count": 22,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, SUPLY_HSHLDCO=22",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "050.2600B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, INSTT_RECOMEND_HSHLDCO=4",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "050.2600B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, MNYCH_HSHLDCO=4",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "050.2600B",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, NWWDS_HSHLDCO=6",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "050.2600B",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, OLD_PARNTS_SUPORT_HSHLDCO=1",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "050.2600B",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=050.2600B, LFE_FRST_HSHLDCO=3",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "059.9500A",
+      "supply_count": 140,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, SUPLY_HSHLDCO=140",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "059.9500A",
+      "supply_count": 31,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, INSTT_RECOMEND_HSHLDCO=31",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "059.9500A",
+      "supply_count": 30,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, MNYCH_HSHLDCO=30",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "059.9500A",
+      "supply_count": 46,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, NWWDS_HSHLDCO=46",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "059.9500A",
+      "supply_count": 9,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, OLD_PARNTS_SUPORT_HSHLDCO=9",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "059.9500A",
+      "supply_count": 21,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9500A, LFE_FRST_HSHLDCO=21",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "059.9900B",
+      "supply_count": 153,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, SUPLY_HSHLDCO=153",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "059.9900B",
+      "supply_count": 33,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, INSTT_RECOMEND_HSHLDCO=33",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "059.9900B",
+      "supply_count": 32,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, MNYCH_HSHLDCO=32",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "059.9900B",
+      "supply_count": 50,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, NWWDS_HSHLDCO=50",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "059.9900B",
+      "supply_count": 10,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, OLD_PARNTS_SUPORT_HSHLDCO=10",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "059.9900B",
+      "supply_count": 23,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9900B, LFE_FRST_HSHLDCO=23",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "059.9300C",
+      "supply_count": 99,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, SUPLY_HSHLDCO=99",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "059.9300C",
+      "supply_count": 22,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, INSTT_RECOMEND_HSHLDCO=22",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "059.9300C",
+      "supply_count": 20,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, MNYCH_HSHLDCO=20",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "059.9300C",
+      "supply_count": 31,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, NWWDS_HSHLDCO=31",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "059.9300C",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, OLD_PARNTS_SUPORT_HSHLDCO=6",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "059.9300C",
+      "supply_count": 14,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=059.9300C, LFE_FRST_HSHLDCO=14",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "075.5600A",
+      "supply_count": 66,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, SUPLY_HSHLDCO=66",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "075.5600A",
+      "supply_count": 12,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, INSTT_RECOMEND_HSHLDCO=12",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "075.5600A",
+      "supply_count": 12,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, MNYCH_HSHLDCO=12",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "075.5600A",
+      "supply_count": 20,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, NWWDS_HSHLDCO=20",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "075.5600A",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, OLD_PARNTS_SUPORT_HSHLDCO=4",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "075.5600A",
+      "supply_count": 9,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.5600A, LFE_FRST_HSHLDCO=9",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "075.6200B",
+      "supply_count": 29,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, SUPLY_HSHLDCO=29",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "075.6200B",
+      "supply_count": 5,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, INSTT_RECOMEND_HSHLDCO=5",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "075.6200B",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, MNYCH_HSHLDCO=6",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "075.6200B",
+      "supply_count": 9,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, NWWDS_HSHLDCO=9",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "075.6200B",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, OLD_PARNTS_SUPORT_HSHLDCO=1",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "075.6200B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=075.6200B, LFE_FRST_HSHLDCO=4",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "084.9200A",
+      "supply_count": 11,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9200A, SUPLY_HSHLDCO=11",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "084.9200A",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9200A, INSTT_RECOMEND_HSHLDCO=1",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "084.9200A",
+      "supply_count": 2,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9200A, MNYCH_HSHLDCO=2",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "084.9200A",
+      "supply_count": 3,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9200A, NWWDS_HSHLDCO=3",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "084.9200A",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9200A, LFE_FRST_HSHLDCO=1",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "일반공급",
+      "unit_type": "084.9800B",
+      "supply_count": 30,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, SUPLY_HSHLDCO=30",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "기관추천 특별공급",
+      "unit_type": "084.9800B",
+      "supply_count": 7,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, INSTT_RECOMEND_HSHLDCO=7",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "다자녀가구 특별공급",
+      "unit_type": "084.9800B",
+      "supply_count": 6,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, MNYCH_HSHLDCO=6",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "신혼부부 특별공급",
+      "unit_type": "084.9800B",
+      "supply_count": 9,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, NWWDS_HSHLDCO=9",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "노부모부양 특별공급",
+      "unit_type": "084.9800B",
+      "supply_count": 1,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, OLD_PARNTS_SUPORT_HSHLDCO=1",
+      "criterion_date": "2026-10-08"
+    },
+    {
+      "supply_type": "생애최초 특별공급",
+      "unit_type": "084.9800B",
+      "supply_count": 4,
+      "verification": "official",
+      "evidence_url": "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=2026000458&pblancNo=2026000458",
+      "evidence_text": "getAPTLttotPblancMdl: HOUSE_TY=084.9800B, LFE_FRST_HSHLDCO=4",
+      "criterion_date": "2026-10-08"
+    }
+  ]
+}

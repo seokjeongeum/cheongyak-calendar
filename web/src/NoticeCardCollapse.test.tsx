@@ -7,6 +7,7 @@ import { EMPTY_PROFILE, type LocalProfile, type Notice } from './types'
 
 const profile: LocalProfile = { ...EMPTY_PROFILE, region: '경기도', regionCode: '41', district: '화성시', districtCode: '41590', movedInDate: '2020-01-01', dateOfBirth: '1990-01-01' }
 const notice: Notice = {
+  hogangnono_url: 'https://hogangnono.com/apt/fq81f',
   id: 'fold-card', title: '더샵 동인센트리체', category: 'apt', housing_kind: 'private', source: 'cheongyak_home', provider: '공식 공급기관', address: '대구광역시 중구', region_code: '27', region_name: '대구광역시', announcement_date: '2026-10-02', official_url: 'https://www.applyhome.co.kr/official', price_cap_status: 'no', updated_at: null, version: 1,
   events: [{ kind: 'first_priority', label: '1순위', start_date: '2026-10-13', end_date: '2026-10-13' }],
   prices: [{ unit_type: '084', price_kind: 'sale', amount_krw: 588000000, verification: 'official' }],
@@ -91,7 +92,7 @@ describe('whole notice default disclosure', () => {
   })
 
   it('uses the verified detail page for the numbered phase', () => {
-    const html = render({ ...notice, title: '천안 아이파크 시티 2단지(2회차)' })
+    const html = render({ ...notice, title: '천안 아이파크 시티 2단지(2회차)', hogangnono_url: 'https://hogangnono.com/apt/ghL9c' })
     expect(html).toContain('https://hogangnono.com/apt/ghL9c')
     expect(html).toContain('rel="noopener noreferrer"')
   })

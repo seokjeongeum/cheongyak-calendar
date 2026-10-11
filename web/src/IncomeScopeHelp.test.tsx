@@ -7,6 +7,8 @@ import type { Notice, NoticeRule } from './types'
 const fixture = JSON.parse(readFileSync(new URL('../../api/tests/fixtures/hyangnam-regional-v9.json', import.meta.url), 'utf8')) as {
   document_hash: string; document_url: string; payload: { title: string; announcement_date: string; official_url: string }; pages: { page: number; text: string }[]
 }
+const familyFixture = (JSON.parse(readFileSync(new URL('../../api/tests/fixtures/public-v5.json', import.meta.url), 'utf8')) as typeof fixture[])
+  .find(item => item.pages.some(page => page.text.includes('<가구원수 적용 기준>')))!
 const notice = (rules: NoticeRule[], extra: Partial<Notice> = {}): Notice => ({
   id: 'income-notice', title: '공식 소득 공고', category: 'apt', source: 'applyhome', provider: '공식 기관',
   address: null, region_code: null, region_name: null, announcement_date: '2026-10-02', official_url: 'https://example.org/notice',
@@ -28,10 +30,14 @@ describe('income household scope explanation', () => {
     expect(html).not.toContain('확인했나요')
   })
 
-  it('uses full-source reviewed Hyangnam scope only for the matching hash and supply', () => {
-    const row = notice([income({ document_hash: fixture.document_hash })], fixture.payload)
+  it('uses the current official scope paragraph and its page, without a project catalog', () => {
+    const paragraph = fixture.pages.find(page => page.page === 22)!
+    const scope: NoticeRule = { kind: 'income_household_scope', verification: 'official', supply_type: '생애최초 특별공급', document_hash: fixture.document_hash,
+      evidence_text: paragraph.text, evidence_url: fixture.document_url, evidence_page: paragraph.page }
+    const row = notice([income({ document_hash: fixture.document_hash }), scope], fixture.payload)
     const source = incomeScopeSources([row])[0]
     const original = fixture.pages.find((page) => page.page === source.page)!.text.replace(/\s+/g, ' ')
+    expect(incomeScopeSources([row])).toHaveLength(1)
     expect(source.page).toBe(22)
     expect(source.url).toBe(fixture.document_url)
     expect(original).toContain(source.scope)
@@ -43,20 +49,61 @@ describe('income household scope explanation', () => {
     expect(html).toContain('태아는 태아 수만큼 인정')
     expect(html).toContain('만19세 이상인 성년자')
     expect(html).toContain('#page=22')
-    expect(render([notice([income({ document_hash: 'changed-document' })], fixture.payload)])).not.toContain('최근 1년 이상 계속하여')
-    expect(render([notice([income({ document_hash: fixture.document_hash, supply_type: '일반공급' })], fixture.payload)])).not.toContain('최근 1년 이상 계속하여')
+    expect(render([notice([income({ document_hash: fixture.document_hash })], fixture.payload)])).not.toContain('최근 1년 이상 계속하여')
+    const corrected = notice([income({ document_hash: 'corrected-document' }), scope], { ...fixture.payload, document_hash: 'corrected-document' })
+    expect(render([corrected])).not.toContain('최근 1년 이상 계속하여')
   })
 
-  it('keeps A17 prospective-marriage scope separate from its current-family scope', () => {
-    const hash = 'f591455563e503427c61699da3823b2029aa8ba24e3d09d84478ce01686d10e0'
-    const sources = incomeScopeSources([notice([
-      income({ kind: 'shinhee_income', document_hash: hash, supply_type: '신혼부부(신혼희망타운)' }),
-      income({ kind: 'shinhee_income', document_hash: hash, supply_type: '예비신혼부부(신혼희망타운)' }),
-    ])])
-    expect(sources).toHaveLength(2)
+  it('preserves the actual shared family-scope table and its family labels', () => {
+    const paragraph = familyFixture.pages.find(page => page.text.includes('<가구원수 적용 기준>'))!
+    const supplies = ['신혼부부(신혼희망타운)', '예비신혼부부(신혼희망타운)', '한부모가족(신혼희망타운)']
+    const rules = supplies.flatMap(supply => [
+      income({ kind: 'shinhee_income', document_hash: familyFixture.document_hash, supply_type: supply }),
+      { kind: 'income_household_scope', verification: 'official', document_hash: familyFixture.document_hash, supply_type: supply,
+        evidence_text: paragraph.text, evidence_url: familyFixture.document_url, evidence_page: paragraph.page },
+    ])
+    const sources = incomeScopeSources([notice(rules, familyFixture.payload)])
+    expect(sources).toHaveLength(1)
+    expect(sources[0].supplies).toEqual(supplies)
     expect(sources[0].scope).toContain('주민등록표등본에 등재되지 아니한')
-    expect(sources[1].scope).toContain('혼인으로 구성될 세대')
-    expect(sources[1].scope).not.toContain('주민등록표등본에 등재되지 아니한')
+    expect(sources[0].scope).toContain('예비신혼부부 청약 시 제출한 ‘혼인으로 구성될 세대’')
+    expect(sources[0].income).toContain('만 19세 이상 무주택세대구성원 전원의 합산 소득')
+    expect(sources[0].url).toBe(familyFixture.document_url)
+    expect(sources[0].page).toBe(paragraph.page)
+  })
+
+  it('generalizes the same source clauses across new names, document hashes, URLs and page positions', () => {
+    const paragraph = fixture.pages.find(page => page.page === 22)!
+    const variants = [
+      { title: fixture.payload.title, hash: fixture.document_hash, url: fixture.document_url, page: 22 },
+      { title: '새봄신도시 새 공고', hash: 'brand-new-document-hash', url: 'https://example.org/new-application.pdf', page: 91 },
+    ]
+    for (const variant of variants) {
+      const row = notice([
+        income({ document_hash: variant.hash, criterion_date: '2027-02-03' }),
+        { kind: 'income_household_scope', verification: 'official', supply_type: '생애최초 특별공급', document_hash: variant.hash,
+          criterion_date: '2027-02-03', evidence_text: paragraph.text, evidence_url: variant.url, evidence_page: variant.page },
+      ], { title: variant.title, document_hash: variant.hash, announcement_date: '2027-02-03' })
+      const sources = incomeScopeSources([row])
+      expect(sources).toHaveLength(1)
+      expect(sources[0].scope).toContain('최근 1년 이상 계속하여')
+      expect(sources[0].income).toContain('만19세 이상인 성년자')
+      expect(sources[0].minimumTableSize).toBe(3)
+      const html = render([row])
+      expect(html).toContain(variant.title)
+      expect(html).toContain(`${variant.url}#page=${variant.page}`)
+      expect(html).toContain('기준일 2027-02-03')
+    }
+  })
+
+  it('does not borrow a different supply or cutoff scope for an income ceiling', () => {
+    const rule = income({ document_hash: 'current-document', criterion_date: '2027-02-03' })
+    const unrelated: NoticeRule[] = [
+      { kind: 'income_household_scope', verification: 'official', supply_type: '신혼부부 특별공급', document_hash: 'current-document', criterion_date: '2027-02-03', household_scope: '다른 유형 가족 범위' },
+      { kind: 'income_household_scope', verification: 'official', supply_type: '생애최초 특별공급', document_hash: 'current-document', criterion_date: '2026-02-03', household_scope: '과거 공고 가족 범위' },
+    ]
+    const sources = incomeScopeSources([notice([rule, ...unrelated])])
+    expect(sources.find(source => source.date === '2027-02-03' && source.supplies.includes('생애최초 특별공급'))?.scope).toBe('')
   })
 
   it('reads actual scope metadata and document paragraphs while rejecting unverified evidence', () => {

@@ -32,7 +32,10 @@ def test_cheongju_full_admission_review_and_open_contract_dates():
     assert coverage["scopes"][0]["complete"] is True
     assert coverage["scopes"][0]["missing_topics"] == []
     assert {r["kind"] for r in result["rules"] if r.get("effect") != "metadata"} == {
-        "any", "domestic_residence", "citizenship", "provider_employee_restriction"}
+        "any", "domestic_residence", "citizenship", "provider_employee_restriction", "application_restriction"}
+    restriction = next(r for r in result["rules"] if r["kind"] == "application_restriction")
+    assert restriction["restriction"] == "resale_restriction_active"
+    assert restriction["evidence_page"] == 9 and "전매행위 제한을 위반" in restriction["evidence_text"]
     age = next(r for r in result["rules"] if r["kind"] == "any")
     assert age["conditions"][0]["kind"] == "age_min"
     assert age["conditions"][1]["kind"] == "minor_household_head"
@@ -51,9 +54,9 @@ def test_cheongju_full_admission_review_and_open_contract_dates():
 
 def test_document_change_or_absent_review_pages_does_not_certify_full_admission():
     changed = parse_cheongju(digest="corrected-file")
-    assert changed["status"] == "partial"
-    assert not requirements_complete(changed["rules"], True)
-    incomplete = parse_cheongju(pages=FIXTURE["pages"][:2])
+    assert changed["status"] == "complete"
+    assert requirements_complete(changed["rules"], True)
+    incomplete = parse_cheongju(pages=[p for p in FIXTURE["pages"] if p["page"] != 2])
     assert incomplete["status"] == "partial"
 
 
@@ -131,7 +134,7 @@ def test_reviewed_contract_metadata_is_preserved_on_poll_and_retired_on_document
     current = copy.deepcopy(raw)
     enriched = {**current, "document_hash":"corrected-file", "rules":parse_cheongju(digest="corrected-file")["rules"]}
     patch = _document_patch(current, enriched)
-    assert not patch["rules_complete"]
+    assert patch["rules_complete"]  # The changed current source is independently parsed.
     assert all(r.get("document_hash") == "corrected-file" for r in patch["rules"] if r.get("source") == "official_document_parser")
 
 

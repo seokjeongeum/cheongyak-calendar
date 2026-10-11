@@ -10,12 +10,13 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, func, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer, lazyload
 
 from app.models import CompetitionRevision, CompetitionState, Notice, NoticeEvent, NoticeRevision, SourceStatus, UnitCompetition, UnitPrice, utc_now
 from app.schemas import CompetitionPublic, CompetitionStatePublic, EventPublic, NoticeDetail, NoticePublic, PricePublic, RevisionPublic
 from app.supply_classification import reviewed_supply_classification
-from app.qualification import public_selection_methods, public_winning_scores, is_metadata, merge_poll_rules, public_application_method, public_classification, public_contract_schedule, public_offered_supplies, public_rank_applicability, requirements_complete
+from app.ingest.detail_links import public_detail_link
+from app.qualification import coverage_scope_complete, generic_admission_coverage_complete, public_selection_methods, public_winning_scores, is_metadata, merge_poll_rules, public_application_method, public_classification, public_contract_schedule, public_offered_supplies, public_rank_applicability, requirements_complete, source_bound_superseded_kinds, source_bound_waivers
 
 
 PRICE_CAP_STATUSES = {"yes", "no", "unknown", "not_applicable"}
@@ -270,19 +271,62 @@ def _fingerprint(payload: dict[str, Any]) -> str | None:
     return hashlib.sha256(f"{title}|{address}|{date_text}".encode()).hexdigest()
 
 
+def feed_payload_hash(payload: dict[str, Any]) -> str:
+    """Validate and hash a raw feed independently of merged document facts."""
+    normalized = _normalize(payload, None)
+    document = {"format": 1, "payload": normalized,
+                # Omitted fields preserve prior values; an explicit default
+                # may overwrite one. Their presence is therefore meaningful.
+                "present_fields": sorted(key for key in normalized if key in payload and payload[key] is not None),
+                "updated_at": _json_safe(_datetime(payload.get("updated_at"))),
+                "replace_prices": bool(payload.get("replace_prices")),
+                "replace_rules": bool(payload.get("replace_rules"))}
+    return hashlib.sha256(json.dumps(document, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+def feed_review_hash(payload: dict[str, Any]) -> str:
+    """Detect source corrections that require a new document review.
+
+    Poll timestamps and price amounts can change without changing the applicant
+    branch. Document identity, dates, housing units and source qualification
+    facts do require a new review, even after an earlier audit on the same day.
+    """
+    normalized = _normalize(payload, None)
+    fields = ("source", "external_id", "correction_of_external_id", "title", "category", "address",
+              "region_code", "region_name", "announcement_date", "official_url", "document_hash")
+    document = {field: normalized[field] for field in fields}
+    ignored = {"observed_at", "updated_at", "evidence_url", "evidence_text", "source", "verification",
+               "parser_version", "pipeline_version"}
+    def structural(value):
+        if isinstance(value, dict):
+            return {key: structural(item) for key, item in value.items() if key not in ignored}
+        if isinstance(value, list):
+            # A nested list can encode the official order of selection stages.
+            # Keep that order rather than treating every array as a set.
+            return [structural(item) for item in value]
+        return value
+    document["events"] = structural(normalized["events"])
+    document["units"] = structural([{key: price[key] for key in ("unit_type", "area_sqm", "price_kind")}
+                                    for price in normalized["prices"]])
+    document["rules"] = structural([rule for rule in normalized["rules"]
+        if rule.get("source") != "official_document_parser"
+        and rule.get("kind") not in {"document_diagnostics", "winning_scores", "external_detail_link"}])
+    return hashlib.sha256(json.dumps(document, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
 def _resolve_correction(session: Session, notice: Notice) -> Notice | None:
     """Connect a correction after its predecessor has reached this database."""
     reference = notice.correction_of_external_id
     if not reference:
         return None
-    previous = session.scalar(select(Notice).where(
+    previous = session.scalar(select(Notice).options(defer(Notice.rules)).where(
         Notice.source == notice.source, Notice.external_id == reference,
         Notice.id != notice.id,
     ).limit(1))
     if previous is None:
         # MyHome's beforePblancId identifies the announcement, while its
         # fetched rows can append houseSn. Resolve only an unambiguous row.
-        candidates = session.scalars(select(Notice).where(
+        candidates = session.scalars(select(Notice).options(defer(Notice.rules)).where(
             Notice.source == notice.source,
             Notice.external_id.startswith(f"{reference}:", autoescape=True),
             Notice.id != notice.id,
@@ -298,7 +342,7 @@ def _resolve_correction(session: Session, notice: Notice) -> Notice | None:
 def resolve_pending_corrections(session: Session, source: str) -> int:
     """Resolve newest-first board rows during the same collection cycle."""
     resolved = 0
-    pending = session.scalars(select(Notice).where(
+    pending = session.scalars(select(Notice).options(defer(Notice.rules)).where(
         Notice.source == source, Notice.correction_of_external_id.is_not(None),
         Notice.correction_of_id.is_(None),
     )).all()
@@ -310,7 +354,7 @@ def resolve_pending_corrections(session: Session, source: str) -> int:
     return resolved
 
 
-def lock_notice(session: Session, source: str, external_id: str) -> Notice | None:
+def lock_notice(session: Session, source: str, external_id: str, *, include_rules: bool = True) -> Notice | None:
     """Serialize writers and reload retained ORM objects before merging updates.
 
     A transaction advisory lock covers the first insertion, where a row lock
@@ -323,9 +367,19 @@ def lock_notice(session: Session, source: str, external_id: str) -> Notice | Non
             identity = json.dumps([source, external_id], ensure_ascii=False, separators=(",", ":"))
             lock_key = int.from_bytes(hashlib.sha256(identity.encode()).digest()[:8], "big", signed=True)
             session.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": lock_key})
-        return session.scalar(select(Notice).where(
+        statement = select(Notice).where(
             Notice.source == source, Notice.external_id == external_id,
-        ).with_for_update().execution_options(populate_existing=True))
+        ).with_for_update().execution_options(populate_existing=True)
+        if not include_rules:
+            statement = statement.options(defer(Notice.rules), lazyload(Notice.competitions))
+        return session.scalar(statement)
+
+
+def notice_patch_changed(notice: Notice, payload: dict[str, Any]) -> bool:
+    """Compare the stored form of a patch, including normalized price fields."""
+    normalized = _normalize(payload, notice)
+    digest = hashlib.sha256(json.dumps(normalized, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    return digest != notice.content_hash
 
 
 def upsert_notice(session: Session, payload: dict[str, Any]) -> Notice:
@@ -501,7 +555,7 @@ def record_competition_result(
         raise ValueError("Invalid competition status")
     # Competition and document collectors use long-lived sessions and can run
     # concurrently. Refresh the same notice lock before replacing its snapshot.
-    notice = lock_notice(session, notice.source, notice.external_id) or notice
+    notice = lock_notice(session, notice.source, notice.external_id, include_rules=False) or notice
     stale_fetch = expected_notice_version is not None and notice.version != expected_notice_version
     if stale_fetch:
         # A source correction/enrichment committed while the network request
@@ -530,10 +584,10 @@ def record_competition_result(
         snapshot_rows = [{key: item for key, item in row.items() if key != "observed_at"} for row in rows]
         snapshot = {"rows": snapshot_rows, "unit_types": unit_types or [], "complete": state.complete}
         digest = hashlib.sha256(json.dumps(_json_safe(snapshot), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-        previous = session.scalar(select(CompetitionRevision).where(
+        previous_hash = session.scalar(select(CompetitionRevision.content_hash).where(
             CompetitionRevision.notice_id == notice.id
         ).order_by(CompetitionRevision.id.desc()).limit(1))
-        if previous is None or previous.content_hash != digest:
+        if previous_hash != digest:
             session.add(CompetitionRevision(notice_id=notice.id, content_hash=digest, payload=_json_safe(snapshot), seen_at=observed_at))
         notice.competitions = [UnitCompetition(**{**row, "observed_at": observed_at}) for row in rows]
         state.unit_types = list(dict.fromkeys(unit_types or []))
@@ -617,12 +671,13 @@ def notice_public(
     # altering source rows or their revision history. Import here keeps the
     # document package outside repository initialization.
     from app.extract.official_rules import PARSER_VERSION, parser_version_usable
-    from app.extract.reviewed_sources import reviewed_source_for_document
 
     scope_fields = ("supply_type", "supply_types", "unit_type", "unit_types", "purpose", "restriction", "scope")
 
     def scoped(rule: dict[str, Any], inherited: dict[str, Any]) -> dict[str, Any]:
         result = {**inherited, **{key: rule[key] for key in scope_fields if key in rule}}
+        result["selection_only"] = bool(inherited.get("selection_only") or rule.get("effect") in {"priority", "procedure", "instruction"}
+                                        or result.get("purpose") == "selection")
         if result.get("purpose") in {None, "eligibility", "admission"}:
             result.pop("purpose", None)
         return result
@@ -651,6 +706,8 @@ def notice_public(
     admission_reviews: dict[str, list[dict[str, Any]]] = {}
     complete_scopes: dict[str, list[dict[str, Any]]] = {}
     full_admission_reviews: set[str] = set()
+    source_waivers: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    superseded_conditions: dict[str, list[tuple[str, dict[str, Any], dict[str, Any]]]] = {}
     current_diagnostics: dict[str, tuple[float, dict[str, Any]]] = {}
 
     def collect_review(rule: dict[str, Any], notice: Notice, inherited: dict[str, Any]) -> None:
@@ -664,6 +721,8 @@ def notice_public(
                 and rule.get("parser_version") == PARSER_VERSION and digest and digest == notice.document_hash
                 and substantive_review(rule)):
             replacements.setdefault(digest, set()).add(review_key(rule, scope))
+            superseded_conditions.setdefault(digest, []).extend(
+                (kind, scope, rule) for kind in source_bound_superseded_kinds(rule, digest=digest, parser_version=PARSER_VERSION))
             if not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}:
                 admission_reviews.setdefault(digest, []).append(scope)
         for key in ("conditions", "exceptions"):
@@ -675,6 +734,8 @@ def notice_public(
         for rule in notice.rules or []:
             collect_review(rule, notice, {})
             digest = rule.get("document_hash")
+            if digest and digest == notice.document_hash:
+                source_waivers.setdefault(digest, []).extend(source_bound_waivers(rule, digest=digest, parser_version=PARSER_VERSION))
             if (rule.get("kind") == "document_diagnostics" and rule.get("source") == "official_document_parser"
                     and rule.get("verification") == "official" and rule.get("parser_version") == PARSER_VERSION
                     and digest and digest == notice.document_hash):
@@ -691,22 +752,12 @@ def notice_public(
                     or rule.get("status") in {"unreadable", "unsupported", "error"}
                     or rule.get("preserved_review_parser_version") or not rule.get("scopes")):
                 continue
-            source = reviewed_source_for_document(str(rule.get("evidence_url") or ""), digest)
-            reviewed_pages = set((source or {}).get("admission_reviewed_pages") or [])
-            if (digest in admission_reviews and source and source.get("admission_review_version") and reviewed_pages
-                    and any(review.get("review_version") == source["admission_review_version"]
-                            and reviewed_pages <= set(review.get("reviewed_pages") or [])
-                            for review in [rule, *rule["scopes"]] if isinstance(review, dict))):
-                # This exact whole-source review replaces generic admission
-                # interpretations even when individual exception branches
-                # explicitly remain unsupported in its fresh coverage report.
+            if digest in admission_reviews and generic_admission_coverage_complete(rule):
                 full_admission_reviews.add(digest)
             # A real partial review renews its coverage report, but leaves
             # unmatched previously reviewed conditions available for these bytes.
             replacements[digest].add(review_key(rule, scoped(rule, {})))
-            scopes = [scope for scope in rule["scopes"] if isinstance(scope, dict) and scope.get("complete") is True
-                      and all(not topic.get("required", True) or topic.get("status") in {"verified", "not_applicable"}
-                              for topic in scope.get("topics", []) if isinstance(topic, dict))
+            scopes = [scope for scope in rule["scopes"] if coverage_scope_complete(scope)
                       and any(all(not values(scope, single, plural) or not values(condition, single, plural) or
                                   bool(set(values(scope, single, plural)) & set(values(condition, single, plural)))
                                   for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
@@ -740,6 +791,25 @@ def notice_public(
             # older duplicate's failure; it is never admission review proof.
             return False
         scope = scoped(rule, inherited or {})
+        if (rule.get("source") == "official_document_parser" and not is_metadata(rule)
+                and rule.get("effect") not in {"priority", "procedure", "instruction"}
+                and not scope.get("selection_only")
+                and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
+                and any(rule.get("kind") == kind
+                        and all(not values(waiver_scope, single, plural) or bool(values(scope, single, plural))
+                                and set(values(scope, single, plural)) <= set(values(waiver_scope, single, plural))
+                                for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
+                        for kind, waiver_scope in source_waivers.get(rule.get("document_hash"), []))):
+            return False
+        if (rule.get("source") == "official_document_parser" and not is_metadata(rule)
+                and not scope.get("selection_only")
+                and any(rule.get("kind") == kind and rule != replacement
+                        and all(scope.get(field) == reviewed.get(field) for field in ("purpose", "restriction"))
+                        and all(not values(reviewed, single, plural) or bool(values(scope, single, plural))
+                                and set(values(scope, single, plural)) <= set(values(reviewed, single, plural))
+                                for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
+                        for kind, reviewed, replacement in superseded_conditions.get(rule.get("document_hash"), []))):
+            return False
         if rule.get("source") == "official_document_parser" and rule.get("parser_version") != PARSER_VERSION:
             digest = rule.get("document_hash")
             if (review_key(rule, scope) in replacements.get(digest, set()) or
@@ -866,6 +936,7 @@ def notice_public(
         "updated_at": max((item.updated_at for item in related if item.updated_at), default=None),
         "version": canonical.version,
     }
+    data["hogangnono_url"] = public_detail_link(data, rules)
     if detail:
         data["revisions"] = [RevisionPublic.model_validate(revision, from_attributes=True) for revision in canonical.revisions]
         result = NoticeDetail(**data)

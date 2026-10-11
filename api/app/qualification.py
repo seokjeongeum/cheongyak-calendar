@@ -63,6 +63,106 @@ def is_metadata(rule: dict[str, Any]) -> bool:
     return rule.get("effect") == "metadata" or rule.get("kind") in METADATA_KINDS
 
 
+def coverage_scope_complete(scope: Any) -> bool:
+    """Validate completion flags without ignoring malformed source metadata."""
+    if not isinstance(scope, dict) or scope.get("complete") is not True:
+        return False
+    for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")):
+        if scope.get(single) is not None and not isinstance(scope[single], str):
+            return False
+        if scope.get(plural) is not None and (not isinstance(scope[plural], list) or
+                                            any(not isinstance(value, str) or not value for value in scope[plural])):
+            return False
+    topics = scope.get("topics", [])
+    if not isinstance(topics, list) or any(not isinstance(topic, dict) for topic in topics):
+        return False
+    if any(type(topic.get("required", True)) is not bool or
+           topic.get("required", True) and topic.get("status") not in {"verified", "not_applicable"}
+           for topic in topics):
+        return False
+    missing = scope.get("missing_topics", [])
+    if not isinstance(missing, list) or missing:
+        return False
+    version = scope.get("review_version")
+    if version is not None and not isinstance(version, str):
+        return False
+    if isinstance(version, str) and version.startswith("generic-admission-"):
+        pages = scope.get("reviewed_pages")
+        count = scope.get("verified_rule_count")
+        return bool(scope.get("completion_basis") == "document_structure_reviewed_standard_branch"
+                    and isinstance(pages, list) and pages
+                    and all(type(page) is int and page > 0 for page in pages)
+                    and type(count) is int and count > 0
+                    and "missing_topics" in scope)
+    return True
+
+
+def generic_admission_coverage_complete(rule: dict[str, Any]) -> bool:
+    """Only a complete source review of every offered branch replaces all facts."""
+    scopes, offered = rule.get("scopes"), rule.get("offered_supply_types")
+    if (rule.get("kind") != "condition_coverage" or rule.get("status") != "complete"
+            or rule.get("source") != "official_document_parser" or rule.get("verification") != "official"
+            or not isinstance(rule.get("document_hash"), str) or not rule["document_hash"]
+            or not isinstance(rule.get("evidence_url"), str) or not rule["evidence_url"].strip()
+            or not isinstance(scopes, list) or not scopes
+            or not isinstance(offered, list) or not offered
+            or any(not isinstance(supply, str) or not supply for supply in offered)):
+        return False
+    if not all(coverage_scope_complete(scope)
+               and isinstance(scope.get("review_version"), str)
+               and scope["review_version"].startswith("generic-admission-")
+               and isinstance(scope.get("supply_type"), str)
+               and not scope.get("unit_type") and not scope.get("unit_types")
+               for scope in scopes):
+        return False
+    return set(offered) == {scope["supply_type"] for scope in scopes}
+
+
+def source_bound_waivers(rule: dict[str, Any], *, digest: str, parser_version: str) -> list[tuple[str, dict[str, Any]]]:
+    """Explicit source exemptions can replace one fact in an otherwise partial review."""
+    if (rule.get("kind") != "condition_coverage" or rule.get("source") != "official_document_parser"
+            or rule.get("verification") != "official" or rule.get("document_hash") != digest
+            or rule.get("parser_version") != parser_version
+            or rule.get("status") in {"unreadable", "unsupported", "error"}
+            or not isinstance(rule.get("evidence_url"), str) or not rule["evidence_url"].strip()
+            or not isinstance(rule.get("scopes"), list)):
+        return []
+    waivers = []
+    for scope in rule["scopes"]:
+        if (not isinstance(scope, dict) or not isinstance(scope.get("review_version"), str)
+                or not scope["review_version"].startswith("generic-admission-")
+                or not isinstance(scope.get("supply_type"), str) or not scope["supply_type"]
+                or scope.get("completion_basis") != "document_structure_reviewed_standard_branch"
+                or not isinstance(scope.get("reviewed_pages"), list) or not scope["reviewed_pages"]
+                or not all(type(page) is int and page > 0 for page in scope["reviewed_pages"])
+                or not isinstance(scope.get("topics"), list)):
+            continue
+        for topic in scope["topics"]:
+            if (not isinstance(topic, dict) or topic.get("status") != "not_applicable"
+                    or topic.get("required") is not False
+                    or not isinstance(topic.get("waived_rule_kind"), str) or not topic["waived_rule_kind"]
+                    or type(topic.get("evidence_page")) is not int or topic["evidence_page"] not in scope["reviewed_pages"]
+                    or not isinstance(topic.get("evidence_text"), str) or not topic["evidence_text"].strip()):
+                continue
+            waivers.append((topic["waived_rule_kind"], {**scope, **topic}))
+    return waivers
+
+
+def source_bound_superseded_kinds(rule: dict[str, Any], *, digest: str, parser_version: str) -> list[str]:
+    """A source-reviewed model can explicitly replace an older condition kind."""
+    kinds = rule.get("supersedes_rule_kinds")
+    if (rule.get("source") != "official_document_parser" or rule.get("verification") != "official"
+            or rule.get("document_hash") != digest or rule.get("parser_version") != parser_version
+            or is_metadata(rule) or rule.get("kind") == "unparsed"
+            or rule.get("status") in {"partial", "unreadable", "unsupported", "error"}
+            or not isinstance(kinds, list) or not kinds or any(not isinstance(kind, str) or not kind for kind in kinds)
+            or type(rule.get("evidence_page")) is not int or rule["evidence_page"] <= 0
+            or not isinstance(rule.get("evidence_url"), str) or not rule["evidence_url"].strip()
+            or not isinstance(rule.get("evidence_text"), str) or not rule["evidence_text"].strip()):
+        return []
+    return kinds
+
+
 def requirements_complete(rules: list[dict[str, Any]], declared: bool) -> bool:
     """Classification alone and unverified nested conditions cannot certify a notice."""
     requirements = [rule for rule in rules if not is_metadata(rule)]
@@ -82,11 +182,9 @@ def requirements_complete(rules: list[dict[str, Any]], declared: bool) -> bool:
 
     coverage = [rule for rule in rules if rule.get("kind") == "condition_coverage" and rule.get("verification") == "official"]
     if coverage:
-        scopes = [scope for item in coverage for scope in item.get("scopes", [])]
-        declared = bool(scopes and all(scope.get("complete") is True and all(
-            not topic.get("required", True) or topic.get("status") in {"verified", "not_applicable"}
-            for topic in scope.get("topics", [])
-        ) for scope in scopes))
+        declared = all(isinstance(item.get("scopes"), list) and item["scopes"]
+                       and all(coverage_scope_complete(scope) for scope in item["scopes"])
+                       for item in coverage)
     return bool(declared and requirements and all(verified(rule) for rule in requirements))
 
 

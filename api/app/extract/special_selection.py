@@ -8,11 +8,11 @@ from __future__ import annotations
 import re
 
 from .supply_inventory import canonical_unit
-from .application_regions import normalize_region_text
+from .application_regions import normalize_region_text, _region_names, region_catalog
 
 
 def special_selection_rules(sections, *, inventory, rules, make):
-    from .official_rules import PROVINCES
+    PROVINCES = {r["name"]: r["code"] for r in region_catalog()["provinces"]}
 
     result = []
     base_regions = next((r for r in rules if r.get("kind") == "applicant_regions"
@@ -77,70 +77,42 @@ def special_selection_rules(sections, *, inventory, rules, make):
                     unit_types=units, allocation_method="region_priority", local_share_percent=None,
                     local_region=local_region, **order_fields))
                 break
-            if supply != "다자녀가구 특별공급":
-                continue
             quota = re.search(r"[①②③④⑤]\s*지역\s*[:：]\s*해당시\s*[·ㆍ.]?\s*도\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)\s*(?:→|⇒|->)\s*기타지역\s*거주자\s*(\d{1,3})\s*%\s*\(([^)]*)\)", text)
             if not quota or int(quota[1]) + int(quota[3]) != 100 or max(int(quota[1]), int(quota[3])) > 100:
                 continue
-            first_names = [name for name in PROVINCES if name in quota[2]]
-            second_names = [name for name in PROVINCES if name in quota[4]]
-            # Seoul/Incheon use their own explicitly named province bucket.
-            # Do not substitute the different Gyeonggi city/province table.
-            capital = {"서울특별시", "인천광역시", "경기도"}
-            metro_quota = (len(first_names) == 1 and first_names[0] in {"서울특별시", "인천광역시"}
-                           and set(second_names) == capital - set(first_names)
-                           and re.search(re.escape(first_names[0]) + r"\s*거주자", quota[2]))
-            if metro_quota:
-                local_name = first_names[0]
-                advance = re.search(re.escape(local_name) + r"\s*거주자가\s*" + re.escape(quota[1]) + r"%\s*우선공급에서\s*낙첨될\s*경우[^■]{0,650}?다시\s*경쟁[^■]{0,200}?우선공급\s*요건은\s*적용되지\s*않습니다", text)
-                fields = {"regional_shares": [
-                    {"residence_area": "local", "percent": int(quota[1]), "label": quota[2], "region_codes": [PROVINCES[local_name]]},
-                    {"residence_area": "other", "percent": int(quota[3]), "label": quota[4], "region_codes": [PROVINCES[name] for name in second_names]},
-                ], "local_region": {"region_code": PROVINCES[local_name], "region_name": local_name}, **order_fields}
-                if advance:
-                    fields.update(unsuccessful_applicants_advance=True, local_priority_in_remaining_quota=False,
-                                  remaining_quota_evidence_text=advance.group(0), remaining_quota_evidence_page=page)
-                result.append(make("regional_allocation", page, quota.group(0) + (" " + advance.group(0) if advance else ""),
-                    supply_type=supply, unit_types=units, allocation_method="regional_quota", local_share_percent=None, **fields))
-                break
-            # The supported 수도권 table explicitly includes all of 경기도,
-            # not merely a municipality whose label begins with 경기도.
-            if first_names != ["경기도"] or set(second_names) != {"서울특별시", "인천광역시"} or not re.search(r"(?:및\s*)경기도\s*거주자", quota[2]):
+            cutoff = str((base_regions or {}).get("criterion_date") or next((r.get("criterion_date") for r in rules if r.get("criterion_date")), ""))
+            first_regions = _region_names(quota[2], cutoff, PROVINCES)
+            second_regions = _region_names(quota[4], cutoff, PROVINCES)
+            if not first_regions or not second_regions or {r["region_code"] for r in first_regions} & {r["region_code"] for r in second_regions}:
                 continue
             first_priority = re.search(r"(?:경쟁이\s*있는\s*경우\s*|경쟁시\s*해당\s*주택건설지역\s*)([^()\[\]]{1,35}?)\s*거주자\s*우선", text)
-            advance = re.search(r"경기도\s*거주자가\s*50%\s*우선공급에서\s*낙첨될\s*경우[^■]{0,650}?다시\s*경쟁[^■]{0,200}?우선공급\s*요건은\s*적용되지\s*않습니다", text)
+            advance = re.search(r"(?:" + "|".join(re.escape(r["region_name"]) for r in first_regions) + r")\s*거주자가?\s*" + re.escape(quota[1]) + r"%\s*우선공급에서\s*낙첨될\s*경우[^■]{0,750}?다시\s*경쟁[^■]{0,230}?우선공급\s*요건은\s*적용되지\s*않습니다", text)
+            local = (base_regions or {}).get("local_priority")
+            first_codes = [r["region_code"] for r in first_regions]
+            local_code = local.get("region_code") if isinstance(local, dict) else None
+            first_area = "local" if first_codes == [local_code] else "local_and_other_gyeonggi" if first_codes == ["41"] and local_code and local_code.startswith("41") else "province"
             fields = {
                 "regional_shares": [
-                    {"residence_area": "local_and_other_gyeonggi", "percent": int(quota[1]),
-                     "label": re.sub(r"\s*거주자\s*$", "", quota[2]).strip(), "region_codes": ["41"]},
-                    {"residence_area": "other", "percent": int(quota[3]),
-                     "label": re.sub(r"\s*거주자\s*$", "", quota[4]).strip(), "region_codes": ["11", "28"]},
-                ],
-                **order_fields,
+                    {"residence_area": first_area, "percent": int(quota[1]), "label": quota[2], "region_codes": first_codes},
+                    {"residence_area": "other", "percent": int(quota[3]), "label": quota[4], "region_codes": [r["region_code"] for r in second_regions]},
+                ], **order_fields,
             }
             if first_priority:
                 local_name = first_priority[1].strip()
-                local = (base_regions or {}).get("local_priority")
                 fields.update(local_priority_within_first_quota=True,
-                              local_region=local if isinstance(local, dict) and local_name in str(local.get("region_name", "")) else {"region_name": local_name},
-                              first_quota_priority_evidence_text=first_priority.group(0),
-                              first_quota_priority_evidence_page=page)
+                    local_region=local if isinstance(local, dict) and local_name in str(local.get("region_name", "")) else {"region_name": local_name},
+                    first_quota_priority_evidence_text=first_priority.group(0), first_quota_priority_evidence_page=page)
+            elif first_area == "local" and local:
+                fields["local_region"] = local
             if advance:
                 fields.update(unsuccessful_applicants_advance=True, local_priority_in_remaining_quota=False,
-                              remaining_quota_evidence_text=advance.group(0), remaining_quota_evidence_page=page)
-            quote = quota.group(0) + (" " + advance.group(0) if advance else "")
-            result.append(make("regional_allocation", page, quote, supply_type=supply, unit_types=units,
-                allocation_method="regional_quota", local_share_percent=None, **fields))
-            # Preserve independently verified admission facts while adding the
-            # province bucket that this particular special quota requires.
-            if base_regions and first_priority and isinstance(base_regions.get("local_priority"), dict):
-                local = base_regions["local_priority"]
-                if first_priority[1].strip() in str(local.get("region_name", "")):
-                    region_fields = {key: base_regions[key] for key in (
-                        "regions", "scope_complete", "local_priority", "priority_applicable", "exceptions")
-                        if key in base_regions}
-                    result.append(make("applicant_regions", page, quota.group(0), supply_type=supply,
-                        unit_types=units, other_gyeonggi={"region_code": "41", "region_name": "경기도"},
-                        **region_fields))
+                    remaining_quota_evidence_text=advance.group(0), remaining_quota_evidence_page=page)
+            result.append(make("regional_allocation", page, quota.group(0) + (" " + advance.group(0) if advance else ""),
+                supply_type=supply, unit_types=units, allocation_method="regional_quota", local_share_percent=None, **fields))
+            if base_regions and first_priority and isinstance(local, dict) and first_priority[1].strip() in str(local.get("region_name", "")):
+                region_fields = {key: base_regions[key] for key in ("regions", "scope_complete", "local_priority", "priority_applicable", "exceptions") if key in base_regions}
+                if first_codes == ["41"]:
+                    region_fields["other_gyeonggi"] = first_regions[0]
+                result.append(make("applicant_regions", page, quota.group(0), supply_type=supply, unit_types=units, **region_fields))
             break
     return result

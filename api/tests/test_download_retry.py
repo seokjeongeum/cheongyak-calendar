@@ -95,18 +95,15 @@ async def test_enrichment_exhausted_fallback_exposes_actual_host_statuses_withou
         requested.append(str(request.url))
         return httpx.Response(500 if str(request.url) == STATIC else 503 if str(request.url) == WWW else 404)
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        result = await pipeline.enrich_notice({"official_url": page, "announcement_date": "2026-10-02"}, client, allow_gemini=False)
-    assert not result.get("document_hash")
+        result = await pipeline.enrich_notice({"official_url": page, "announcement_date": "2026-10-02", "document_hash": "retained", "rules": [{"kind": "age_min", "source": "official_document_parser", "verification": "official", "document_hash": "retained", "evidence_url": STATIC}]}, client, allow_gemini=False)
+    assert result.get("document_hash") == "retained"
     rule = next(rule for rule in result["rules"] if rule["kind"] == "document_diagnostics")
     assert rule["status"] == "unreadable"
     entries = rule["diagnostics"]
     assert next(entry for entry in entries if entry["stage"] == "discovery" and entry["status"] == "error")["evidence_url"] == requested[0]
     failures = [entry for entry in entries if entry["stage"] == "download" and entry["status"] == "error"]
-    corrected_static = STATIC.replace("atchmnflSn=1", "atchmnflSn=2")
-    corrected_www = corrected_static.replace("static.applyhome.co.kr", "www.applyhome.co.kr")
-    assert requested[1:3] == [corrected_static, corrected_www]
+    assert requested[1:] == [*([STATIC] * pipeline.MAX_DOWNLOAD_ATTEMPTS), *([WWW] * pipeline.MAX_DOWNLOAD_ATTEMPTS)]
     assert Counter((entry["evidence_url"], entry["http_status"]) for entry in failures) == {
-        (corrected_static, 404): 1, (corrected_www, 404): 1,
         (STATIC, 500): pipeline.MAX_DOWNLOAD_ATTEMPTS,
         (WWW, 503): pipeline.MAX_DOWNLOAD_ATTEMPTS,
     }

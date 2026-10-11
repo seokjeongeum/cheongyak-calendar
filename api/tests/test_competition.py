@@ -641,3 +641,40 @@ async def test_ended_unpublished_results_are_retried_and_late_publication_is_sav
     with factory() as session:
         assert session.scalar(select(Notice)).competition_state.status == "ok"
         assert session.scalar(select(func.count()).select_from(CompetitionRevision)) == 1
+
+
+@pytest.mark.asyncio
+async def test_competition_refresh_and_lock_do_not_download_large_condition_json(factory, monkeypatch):
+    from sqlalchemy import event
+    from app.ingest import winning_scores
+
+    monkeypatch.setattr(competition, "SessionLocal", factory)
+    monkeypatch.setattr(competition, "init_db", lambda: None)
+    monkeypatch.setenv("CHEONGYAK_COMPETITION_API_KEY", "")
+    monkeypatch.setenv("DATA_GO_KR_API_KEY", "")
+    # Score metadata has a separate PostgreSQL server-side merge regression.
+    monkeypatch.setattr(winning_scores, "record_winning_scores", lambda *args, **kwargs: None)
+    with factory() as session:
+        raw = payload(first="2026-10-01")
+        raw["rules"] = [{"kind": "document_diagnostics", "effect": "metadata", "evidence_text": "공개 원문 " * 10000}]
+        saved_notice = upsert_notice(session, raw)
+        parsed = competition.parse_popup(fixture(), popup(), expected_unit_types=LOCAL_UNITS, observed_at=NOW)
+        record_competition_result(session, saved_notice, "ok", rows=parsed.rows,
+                                  unit_types=parsed.unit_types, complete=True, observed_at=NOW)
+        session.commit()
+        engine = session.get_bind()
+    statements = []
+
+    def captured(connection, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().lower().startswith("select"):
+            statements.append(statement.lower())
+
+    event.listen(engine, "before_cursor_execute", captured)
+    try:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=fixture()))) as client:
+            result = await competition.run_once(today=date(2026, 10, 3), client=client)
+    finally:
+        event.remove(engine, "before_cursor_execute", captured)
+    assert result["count"] == 1 and result["rows"] == 16
+    import re
+    assert statements and all(not re.search(r"notices\.(?:rules|raw_payload)\b|(?:notice|competition)_revisions\.payload\b", statement) for statement in statements)

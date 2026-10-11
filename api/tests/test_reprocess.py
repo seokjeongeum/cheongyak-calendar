@@ -29,6 +29,15 @@ def store(tmp_path, monkeypatch):
     engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def isolate_external_detail_lookup(monkeypatch):
+    # This module tests official-feed/document behavior. Public complex-link
+    # discovery has its own mocked provider tests and must not use live HTTP.
+    async def unchanged(payload, **kwargs):
+        return payload
+    monkeypatch.setattr(worker, "enrich_detail_link", unchanged)
+
+
 def feed(**changes):
     return {"source": "cheongyak_home", "external_id": "public-1", "title": "공식 모집공고",
             "category": "private_sale", "announcement_date": "2026-10-02",
@@ -236,6 +245,9 @@ async def test_same_hash_jamsil_reprocess_repairs_prices_retains_history_and_is_
         assert notice.revisions[0].payload["prices"][0]["price_kind"] == "deposit"
         assert len(notice.revisions) == 2
     assert (await reprocess.reprocess(ids=[notice_id]))["updated"] == 0
+    with store() as session:
+        notice = lock_notice(session, "cheongyak_home", "public-1")
+        assert notice.version == 2 and len(notice.revisions) == 2
 
 
 @pytest.mark.asyncio

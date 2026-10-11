@@ -4,7 +4,7 @@
 
 ## 무료 웹 배포
 
-[Render 무료 웹 배포 연결](https://render.com/deploy?repo=https://github.com/seokjeongeum/cheongyak-calendar/tree/work)에서 웹·API를 배포하고 [Neon Free](https://console.neon.tech/)의 PostgreSQL을 연결합니다. 배포 설정은 `Free` 웹 서비스 한 개만 생성합니다. 사용자 PC의 Git·Docker 업데이트는 필요하지 않습니다. 계정 연결과 수집 자동화 활성화 방법은 [무료 웹 배포 안내](docs/free-hosting.md)에 있습니다.
+[Render 무료 웹 배포 연결](https://render.com/deploy?repo=https://github.com/seokjeongeum/cheongyak-calendar/tree/work)에서 웹·API를 배포하고 [Supabase Free](https://supabase.com/dashboard)의 PostgreSQL Session pooler를 연결합니다. 배포 설정은 `Free` 웹 서비스 한 개만 생성합니다. 사용자 PC의 Git·Docker 업데이트는 필요하지 않습니다. 계정 연결과 수집 자동화 활성화 방법은 [무료 웹 배포 안내](docs/free-hosting.md)에 있습니다. 기존 DB의 원본·가격·경쟁률·설정을 보존하는 [무료 DB 이전 절차](docs/free-database-copy-20261010.md)도 제공합니다.
 
 **데이터 출처 → API 연결 설정**에서 서비스별 발급 링크를 열고 키를 저장합니다. API 키는 서버의 PostgreSQL에 보관합니다. 설정 변경에는 Render가 생성한 관리자 인증키가 필요합니다. 개인 조건은 웹 주소별 브라우저 저장소에만 남으므로 기존 localhost의 입력과 웹사이트의 입력은 별개입니다.
 

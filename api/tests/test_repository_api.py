@@ -579,6 +579,34 @@ def test_complete_general_review_does_not_retire_unreviewed_special_scope(db, cl
     assert global_old not in rules and special_old in rules
 
 
+def test_partial_source_exemption_retires_waived_duplicate_fact_and_preserves_other_paths(db, client):
+    waived = document_rule("household_head", value=True, supply_type="신혼부부 특별공급")
+    unanswered = document_rule("homeless", value=True, supply_type="신혼부부 특별공급")
+    parent_path = document_rule("household_head", value=True, supply_type="노부모부양 특별공급")
+    global_fact = document_rule("household_head", value=True)
+    selection = document_rule("all", effect="priority", supply_type="신혼부부 특별공급",
+                              conditions=[document_rule("household_head", value=True)])
+    scope = {"supply_type": "신혼부부 특별공급", "complete": False, "verified_rule_count": 1,
+             "review_version": "generic-admission-future-document", "reviewed_pages": [2, 3],
+             "completion_basis": "document_structure_reviewed_standard_branch", "missing_topics": ["미확보 다른 조건"],
+             "topics": [{"topic": "세대주 면제", "status": "not_applicable", "required": False,
+                         "waived_rule_kind": "household_head", "evidence_page": 2, "evidence_text": "신혼부부: 세대주 요건 X"}]}
+    coverage = document_rule("condition_coverage", version=PARSER_VERSION, effect="metadata", status="partial",
+                             evidence_url="https://official.example/new-document.pdf", scopes=[scope])
+    raw = example_notice(external_id="FUTURE-PARTIAL-EXEMPTION")
+    raw.update(document_hash="reviewed-file", rules=[classification(), coverage])
+    notice = upsert_notice(db, raw)
+    duplicate = upsert_notice(db, {**raw, "source": "myhome", "external_id": "PRIOR-EXEMPTION-DUPLICATE",
+                                  "rules": [classification(), waived, unanswered, parent_path, global_fact, selection]})
+    db.commit()
+    assert duplicate.duplicate_of_id == notice.id
+    public = client.get(f"/api/notices/{notice.id}").json()
+    assert waived not in public["rules"]
+    assert all(rule in public["rules"] for rule in (unanswered, parent_path, global_fact, selection, coverage))
+    assert public["rules_complete"] is False
+    assert waived in duplicate.rules
+
+
 def test_geography_coverage_flag_alone_is_not_proof_of_new_admission_review(db, client):
     admission = document_rule("homeless", value=True, supply_type="일반공급")
     region = document_rule("applicant_regions", version=PARSER_VERSION, effect="metadata", scope_complete=True, unrestricted=True)
@@ -696,7 +724,7 @@ async def test_actual_hangang_v8_to_current_pipeline_and_duplicate_projection_ro
 
 
 @pytest.mark.parametrize("missing_proof", ["review_version", "reviewed_pages"])
-def test_whole_source_admission_retirement_requires_registry_version_and_full_pages(db, client, missing_proof):
+def test_partial_whole_review_keeps_unmodelled_fact_and_retires_explicit_source_replacement(db, client, missing_proof):
     import copy
     import json
     from pathlib import Path
@@ -706,19 +734,21 @@ def test_whole_source_admission_retirement_requires_registry_version_and_full_pa
     source = next(row for row in json.loads((fixtures / "current-private-v5.json").read_text()) if row["external_id"] == "2026000468")
     prior = json.loads((fixtures / "hangang-prior-generic-v8.json").read_text())
     old_tax = next(rule for rule in prior["rules"] if rule["kind"] == "tax_years_min")
+    unmodelled = {**old_tax, "id": "prior-unmodelled-tax-clause", "kind": "additional_official_tax_treatment"}
     parsed = parse_official_rules(source["pages"], url=source["document_url"], digest=source["document_hash"], payload=source["payload"])
     rules = copy.deepcopy(parsed["rules"])
     coverage = next(rule for rule in rules if rule["kind"] == "condition_coverage")
-    coverage[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else list(range(1, 62))
+    coverage[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else [0]
     for scope in coverage["scopes"]:
-        scope[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else list(range(1, 62))
+        scope[missing_proof] = "unreviewed-version" if missing_proof == "review_version" else [0]
         if scope["supply_type"] == "생애최초 특별공급":
             scope["complete"] = False
     raw = {**source["payload"], "source": "cheongyak_home", "external_id": source["external_id"],
-           "provider": "한국부동산원", "document_hash": source["document_hash"], "rules": [*rules, old_tax]}
+           "provider": "한국부동산원", "document_hash": source["document_hash"], "rules": [*rules, old_tax, unmodelled]}
     notice = upsert_notice(db, raw)
     db.commit()
-    assert old_tax in client.get(f"/api/notices/{notice.id}").json()["rules"]
+    projected = client.get(f"/api/notices/{notice.id}").json()["rules"]
+    assert old_tax not in projected and unmodelled in projected
 
 
 @pytest.mark.parametrize("old_version", ["official-sections-2026-10-07-v9", PARSER_VERSION])

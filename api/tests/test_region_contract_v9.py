@@ -126,14 +126,16 @@ async def test_official_www_attachment_fallback_uses_actual_source_and_has_no_un
     source = CURRENT[3]
     original = source["document_url"].replace("www.applyhome.co.kr", "static.applyhome.co.kr")
     fake_pdf = b"%PDF-current-notice"
-    monkeypatch.setattr(pipeline, "document_pages", lambda *args: source["pages"])
     # Simulate provider bytes in the transport while using the separately
     # recorded hash-bound source review for the independent parser test above.
     real_parser = pipeline.parse_official_rules
     def parse(pages, **kwargs):
         assert kwargs["url"] == source["document_url"]
         return real_parser(pages, **{**kwargs, "digest": source["document_hash"]})
-    monkeypatch.setattr(pipeline, "parse_official_rules", parse)
+    async def interpret(operation, **kwargs):
+        return {'has_text': True, 'result': parse(source['pages'], url=kwargs['url'],
+                                                digest=kwargs['digest'], payload=kwargs['payload'])}
+    monkeypatch.setattr(pipeline, "_isolated_document_operation", interpret)
     requests = []
     def handler(request):
         requests.append(str(request.url))
@@ -167,12 +169,11 @@ def test_same_official_attachment_www_host_retains_hash_bound_review():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("ancillary_links", [False, True])
 async def test_hyangnam_corrected_project_fallback_after_provider_page_and_attachment_fail(monkeypatch, ancillary_links):
-    from app.extract.reviewed_sources import reviewed_document_urls
     source = HYANGNAM
-    candidates = reviewed_document_urls(source["payload"]["official_url"], announcement_date="2026-10-02")
-    assert candidates[-1] == source["document_url"]
-    assert not reviewed_document_urls(source["payload"]["official_url"], announcement_date="2026-09-01")
-    assert not reviewed_document_urls(source["payload"]["official_url"].replace("2026000463", "2026000999"), announcement_date="2026-10-02")
+    prior = {**source["payload"], "document_hash": source["document_hash"],
+             "rules": parsed(source)["rules"]}
+    assert source["document_url"] in pipeline._persisted_document_urls(prior)
+    assert not pipeline._persisted_document_urls({**prior, "document_hash": "changed-source"})
     calls = []
     async def extract(url, client, *, payload):
         calls.append(url)
@@ -184,7 +185,7 @@ async def test_hyangnam_corrected_project_fallback_after_provider_page_and_attac
     transport = httpx.MockTransport(lambda request: httpx.Response(200, text=''.join(
         f'<a href="/ancillary-{number}.pdf">첨부 PDF</a>' for number in range(3))) if ancillary_links else httpx.Response(404))
     async with httpx.AsyncClient(transport=transport) as http:
-        result = await pipeline.enrich_notice(source["payload"], http, allow_gemini=False)
+        result = await pipeline.enrich_notice(prior, http, known_document_hash=source["document_hash"], allow_gemini=False)
     assert calls == (["https://www.applyhome.co.kr/ancillary-0.pdf", "https://www.applyhome.co.kr/ancillary-1.pdf", source["document_url"]] if ancillary_links else [source["document_url"]])
     assert result["document_hash"] == source["document_hash"]
     scope = next(r for r in result["rules"] if r["kind"] == "applicant_regions" and not r.get("supply_type"))

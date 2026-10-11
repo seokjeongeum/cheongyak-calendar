@@ -18,6 +18,15 @@ from app.repository import upsert_notice
 from test_repository_api import example_notice
 
 
+@pytest.fixture(autouse=True)
+def isolate_external_detail_lookup(monkeypatch):
+    # This module tests official-feed/document behavior. Public complex-link
+    # discovery has its own mocked provider tests and must not use live HTTP.
+    async def unchanged(payload, **kwargs):
+        return payload
+    monkeypatch.setattr(worker, "enrich_detail_link", unchanged)
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status,version,parser_version,failure_stage,failure_status,expected_attempts", [
     ("unreadable", None, PARSER_VERSION, "discovery", None, 1),
@@ -27,7 +36,7 @@ from test_repository_api import example_notice
     ("complete", None, PARSER_VERSION, "discovery", None, 0),
     ("partial", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
     ("unsupported", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
-    ("complete", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 0),
+    ("complete", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
     ("partial", "older-download-pipeline", PARSER_VERSION, "discovery", "error", 1),
     ("complete", "older-download-pipeline", PARSER_VERSION, "discovery", "error", 1),
     ("partial", "older-download-pipeline", PARSER_VERSION, "discovery", "resolved", 0),

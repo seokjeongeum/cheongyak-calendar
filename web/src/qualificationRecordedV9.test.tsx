@@ -5,8 +5,8 @@ import { EligibilityDetails } from './EligibilityDetails'
 import { applicationEventAvailability, beginEvaluationRevision, eligibilityCombinations } from './eligibility'
 import { evaluateNotice } from './evaluation'
 import { setEvaluationToday } from './factTimeline'
-import { applicantRegionEligibility, evaluateQualification, regionDecision } from './qualification'
-import { EMPTY_PROFILE, type LocalProfile, type Notice } from './types'
+import { applicantRegionEligibility, evaluateQualification, evaluateRule, regionDecision } from './qualification'
+import { createOwnershipFact, EMPTY_PROFILE, type LocalProfile, type Notice } from './types'
 
 const notice = recorded.notice as unknown as Notice
 const today = '2026-10-07'
@@ -56,6 +56,36 @@ describe('recorded Gajeong full-source admission integration', () => {
     expect(evaluateQualification(notice, p).status).toBe('mismatch')
     const strict = { ...notice, rules: notice.rules.map((rule) => rule.kind === 'domestic_residence' ? { ...rule, overseas_residence_equivalence: undefined } : rule) }
     expect(regionDecision(strict, profile({ currentlyDomesticResident: false, overseasContinuousDays: '90' })).status).toBe('outside')
+  })
+  it('compares the documented general-supply ownership condition using the parent’s actual birthday', () => {
+    const withParent = (dateOfBirth: string) => profile({
+      householdMembers: [{ id: 'parent', relation: 'applicant_parent', register: 'applicant', dateOfBirth, ownsHome: true, previouslyOwnedHome: true }],
+      ownershipFacts: [{ ...createOwnershipFact('parent-home'), ownerMemberId: 'parent', ownerRelation: 'ascendant',
+        propertyKind: 'apartment', areaSqm: '84', propertyRegionCode: '41', acquiredDate: '2020-01-01',
+        acquisitionMethod: 'purchase', abandonedOrDestroyedOrNonResidential: false, oldLawUnauthorized: false }],
+    })
+    const sixty = evaluateQualification(notice, withParent('1966-09-23'), undefined, '일반공급')
+    expect(sixty.status).toBe('possible')
+    expect(sixty.reasons.find((reason) => reason.label === '무주택 세대구성원')).toMatchObject({ status: 'pass', criterionDate: '2026-09-23' })
+    expect(sixty.reasons.find((reason) => reason.label === '무주택 세대구성원')?.detail).toContain('60세')
+    const notYetSixty = evaluateQualification(notice, withParent('1966-09-24'), undefined, '일반공급')
+    expect(notYetSixty.status).toBe('mismatch')
+    expect(notYetSixty.reasons.find((reason) => reason.label === '무주택 세대구성원')?.status).toBe('fail')
+  })
+  it('uses the current official project identity for winner-contract ownership and its disposition', () => {
+    const condition = notice.rules.find((rule) => rule.kind === 'original_project_contract_ownership')!
+    const projectId = condition.project_id as string
+    expect(projectId).toBe('0000061183')
+    const winning = { id: 'win', personId: 'applicant', projectId, eventKind: 'winning' as const, eventDate: '2026-05-15' }
+    const contract = { id: 'contract', personId: 'applicant', projectId, eventKind: 'contract' as const, eventDate: '2026-06-01' }
+    const right = { ...createOwnershipFact('right'), ownerMemberId: 'applicant', ownerRelation: 'applicant' as const,
+      projectId, propertyKind: 'presale_right' as const, underlyingPropertyKind: 'apartment' as const,
+      acquiredDate: contract.eventDate, acquisitionMethod: 'purchase' as const, areaSqm: '74', propertyRegionCode: '28' }
+    const withWin = profile({ applicationHistoryPresence: true, applicationHistoryEvents: [winning], ineligibleRestrictionActive: true })
+    expect(evaluateRule(condition, withWin, notice).status).toBe('pass')
+    const withContract = { ...withWin, applicationHistoryEvents: [winning, contract], ownershipFacts: [right] }
+    expect(evaluateRule(condition, withContract, notice).status).toBe('fail')
+    expect(evaluateRule(condition, { ...withContract, ownershipFacts: [{ ...right, disposedDate: '2026-09-01' }] }, notice).status).toBe('pass')
   })
   it('applies the documented domestic equivalence only to its allowed supply scope', () => {
     const institution = '기관추천 특별공급'

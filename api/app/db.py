@@ -65,11 +65,22 @@ def init_db(target_engine: Engine | None = None) -> None:
         if selected.dialect.name == "postgresql":
             connection.execute(text("ALTER TABLE competition_state ADD COLUMN IF NOT EXISTS proof_invalidated BOOLEAN NOT NULL DEFAULT FALSE"))
             connection.execute(text("ALTER TABLE document_extraction_state ADD COLUMN IF NOT EXISTS audited_on DATE"))
+            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_hash VARCHAR(64)"))
+            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_version INTEGER"))
+            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_review_hash VARCHAR(64)"))
+            connection.execute(text("ALTER TABLE document_extraction_state ADD COLUMN IF NOT EXISTS document_checkpoint JSON"))
         elif "proof_invalidated" not in {c["name"] for c in inspect(connection).get_columns("competition_state")}:
             connection.execute(text("ALTER TABLE competition_state ADD COLUMN proof_invalidated BOOLEAN NOT NULL DEFAULT FALSE"))
         if selected.dialect.name == 'sqlite' and 'audited_on' not in {
                 column['name'] for column in inspect(connection).get_columns('document_extraction_state')}:
             connection.execute(text('ALTER TABLE document_extraction_state ADD COLUMN audited_on DATE'))
+        if selected.dialect.name == 'sqlite':
+            notice_columns = {column['name'] for column in inspect(connection).get_columns('notices')}
+            for name, sql_type in (('last_feed_hash', 'VARCHAR(64)'), ('last_feed_version', 'INTEGER'), ('last_feed_review_hash', 'VARCHAR(64)')):
+                if name not in notice_columns:
+                    connection.execute(text(f'ALTER TABLE notices ADD COLUMN {name} {sql_type}'))
+            if 'document_checkpoint' not in {column['name'] for column in inspect(connection).get_columns('document_extraction_state')}:
+                connection.execute(text('ALTER TABLE document_extraction_state ADD COLUMN document_checkpoint JSON'))
         # Legacy pending states created by a notice correction must not become
         # valid historical evidence merely because a later retry failed.
         connection.execute(text("UPDATE competition_state SET proof_invalidated = TRUE WHERE message = :message"), {"message": "공고 변경 후 경쟁률 재확인 대기"})

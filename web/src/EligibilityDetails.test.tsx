@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { EligibilityBrief, EligibilityDetails, ReasonList } from './EligibilityDetails'
 import { conditionCoverage, eligibilityCombinations, evaluateEligibility, evaluateRule, deriveRank, noticeEligibilitySummary } from './eligibility'
 import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeRule } from './types'
+import { evaluateNotice } from './evaluation'
 const unchangedFacts = { bank_private: { mode: 'never_changed' as const, date: '' }, bank_national: { mode: 'never_changed' as const, date: '' }, household_head: { mode: 'never_changed' as const, date: '' }, marital: { mode: 'never_changed' as const, date: '' }, children: { mode: 'never_changed' as const, date: '' }, military: { mode: 'never_changed' as const, date: '' } }
 
 const evidence = 'https://www.applyhome.co.kr/public/notice.pdf'
@@ -229,6 +230,31 @@ describe('grouped eligibility evidence renderer', () => {
     expect(failed[0]).toContain('qualification-unavailable')
     expect(failed[0]).toContain('0명')
     expect(html).not.toContain('신혼부부 특별공급')
+  })
+
+  it('labels a deduplicated special-only missing fact with its actual supplies while general supply remains possible', () => {
+    const specialTypes = ['신혼부부 특별공급', '생애최초 특별공급']
+    const item = notice([
+      rule('age_min', 19, { supply_type: '일반공급' }),
+      ...specialTypes.map((supply_type) => rule('household_head', true, { supply_type })),
+    ])
+    const facts = profile({ dateOfBirth: '1990-01-01', isHouseholdHead: null, specialWinning: false })
+    const snapshot = evaluateNotice(item, facts, '2026-10-03', Date.parse('2026-10-03T03:00:00Z'))
+    expect(snapshot.supplies.find((supply) => supply.supplyType === '일반공급')?.result.status).toBe('possible')
+    for (const prepared of [undefined, snapshot]) {
+      const html = renderToStaticMarkup(<EligibilityBrief notice={item} profile={facts} result={snapshot.summary} snapshot={prepared} onProfile={() => {}} />)
+      expect(html).toContain('묶어서 비교하는 신청 조건')
+      expect(html).not.toContain('모집 유형에 공통으로 적용되는 조건')
+      expect(html).toContain(`적용: ${specialTypes.join(' / ')}`)
+      expect(html.match(/내 입력 부족 · 세대주/g)).toHaveLength(1)
+      expect(html.match(/세대주 입력하기/g)).toHaveLength(1)
+      const shared = html.split('class="qualification-brief-common"')[1].split('class="qualification-supply-overview"')[0]
+      expect(shared).not.toContain('일반공급')
+      const general = html.match(/<section class="qualification-supply-brief qualification-possible[^\"]*">[\s\S]*?<\/section>/)?.[0]
+      expect(general).toContain('일반공급')
+      expect(general).toContain('조건상 가능성 있음')
+      expect(general).not.toContain('세대주 입력하기')
+    }
   })
 
   it('keeps the notice possible when another offered general unit remains possible after closure', () => {

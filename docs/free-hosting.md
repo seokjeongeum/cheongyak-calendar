@@ -1,16 +1,16 @@
 # PC 업데이트 없이 무료 웹으로 사용
 
-Render Free 웹 서비스에 화면·API를 배포하고, Neon Free PostgreSQL에 공고·가격·경쟁률·API 연결 설정을 저장합니다. 수집은 GitHub Actions의 표준 `ubuntu-latest` 공개 저장소 실행기에서 별도로 실행합니다. PC에서 `git pull`, Docker 재빌드 또는 `.env` 편집을 할 필요가 없습니다.
+Render Free 웹 서비스에 화면·API를 배포하고, Supabase Free PostgreSQL에 공고·가격·경쟁률·API 연결 설정을 저장합니다. 수집은 GitHub Actions의 표준 `ubuntu-latest` 공개 저장소 실행기에서 별도로 실행합니다. PC에서 `git pull`, Docker 재빌드 또는 `.env` 편집을 할 필요가 없습니다.
 
 이 문서는 준비된 배포 구성을 설명합니다. 계정 연결·데이터베이스 설정·워크플로 활성화를 완료하기 전에는 공개 앱과 자동 수집이 실행된 상태로 간주하지 않습니다. 무료 서비스의 제한 때문에 정확한 3시간 실행과 항상 즉시 열리는 화면을 보장하지 않습니다.
 
 ## 1. 무료 PostgreSQL 연결
 
-[Neon Console](https://console.neon.tech/)에서 **Free** 프로젝트를 만들고 **Connect**의 PostgreSQL 연결 문자열을 복사합니다. TLS 설정(`sslmode=require`)을 유지합니다. Neon Free는 카드 등록 없이 사용할 수 있고 무료 한도 초과분을 청구하지 않습니다. 한도에 도달하면 연결이나 쓰기가 제한될 수 있습니다.
+[Supabase 대시보드](https://supabase.com/dashboard)에서 **Free** 프로젝트를 만들고 **Connect → Session pooler → URI**의 PostgreSQL 연결 문자열을 복사합니다. 포트 `5432`를 사용하고 `[YOUR-PASSWORD]`는 실제 DB 비밀번호로 바꿉니다. 비밀번호의 URI 특수문자는 URL 인코딩합니다. 직접 연결 주소는 IPv6가 필요할 수 있으므로 Render·GitHub의 IPv4 환경에서는 Session pooler를 사용합니다. TLS 설정(`sslmode=require`)을 유지합니다. 기존 [Neon Free](https://console.neon.tech/) 연결도 지원합니다.
 
 연결 문자열에는 데이터베이스 비밀번호가 있습니다. 아래 Render 환경 설정과 GitHub Actions 비밀값 입력 화면에만 붙여 넣습니다. 저장소 파일, 이슈 또는 채팅에 올리지 않습니다. API 키 원문도 이 데이터베이스에 저장되므로 프로젝트 접근 권한과 백업은 소유자가 관리합니다.
 
-기존 localhost PostgreSQL의 공고·설정·관리자 인증은 새 프로젝트로 자동 이동하지 않습니다. 기존 데이터를 유지하려면 기존 DB를 별도로 백업·복원해야 합니다. Neon의 무료 저장 공간·컴퓨트·전송량 한도도 확인합니다.
+기존 DB의 공고·설정·관리자 인증은 새 프로젝트를 생성하는 것만으로 이동하지 않습니다. [검증된 DB 이전 절차](free-database-copy-20261010.md)로 원본을 읽기 전용으로 복사하고 행 수를 검증한 뒤 Render와 수집의 `DATABASE_URL`을 함께 변경합니다. 무료 저장 공간·컴퓨트·전송량 한도도 확인합니다. 서버 테이블에는 RLS를 적용하며 공개 Data API로 원본과 저장된 키를 제공하지 않습니다.
 
 ## 2. Render Free 웹 배포
 
@@ -64,6 +64,6 @@ Render에서는 **결제 수단을 등록하지 않은 Free 계정·워크스페
 
 ## 무료 운영의 범위
 
-Render Free는 유휴 시 웹 서비스를 중지하므로 다음 접속의 기동 시간이 길어질 수 있습니다. 무료 DB의 사용량·저장 공간 한도나 기관의 실행기 IP 접근 제한도 수집에 영향을 줍니다. [Render Free 안내](https://render.com/docs/free), [Neon 요금제](https://neon.com/pricing), [무료 한도 초과 시 Neon 동작](https://neon.com/faqs/free-plan-limits-and-quotas), [GitHub 예약 실행 안내](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)를 계정에서 확인합니다.
+Render Free는 유휴 시 웹 서비스를 중지하므로 다음 접속의 기동 시간이 길어질 수 있습니다. 무료 DB의 사용량·저장 공간 한도나 기관의 실행기 IP 접근 제한도 수집에 영향을 줍니다. [Render Free 안내](https://render.com/docs/free), [Supabase 요금제](https://supabase.com/pricing), [Neon 요금제](https://neon.com/pricing), [GitHub 예약 실행 안내](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)를 계정에서 확인합니다.
 
 무료 서비스의 저장 이력을 내보내 백업하고, 앱의 출처 상태를 확인합니다. 이 구성에는 유료 cron·상시 worker·상위 DB 요금제로 자동 전환하는 설정이 없습니다. 수집 지연·정지 시 원본·가격·경쟁률·기존 설정을 지우거나 예시 공고로 대체하지 않습니다.

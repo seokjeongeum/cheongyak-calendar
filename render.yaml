@@ -11,7 +11,7 @@ services:
     dockerContext: .
     healthCheckPath: /api/health
     envVars:
-      # Supply a durable Neon Free PostgreSQL URL.
+      # Supply a durable Free PostgreSQL URL (Supabase Session pooler or Neon).
       # Render's own Free PostgreSQL expires after 30 days.
       - key: DATABASE_URL
         sync: false

@@ -40,6 +40,7 @@ async def test_exact_current_reviewed_pdf_resolves_failed_page_with_actual_sourc
                 "diagnostics": [pipeline.document_diagnostic("decode", "document_read", PDF_URL, status="ok")]}
 
     monkeypatch.setattr(pipeline, "extract_local_document", extract)
+    payload.update(document_hash=SOURCE["document_hash"], rules=copy.deepcopy(parsed["rules"]))
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(403))) as client:
         result = await pipeline.enrich_notice(payload, client, allow_gemini=False)
     failure = next(entry for entry in diagnostics(result) if entry["code"] == "announcement_download_failed")
@@ -62,7 +63,7 @@ async def test_page_error_remains_when_no_current_attachment_is_successfully_par
     payload = {**notice(), "document_hash": "last-reviewed-document", "rules": [
         {"kind": "age_min", "effect": "admission", "value": 19,
          "verification": "official", "source": "official_document_parser",
-         "document_hash": "last-reviewed-document"}]}
+         "document_hash": "last-reviewed-document", "evidence_url": PDF_URL}]}
 
     async def extract(url, client, *, payload):
         if stage == "download":
@@ -97,8 +98,11 @@ async def test_wrong_notice_or_date_pdf_never_replaces_current_hash_or_resolves_
         {"kind": "applicant_regions", "effect": "metadata", "verification": "official",
          "source": "official_document_parser", "document_hash": "last-reviewed-document",
          "scope_complete": True, "regions": [{"region_code": "41", "region_name": "경기도"}]}]}
-    monkeypatch.setattr(pipeline, "reviewed_document_urls", lambda *args, **kwargs: [PDF_URL])
-    monkeypatch.setattr(pipeline, "document_pages", lambda *args: SOURCE["pages"])
+    monkeypatch.setattr(pipeline, "_persisted_document_urls", lambda *args, **kwargs: [PDF_URL])
+    async def interpret(operation, **kwargs):
+        return {'has_text': True, 'result': pipeline.parse_official_rules(
+            SOURCE['pages'], url=kwargs['url'], digest=kwargs['digest'], payload=kwargs['payload'])}
+    monkeypatch.setattr(pipeline, "_isolated_document_operation", interpret)
 
     def transport(request):
         return httpx.Response(200, content=b"%PDF-test-current-identity") if str(request.url) == PDF_URL else httpx.Response(403)
@@ -147,7 +151,7 @@ async def test_failed_feed_attempt_retains_known_hash_in_diagnostics_when_feed_o
     rule = next(rule for rule in result["rules"] if rule["kind"] == "document_diagnostics")
     assert result["document_hash"] == rule["document_hash"] == "last-reviewed-document"
     assert rule["status"] == "unreadable"
-    assert any(entry["status"] == "error" and entry["stage"] == "download" for entry in rule["diagnostics"])
+    assert any(entry["status"] == "error" and entry["code"] == "attachment_not_found" for entry in rule["diagnostics"])
 
 
 @pytest.mark.asyncio

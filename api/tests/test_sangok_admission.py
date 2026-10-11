@@ -4,12 +4,13 @@ import json
 from pathlib import Path
 
 from app.extract.official_rules import parse_official_rules
-from app.extract.sangok_admission import REVIEW_VERSION
+from app.extract.generic_admission import REVIEW_VERSION
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SANGOK = copy.deepcopy(next(row for row in json.loads((FIXTURES / "current-oct8-regions.json").read_text())
                             if row["external_id"] == "2026000458"))
 FEED = json.loads((FIXTURES / "sangok-current-feed-inventory.json").read_text())
+CURRENT_SIX_FEED = json.loads((FIXTURES / "sangok-current-six-feed.json").read_text())
 SANGOK["payload"]["rules"] = [{"kind": "offered_supplies", "effect": "metadata", "source": "cheongyak_home",
                                 "verification": "official", "evidence_url": FEED["official_url"], "supplies": FEED["supplies"]}]
 
@@ -69,7 +70,7 @@ def test_sangok_cutoff_bank_restrictions_and_overseas_are_not_borrowed_from_octo
     assert overseas["currently_abroad_only"] and overseas["reentry_same_country"] and overseas["reentry_within_days"] == 7
     assert overseas["livelihood_exception_requires_family"] and "생업에 직접 종사" in overseas["evidence_text"]
     adult = next(rule for rule in of_kind(result, "any") if rule.get("label") == "성년 또는 공고의 미성년 세대주")
-    assert adult["evidence_page"] == 5 and adult["conditions"][0]["value"] == 19
+    assert adult["evidence_page"] == 26 and adult["conditions"][0]["value"] == 19
     assert adult["conditions"][1]["conditions"][1]["kind"] == "unparsed"
 
 
@@ -108,14 +109,17 @@ def test_sangok_financial_family_tax_parent_and_nomination_facts_are_explicit():
 
 
 def test_sangok_changed_identity_or_missing_compulsory_clause_is_not_certified():
-    assert not scopes(parse(digest="changed-file"))["일반공급"]["complete"]
-    assert not scopes(parse(pages=SANGOK["pages"][:-1]))["일반공급"]["complete"]
-    for page_number, phrase in [(3, "해외체류기간"), (5, "재당첨 제한을 적용받지"), (12, "250만원"), (19, "만65세"), (24, "2세 미만")]:
+    assert scopes(parse(digest="changed-file"))["일반공급"]["complete"]
+    assert scopes(parse(pages=SANGOK["pages"][:-1]))["일반공급"]["complete"]
+    for page_number, phrase in [(3, "해외체류기간"), (5, "재당첨 제한을 적용받지"), (12, "250만원"), (19, "만65세"), (24, "2세 미만"), (24, "무주택세대구성원")]:
         pages = copy.deepcopy(SANGOK["pages"])
         page = next(page for page in pages if page["page"] == page_number)
         assert phrase in page["text"]
         page["text"] = page["text"].replace(phrase, "미확보")
-        assert not scopes(parse(pages=pages))["일반공급"]["complete"]
+        affected = "노부모부양 특별공급" if page_number == 19 else "신생아 특별공급" if page_number == 24 else "일반공급"
+        assert not scopes(parse(pages=pages))[affected]["complete"]
+        if affected != "일반공급":
+            assert scopes(parse(pages=pages))["일반공급"]["complete"]
     payload = {**SANGOK["payload"], "announcement_date": "2026-10-02"}
     assert parse(payload=payload)["identity_status"] == "mismatch"
 
@@ -130,3 +134,67 @@ def test_sangok_document_stock_and_instructions_remain_separate_from_eligibility
     assert instructions["effect"] == "metadata"
     assert {item["phase"] for item in instructions["instructions"]} == {"application", "post_selection"}
     assert all(item["document_hash"] == SANGOK["document_hash"] for item in instructions["instructions"])
+
+
+def six_column_payload():
+    payload = copy.deepcopy(SANGOK["payload"])
+    supplied = CURRENT_SIX_FEED["supplies"]
+    payload["rules"] = [
+        {"kind": "offered_supplies", "effect": "metadata", "source": "cheongyak_home", "verification": "official",
+         "evidence_url": CURRENT_SIX_FEED["official_url"], "supplies": copy.deepcopy(supplied)},
+        # The public detail carried a previous parser copy twice. The original
+        # known API cells remain authoritative once the counts match the PDF.
+        {"kind": "offered_supplies", "effect": "metadata", "source": "official_document_parser", "verification": "official",
+         "inventory_status": "verified", "document_hash": SANGOK["document_hash"], "supplies": copy.deepcopy(supplied * 2)},
+    ]
+    return payload
+
+
+def test_actual_current_six_column_feed_restores_missing_newborn_rows_from_pdf():
+    assert len(CURRENT_SIX_FEED["supplies"]) == 53
+    assert sum(row["supply_count"] for row in CURRENT_SIX_FEED["supplies"]) == 1163
+    assert not any(row["supply_type"] == "신생아 특별공급" for row in CURRENT_SIX_FEED["supplies"])
+    result = parse(payload=six_column_payload())
+    inventory = of_kind(result, "offered_supplies")
+    assert len(inventory) == 1 and inventory[0]["inventory_status"] == "verified"
+    stock = inventory[0]["supplies"]
+    assert len(stock) == 62 and sum(row["supply_count"] for row in stock) == 1289
+    actual = {(row["supply_type"], row["unit_type"]): row for row in stock}
+    for row in CURRENT_SIX_FEED["supplies"]:
+        assert actual[row["supply_type"], row["unit_type"]] == row
+    newborn = [row for row in stock if row["supply_type"] == "신생아 특별공급"]
+    assert len(newborn) == 9 and sum(row["supply_count"] for row in newborn) == 126
+    assert all(row["source"] == "official_document_parser" and row["evidence_page"] == 6
+               and row["document_hash"] == SANGOK["document_hash"] and row["criterion_date"] == "2026-10-08" for row in newborn)
+    coverage = scopes(result)
+    assert len(coverage) == 7 and coverage["일반공급"]["complete"] and coverage["신생아 특별공급"]["complete"]
+    assert all(scope["review_version"] == REVIEW_VERSION for scope in coverage.values())
+    assert of_kind(result, "homeless", "신생아 특별공급")[0]["value"] is True
+    child = of_kind(result, "newborn_children_min", "신생아 특별공급")[0]
+    assert child["evidence_page"] == 24 and child["child_age_inclusive"] and child["include_pregnancy"] and child["include_adoption"]
+    assert of_kind(result, "special_winning", "신생아 특별공급")
+    assert of_kind(result, "private_rank_months", "신생아 특별공급")[0]["value"] == 12
+    assert of_kind(result, "income_household_scope", "신생아 특별공급")[0]["evidence_page"] == 25
+
+
+def test_conflicting_known_api_cell_does_not_receive_complete_admission_or_pdf_overwrite():
+    payload = six_column_payload()
+    payload["rules"][0]["supplies"][0]["supply_count"] += 1
+    result = parse(payload=payload)
+    assert not scopes(result)["일반공급"]["complete"]
+    assert not any(rule.get("inventory_status") == "verified" for rule in of_kind(result, "offered_supplies"))
+    assert of_kind(result, "newborn_children_min", "신생아 특별공급")
+    assert not scopes(result)["신생아 특별공급"]["complete"]
+
+
+def test_changed_pdf_table_totals_or_column_order_cannot_supply_missing_allocations():
+    for old, replacement in [("112 11 10 16 3 7 11 58 54 4", "112 11 10 16 3 7 10 58 54 4"),
+                             ("1,289 126 122 190 35 86 126 685 604 88", "1,288 126 122 190 35 86 126 685 604 88"),
+                             ("기관 다자녀 신혼 노부모 생애 신생아 계", "기관 신생아 신혼 노부모 생애 다자녀 계")]:
+        pages = copy.deepcopy(SANGOK["pages"])
+        page = next(page for page in pages if page["page"] == 6)
+        assert old in page["text"]
+        page["text"] = page["text"].replace(old, replacement)
+        result = parse(pages=pages, payload=six_column_payload())
+        assert not scopes(result)["일반공급"]["complete"]
+        assert not any(rule.get("inventory_status") == "verified" for rule in of_kind(result, "offered_supplies"))

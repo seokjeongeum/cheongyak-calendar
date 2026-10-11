@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from sqlalchemy import func, select
+from sqlalchemy.orm import defer
 
 from app.db import SessionLocal, init_db
 from app.models import Notice, NoticeEvent
@@ -299,7 +300,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today - timedelta(days=RESULT_LOOKBACK_DAYS),
                 NoticeEvent.start_date <= today + timedelta(days=90),
             ).exists()
-            notices = deque(session.scalars(select(Notice).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all())
+            notices = deque(session.scalars(select(Notice).options(defer(Notice.rules)).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all())
             retried: set[str] = set()
             while notices:
                 notice = notices.popleft()

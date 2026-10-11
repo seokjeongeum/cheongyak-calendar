@@ -17,7 +17,7 @@ const REGION_DECISION_LABEL: Record<RegionDecision['status'], string> = {
   local: '해당지역', other_gyeonggi: '기타경기', other: '기타지역', outside: '신청지역 밖',
   not_divided: '신청지역 충족', missing_input: '지역 정보 입력 필요', source_gap: '공식 지역 조건 확인 필요',
 }
-const SOURCE_STAGE_LABEL: Record<string, string> = { discovery: '공고문 찾기', download: '공고문 다운로드', conversion: '문서 형식 변환', decode: '문서 형식 변환·텍스트 추출', interpretation: '신청 조건 판독', identity: '공고번호·날짜·문서 변경 확인' }
+const SOURCE_STAGE_LABEL: Record<string, string> = { discovery: '공고문 찾기', download: '공고문 다운로드', conversion: '문서 형식 변환', decode: '문서 형식 변환·텍스트 추출', interpretation: '신청 조건 판독', identity: '공고번호·날짜·문서 변경 확인', processing: '공고문 확인 실행' }
 export function noticeRegionGroups(notice: Notice, profile: LocalProfile): { decision: RegionDecision; scopes: string[] }[] {
   const inventory = officialOfferedSupplies(notice)
   const combinations = inventory.length ? inventory.map((item) => ({ supplyType: item.supply_type, unitType: item.unit_type || undefined }))
@@ -163,13 +163,21 @@ export function EligibilityBrief({ result, notice, profile, decision, onProfile,
     .filter((reason) => supplies.some((supply) => supply.result.status !== 'mismatch' && actionableReasons(supply.result.reasons).some((item) => reasonKey(item) === reasonKey(reason))))
   const sharedKeys = new Set(sharedReasons.map(reasonKey))
   const shownShared = selectBriefReasons(sharedReasons)
+  const sharedScopes = new Map<string, Set<string>>()
+  for (const supply of supplies) for (const reason of actionableReasons(supply.result.reasons)) {
+    const key = reasonKey(reason)
+    if (!sharedKeys.has(key)) continue
+    const scopes = sharedScopes.get(key) || new Set<string>()
+    scopes.add(supply.supplyType)
+    sharedScopes.set(key, scopes)
+  }
   const hasRankComparison = rankResult && (actionableReasons(rankResult.reasons).length > 0 || rankResult.rank === 'not_applicable')
   return <div className="qualification-brief" aria-label="자격 판단 이유">
     <InventorySummary notice={notice} />
     {candidateReason && <p className="qualification-candidate"><MapPin size={13} /><span>{candidateReason}</span></p>}
     {hasRankComparison && <div className="qualification-account-summary"><small>청약통장·순위 조건</small><strong>{rankResult.label}</strong>{rankConfirmed.length > 0 && <span>{rankConfirmed.map((reason) => `${reason.label} 충족`).join(' · ')}</span>}{rankQuestion && <button type="button" className="qualification-input-action" onClick={() => onProfile(rankQuestion.profileField, rankQuestion.historyGroup)}>{rankQuestion.label} 입력하기</button>}</div>}
     {showUnitRanks && <div className="qualification-unit-ranks" aria-label="주택형별 청약순위">{rankedUnits.map((group) => <div key={group.units.join(',')}><span>{group.units.join(' · ')}</span><strong>{group.result.label}</strong></div>)}</div>}
-    {!!shownShared.length && <div className="qualification-brief-common"><strong>모집 유형에 공통으로 적용되는 조건</strong>{shownShared.map((reason) => <div className="qualification-brief-row" key={reasonKey(reason)}><ReasonIcon reason={reason} /><div><strong>{reasonStatusLabel(reason)} · {reason.label}</strong><span>{reason.detail}</span>{needsProfile(reason) && <button type="button" className="qualification-input-action" onClick={() => onProfile(reason.profileField, reason.historyGroup)}>{reason.label} 입력하기</button>}</div></div>)}</div>}
+    {!!shownShared.length && <div className="qualification-brief-common"><strong>묶어서 비교하는 신청 조건</strong>{shownShared.map((reason) => <div className="qualification-brief-row" key={reasonKey(reason)}><ReasonIcon reason={reason} /><div><strong>{reasonStatusLabel(reason)} · {reason.label}</strong><small>적용: {[...(sharedScopes.get(reasonKey(reason)) || [])].join(' / ')}</small><span>{reason.detail}</span>{needsProfile(reason) && <button type="button" className="qualification-input-action" onClick={() => onProfile(reason.profileField, reason.historyGroup)}>{reason.label} 입력하기</button>}</div></div>)}</div>}
     {visibleSupplies.length > 0 ? <div className="qualification-supply-overview" aria-label="모집 유형별 신청 가능성"><strong className="qualification-application-heading">{visibleSupplies.some((supply) => actionableReasons(supply.result.reasons).length > 0) ? '이 공고의 신청 조건' : '공식 모집 유형'}</strong>{visibleSupplies.map((supply, index) => {
       const useful = actionableReasons(supply.result.reasons)
       const shown = selectBriefReasons(useful.filter((reason) => !sharedKeys.has(reasonKey(reason))))

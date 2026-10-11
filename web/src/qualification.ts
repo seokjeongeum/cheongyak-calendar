@@ -880,6 +880,8 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const label = assets ? '공고 기준 순자산' : '신혼희망타운 월평균소득'
     const field = assets ? 'officialNetAssetsKrw' : 'monthlyIncomeKrw'
     if (amount === null) return missingInput(rule, notice, label, assets ? '공고의 평가 방식으로 계산한 자산에서 인정 부채를 뺀 순자산을 입력하세요. 가구 자산 합계를 대신 사용하지 않습니다.' : '공고가 정한 가족 범위의 월평균소득을 입력하세요. 연 소득을 12로 나눈 값으로 대신하지 않습니다.', undefined, field)
+    const minimumSize = assets ? 0 : numberFrom(rule.min_household_size, true)
+    if (!assets && (minimumSize === null || minimumSize < 1 || !Number.isInteger(minimumSize))) return unsupported(rule, notice, '공고의 소득표에서 소규모 가구에 적용하는 기준 인원을 확인해야 합니다.', label)
     let percent = numberFrom(rule.normal_percent, true)
     if (!assets) {
       const dual = numberFrom(rule.dual_income_percent, true)
@@ -887,16 +889,17 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
       else if (dual !== null && profile.dualIncome === null) {
         const size = numberFrom(profile.incomeHouseholdSize, true)
         const tables = rule.percentage_tables as Record<string, { household_size: number; max_krw: number }[]> | undefined
-        const base = size !== null && size > 0 ? tables?.[String(percent)]?.find((entry) => entry.household_size === Math.max(3, size))?.max_krw : null
+        const base = size !== null && size > 0 ? tables?.[String(percent)]?.find((entry) => entry.household_size === Math.max(minimumSize!, size))?.max_krw : null
         if (base == null || amount > base) return missingInput(rule, notice, '본인·배우자 소득 활동', '본인과 배우자(예비배우자)가 모두 사업소득 또는 근로소득이 있는지 입력하세요.', '맞벌이 여부별 소득 기준', 'dualIncome')
       }
     }
     const size = assets ? 0 : numberFrom(profile.incomeHouseholdSize, true)
     if (!assets && (size === null || size < 1)) return missingInput(rule, notice, '소득 산정 가구원 수', '공고가 정한 소득 산정 가족과 태아를 포함한 가구원 수를 입력하세요.', '공식 소득 산정 가구원 수', 'incomeHouseholdSize')
+    const oneBonus = numberFrom(rule.one_child_bonus_percent, true), twoBonus = numberFrom(rule.two_children_bonus_percent, true)
     const maxAt = (bonus: number): number | null => {
-      if (assets) return numberFrom(bonus === 20 ? rule.two_children_max_krw : bonus === 10 ? rule.one_child_max_krw : rule.base_max_krw, true)
+      if (assets) return numberFrom(bonus === 0 ? rule.base_max_krw : bonus === twoBonus ? rule.two_children_max_krw : bonus === oneBonus ? rule.one_child_max_krw : undefined, true)
       const table = (rule.percentage_tables as Record<string, { household_size: number; max_krw: number }[]> | undefined)?.[String((percent ?? 0) + bonus)]
-      const value = table?.find((entry) => entry.household_size === Math.max(3, size!))?.max_krw
+      const value = table?.find((entry) => entry.household_size === Math.max(minimumSize!, size!))?.max_krw
       return numberFrom(value, true)
     }
     let bonus = 0
@@ -904,7 +907,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     // Child and pregnancy information is only needed to establish the relaxed
     // threshold when the normal threshold is exceeded.
     if (base !== null && amount > base) {
-      if (!date || typeof rule.child_relaxation_since !== 'string') return unsupported(rule, notice, '출산가구 완화의 기준일을 확인해야 합니다.', label)
+      if (!date || typeof rule.child_relaxation_since !== 'string' || rule.child_relaxation_policy_supported !== true || oneBonus === null || twoBonus === null || oneBonus <= 0 || twoBonus <= 0) return unsupported(rule, notice, '출산가구 완화의 기준일·자녀 수·완화 비율을 확인해야 합니다.', label)
       if (profile.hasChildren === null || profile.hasChildren && !profile.children.length || !profile.hasChildren && profile.children.length) return missingInput(rule, notice, '출산가구 완화', '자녀 유무와 자녀별 생년월일을 입력하면 출산가구의 완화 기준을 비교합니다.', undefined, 'children')
       if (profile.pregnant === null) return missingInput(rule, notice, '출산가구 완화', '본인 또는 배우자가 임신 중인지 입력하세요.', undefined, 'pregnant')
       if (profile.children.some((child) => !parseDate(child.dateOfBirth) || child.dateOfBirth > date || child.adopted === null)) return missingInput(rule, notice, '출산가구 완화', '공고 기준일의 자녀 생년월일과 입양 여부를 입력하세요.', undefined, 'children')
@@ -912,12 +915,14 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
       if (expected === null || profile.pregnant && expected < 1) return missingInput(rule, notice, '출산가구 완화', '임신 중 태아 수를 입력하세요.', undefined, 'expectedChildren')
       const recent = profile.children.filter((child) => child.dateOfBirth >= String(rule.child_relaxation_since)).length + expected
       const total = profile.children.length + expected
-      bonus = recent > 0 ? total > 1 ? 20 : 10 : 0
+      const oneCount = numberFrom(rule.one_child_count, true), twoCount = numberFrom(rule.two_children_count_min, true)
+      if (oneCount === null || twoCount === null || oneCount !== 1 || twoCount !== 2 || rule.include_older_children_when_recent_child_exists !== true) return unsupported(rule, notice, '출산가구의 자녀 수와 기존 자녀 포함 범위를 확인해야 합니다.', label)
+      bonus = recent > 0 ? total >= twoCount ? twoBonus : total === oneCount ? oneBonus : 0 : 0
     }
     const maximum = maxAt(bonus)
     if (maximum === null) return unsupported(rule, notice, `입력한 가구원 수의 공식 ${assets ? '자산' : '소득'} 표를 아직 정리하지 못했습니다.`, label)
     const assessed = numeric({ ...rule, value: maximum, operator: '<=' }, notice, amount, label, '원', '<=')
-    assessed.detail = `${assets ? '인정 부채를 차감한 공고 기준 순자산' : `${Math.max(3, size!)}인 기준 월평균소득 ${percent! + bonus}%`}${bonus ? ` · 출산가구 ${bonus}%p 완화` : ''}: 내 입력 ${amount.toLocaleString('ko-KR')}원 · 공고 한도 ${maximum.toLocaleString('ko-KR')}원`
+    assessed.detail = `${assets ? '인정 부채를 차감한 공고 기준 순자산' : `${Math.max(minimumSize!, size!)}인 기준 월평균소득 ${percent! + bonus}%`}${bonus ? ` · 출산가구 ${bonus}%p 완화` : ''}: 내 입력 ${amount.toLocaleString('ko-KR')}원 · 공고 한도 ${maximum.toLocaleString('ko-KR')}원`
     return assessed
   }
   if (rule.kind === 'marriage_months_max') {

@@ -20,7 +20,7 @@ from sqlalchemy import func, or_, select
 
 from app.db import SessionLocal
 from app.models import DocumentExtractionState, Notice, NoticeEvent
-from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, open_ended_application_clause, upsert_notice, record_source_status
+from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, notice_patch_changed, open_ended_application_clause, upsert_notice, record_source_status
 from .pipeline import enrich_notice
 from .official_rules import PARSER_VERSION, parser_version_usable
 from app.qualification import public_contract_schedule, requirements_complete
@@ -157,7 +157,11 @@ async def reprocess(*, ids: list[str] | None = None, external_ids: list[str] | N
                             continue
                         patch = _document_patch(current, enriched)
                         conditions = [r for r in patch["rules"] if r.get("source") == "official_document_parser" and r.get("effect") != "metadata"]
-                        changed = patch["rules"] != current["rules"] or patch.get("document_hash") != current.get("document_hash") or ("prices" in patch and patch["prices"] != current.get("prices", [])) or ("category" in patch and patch["category"] != current.get("category"))
+                        # Parser prices may contain derived presentation fields
+                        # or omit default nullable fields. Compare the same
+                        # stored form used by upsert, so an identical review is
+                        # not reported as another source change on every run.
+                        changed = notice_patch_changed(fresh, patch)
                         if changed:
                             if not dry_run:
                                 upsert_notice(session, patch)

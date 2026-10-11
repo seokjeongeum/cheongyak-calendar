@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import re
 from .supply_inventory import canonical_unit
+from .application_regions import normalize_region_text, _priority, region_catalog
 
 
 def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: list[dict], parser_version: str) -> list[dict]:
@@ -29,6 +30,7 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
     if not cutoff or not all_inventory:
         return []
     result = []
+    provinces = {row["name"]: row["code"] for row in region_catalog()["provinces"]}
     sections = _sections(pages, shinhee=False)
     general_pages = {}
     for section in sections:
@@ -76,7 +78,13 @@ def parse_selection_rules(pages: list[dict], *, url: str, digest: str, rules: li
             (r.get("supply_type") == "일반공급" or not r.get("supply_type") and
              (not r.get("supply_types") or "일반공급" in r["supply_types"])) for r in rules + result)
         if rank_applies and inventory and order and not general_allocated:
-            result.append(make("regional_allocation", page["page"], order.group(0), allocation_method="region_priority", local_share_percent=None))
+            fields = {}
+            local_clause = re.search(r"해당지역\s*거주자\s*\(([^)]*)\)", order.group(0))
+            if local_clause:
+                local = _priority("경쟁 시 " + normalize_region_text(local_clause[1]) + " 우선공급", cutoff, provinces)
+                if local:
+                    fields["local_region"] = local
+            result.append(make("regional_allocation", page["page"], order.group(0), allocation_method="region_priority", local_share_percent=None, **fields))
         # Area-band tables must explicitly name the pair of percentage columns.
         # PDFs sometimes emit column numbers/units after the words. Normalize
         # these exact table layouts only, without filling in legal defaults.

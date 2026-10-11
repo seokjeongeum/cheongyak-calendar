@@ -6,13 +6,13 @@ application date, or a total special count does not invent a supply subtype.
 
 import re
 
+from .supply_tables import normalize_unit, ordinary_document_inventory, residual_dong_inventory, residual_geometry_inventory
+
 SPECIAL_COLUMNS = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자")
 
 
 def canonical_unit(value):
-    text = str(value).strip()
-    match = re.fullmatch(r"(\d{2,3})\.(\d{4})([A-Z]?)", text)
-    return f"{int(match[1]):03d}.{match[2]}{match[3]}" if match else text
+    return normalize_unit(value)
 
 
 def document_supplies(pages, *, make):
@@ -21,8 +21,15 @@ def document_supplies(pages, *, make):
 The final decimal belongs to the area/land-share block. Only the integer count
 columns after it are read. Total and special subtotal must reconcile exactly.
 """
+    ordinary = _document_inventory(pages, make=make)
+    if ordinary.status != "missing":
+        return [row for row in ordinary.cells.values() if row["supply_count"] > 0] if ordinary.status == "verified" else []
+    return _other_document_supplies(pages, make=make)
+
+
+def _other_document_supplies(pages, *, make):
     supplies = []
-    for index, page in enumerate(pages[:15]):
+    for index, page in enumerate(pages):
         # Some PDFs split the supply heading and its table across pages.
         body = page["text"]
         previous = pages[index - 1]["text"] if index else ""
@@ -87,10 +94,49 @@ columns after it are read. Total and special subtotal must reconcile exactly.
     return list(unique.values())
 
 
+def _document_inventory(pages, *, make):
+    ordinary = ordinary_document_inventory(pages, make=make)
+    if ordinary.status != "missing":
+        return ordinary
+    residual = residual_dong_inventory(pages, make=make)
+    return residual_geometry_inventory(pages, make=make) if residual.status == "missing" else residual
+
+
 def official_supplies(pages, payload, *, make):
-    document = document_supplies(pages, make=make)
-    source = [row for rule in payload.get("rules", []) if rule.get("kind") == "offered_supplies" and rule.get("verification") == "official"
-              for row in rule.get("supplies", []) if isinstance(row, dict) and isinstance(row.get("supply_count"), int) and row["supply_count"] > 0]
+    ordinary = _document_inventory(pages, make=make)
+    supply_rules = [rule for rule in payload.get("rules", []) if rule.get("kind") == "offered_supplies" and rule.get("verification") == "official"]
+    # Original service cells precede saved parser copies, but are never edited.
+    supply_rules.sort(key=lambda rule: rule.get("source") == "official_document_parser")
+    supplied = {}
+    # The current document's identity also applies when its table is partial
+    # or absent. A stale saved interpretation must not reappear merely because
+    # the new attachment cannot be read well enough to emit a table cell.
+    current_hash = make("offered_supplies", effect="metadata").get("document_hash")
+    for rule in supply_rules:
+        if (rule.get("source") == "official_document_parser" and current_hash
+                and rule.get("document_hash") and rule["document_hash"] != current_hash):
+            continue
+        if rule.get("inventory_status") == "conflict" and rule.get("source") != "official_document_parser":
+            return [], "conflict"
+        for row in rule.get("supplies", []):
+            if not isinstance(row, dict) or type(row.get("supply_count")) is not int or row["supply_count"] <= 0:
+                continue
+            key = (row.get("supply_type"), canonical_unit(row.get("unit_type")))
+            if not all(key):
+                continue
+            if key in supplied and supplied[key]["supply_count"] != row["supply_count"]:
+                return [], "conflict"
+            supplied.setdefault(key, row)
+    source = list(supplied.values())
+    if ordinary.status == "verified":
+        if any(key not in ordinary.cells or ordinary.cells[key]["supply_count"] != row["supply_count"] for key, row in supplied.items()):
+            return [], "conflict"
+        return [supplied.get(key, row) for key, row in ordinary.cells.items() if row["supply_count"] > 0], "verified"
+    if ordinary.status in {"conflict", "partial"}:
+        # Original rows can remain visible, but an unreadable or contradictory
+        # PDF table cannot certify completeness or restore a missing subtype.
+        return source if ordinary.status == "partial" else [], ordinary.status
+    document = _other_document_supplies(pages, make=make)
     if document and source:
         a = {(r["supply_type"], canonical_unit(r["unit_type"])): r["supply_count"] for r in document}
         b = {(r["supply_type"], canonical_unit(r["unit_type"])): r["supply_count"] for r in source}
@@ -98,4 +144,6 @@ def official_supplies(pages, payload, *, make):
         # conflict. Recollection/review resolves it, and no type is invented.
         if any(key in a and a[key] != count for key, count in b.items()):
             return [], "conflict"
-    return document or source, "verified" if document or source else "missing"
+    merged = {(r["supply_type"], canonical_unit(r["unit_type"])): r for r in document}
+    merged.update(supplied)
+    return list(merged.values()), "verified" if merged else "missing"

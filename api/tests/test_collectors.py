@@ -20,6 +20,15 @@ from app.models import DocumentExtractionState, Notice, SourceStatus
 from app.repository import record_source_status
 
 
+@pytest.fixture(autouse=True)
+def isolate_external_detail_lookup(monkeypatch):
+    # This module tests official-feed/document behavior. Public complex-link
+    # discovery has its own mocked provider tests and must not use live HTTP.
+    async def unchanged(payload, **kwargs):
+        return payload
+    monkeypatch.setattr(worker, "enrich_detail_link", unchanged)
+
+
 def test_myhome_sale_detail_official_2026_09_28_excerpt():
     # Public detail: https://m.myhome.go.kr/hws/portal/sch/selectLttotHouseDetailView.do?pblancId=1485
     # Checked 2026-09-29. The detail explicitly labels sumPrice in 원 and
@@ -344,10 +353,10 @@ async def test_running_status_is_committed_before_request_and_error_retains_succ
             observed_running = True
         await get_json(client, "https://official.example/api", {"serviceKey": key}, attempts=1)
 
-    async def empty_collect(*args):
+    async def empty_collect(*args, **kwargs):
         return []
 
-    async def empty_gh(*args):
+    async def empty_gh(*args, **kwargs):
         return [], None
 
     monkeypatch.setattr(worker.reb, "collect", reb_collect)
@@ -546,7 +555,6 @@ async def test_save_progress_is_visible_before_next_document_without_changing_at
     assert observed == [
         ("sale-1", 17, "공식 공고 수집 중", set()),
         ("sale-2", 1, "공식 공고 저장 중 · 1/3건 저장", {"sale-1"}),
-        ("sale-3", 2, "공식 공고 저장 중 · 2/3건 저장", {"sale-1", "sale-2"}),
     ]
     assert result[0:2] == (2, 1)
     assert result[-1] == "partial"

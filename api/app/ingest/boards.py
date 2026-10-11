@@ -149,7 +149,7 @@ def normalize_sh(row: list[dict[str, Any]], category: str) -> dict[str, Any] | N
     })
 
 
-async def collect_sh(client: httpx.AsyncClient, start: date, end: date) -> list[dict[str, Any]]:
+async def collect_sh(client: httpx.AsyncClient, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     for path, category, supply_type in (("publicLease", "public_rental", "publicLease"), ("publicSale", "public_sale", "publicSale")):
         seen_pages: set[tuple[str, ...]] = set()
@@ -165,12 +165,16 @@ async def collect_sh(client: httpx.AsyncClient, start: date, end: date) -> list[
                 break
             seen_pages.add(signature)
             oldest: str | None = None
+            batch = []
             for row in rows:
                 notice = normalize_sh(row, category)
                 if notice and notice.get("announcement_date"):
                     oldest = min(oldest, notice["announcement_date"]) if oldest else notice["announcement_date"]
                     if start.isoformat() <= notice["announcement_date"] <= end.isoformat():
                         notices.append(notice)
+                        batch.append(notice)
+            if on_rows and batch:
+                await on_rows(batch)
             if oldest and oldest < start.isoformat():
                 break
         else:
@@ -244,7 +248,7 @@ def normalize_gh_apply(row: list[dict[str, Any]], board_path: str) -> dict[str, 
     })
 
 
-async def _collect_gh_corporate(client: httpx.AsyncClient, start: date, end: date) -> list[dict[str, Any]]:
+async def _collect_gh_corporate(client: httpx.AsyncClient, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     seen_pages: set[tuple[str, ...]] = set()
     for page in range(25):
@@ -259,12 +263,16 @@ async def _collect_gh_corporate(client: httpx.AsyncClient, start: date, end: dat
             break
         seen_pages.add(signature)
         page_dates: list[str] = []
+        batch = []
         for row in rows:
             if len(row) >= 5 and _gh_date(row[4]["text"]):
                 page_dates.append(_gh_date(row[4]["text"]))
             notice = normalize_gh(row)
             if notice and notice.get("announcement_date") and start.isoformat() <= notice["announcement_date"] <= end.isoformat():
                 notices.append(notice)
+                batch.append(notice)
+        if on_rows and batch:
+            await on_rows(batch)
         if page_dates and min(page_dates) < start.isoformat():
             break
     else:
@@ -273,7 +281,7 @@ async def _collect_gh_corporate(client: httpx.AsyncClient, start: date, end: dat
     return notices
 
 
-async def _collect_gh_apply(client: httpx.AsyncClient, start: date, end: date) -> list[dict[str, Any]]:
+async def _collect_gh_apply(client: httpx.AsyncClient, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     for path in GH_RENTAL_BOARDS:
         seen_pages: set[tuple[str, ...]] = set()
@@ -289,12 +297,16 @@ async def _collect_gh_apply(client: httpx.AsyncClient, start: date, end: date) -
                 break
             seen_pages.add(signature)
             dates: list[str] = []
+            batch = []
             for row in rows:
                 notice = normalize_gh_apply(row, path)
                 if notice and notice["announcement_date"]:
                     dates.append(notice["announcement_date"])
                     if start.isoformat() <= notice["announcement_date"] <= end.isoformat():
                         notices.append(notice)
+                        batch.append(notice)
+            if on_rows and batch:
+                await on_rows(batch)
             if dates and min(dates) < start.isoformat():
                 break
         else:
@@ -302,7 +314,7 @@ async def _collect_gh_apply(client: httpx.AsyncClient, start: date, end: date) -
     return notices
 
 
-async def collect_gh(client: httpx.AsyncClient, start: date, end: date) -> tuple[list[dict[str, Any]], str | None]:
+async def collect_gh(client: httpx.AsyncClient, start: date, end: date, *, on_rows=None) -> tuple[list[dict[str, Any]], str | None]:
     """Collect the corporate board plus GH's dedicated public rental boards.
 
     Corporate pages have recently returned HTTP 410 from some networks. In
@@ -310,9 +322,9 @@ async def collect_gh(client: httpx.AsyncClient, start: date, end: date) -> tuple
     """
     warning = None
     try:
-        corporate = await _collect_gh_corporate(client, start, end)
+        corporate = await _collect_gh_corporate(client, start, end, on_rows=on_rows)
     except FeedError:
         corporate = []
         warning = "GH 분양/임대 공고 게시판 접근 실패; 청약센터 임대 공고만 수집"
-    rental = await _collect_gh_apply(client, start, end)
+    rental = await _collect_gh_apply(client, start, end, on_rows=on_rows)
     return corporate + rental, warning

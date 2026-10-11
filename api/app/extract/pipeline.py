@@ -9,6 +9,8 @@ unverified and never replaces an official structured price.
 from __future__ import annotations
 
 import base64
+import ipaddress
+from contextvars import ContextVar
 import asyncio
 import hashlib
 import io
@@ -16,7 +18,9 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
 import zipfile
 from html.parser import HTMLParser
@@ -28,15 +32,16 @@ import httpx
 from pypdf import PdfReader
 
 from .official_rules import PARSER_VERSION, parse_official_rules, parser_version_usable
-from .reviewed_sources import REVIEWED_SOURCES, reviewed_document_urls, reviewed_source_for_document
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-09-v13"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-10-v14"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 MAX_DOWNLOAD_ATTEMPTS = 3
 DOWNLOAD_RETRY_DELAY_SECONDS = 0.5
+LOCAL_PROCESS_TIMEOUT_SECONDS = 120
+MAX_PROCESS_OUTPUT_BYTES = 20 * 1024 * 1024
 TRANSIENT_DOWNLOAD_STATUSES = {500, 502, 503, 504}
 TRUSTED_HOSTS = (
     "applyhome.co.kr",
@@ -50,7 +55,7 @@ TRUSTED_HOSTS = (
     "gdco.co.kr",
 )
 DOCUMENT_EXTENSIONS = (".pdf", ".hwp", ".hwpx")
-REVIEWED_PROJECT_DOCUMENTS = {"https://xn--q20b245acmc65au2puno.com/data/gongo_re.pdf"}
+_LINKED_DOCUMENT_URLS: ContextVar[frozenset[str]] = ContextVar("official_linked_documents", default=frozenset())
 
 
 def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error", source_format: str | None = None, http_status: int | None = None) -> dict:
@@ -100,11 +105,7 @@ def _diagnostics_rule(entries: list[dict], status: str, digest: str | None = Non
 
 
 def _with_diagnostics(payload: dict, entries: list[dict], status: str) -> dict:
-    from .reviewed_sources import focused_review_version
     diagnostic = _diagnostics_rule(entries, status, payload.get("document_hash"))
-    focused = focused_review_version(str(payload.get("official_url") or ""), payload.get("announcement_date"))
-    if focused:
-        diagnostic["focused_review_version"] = focused
     payload["rules"] = [r for r in payload.get("rules", []) if r.get("kind") != "document_diagnostics"] + [
         diagnostic]
     payload["local_extraction_status"] = status
@@ -177,9 +178,9 @@ def extraction_configured() -> bool:
 def _trusted_url(url: str) -> bool:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
-    return url in REVIEWED_PROJECT_DOCUMENTS or parsed.scheme == "https" and any(
+    return _public_https_url(url) and (url in _LINKED_DOCUMENT_URLS.get() or any(
         host == root or host.endswith("." + root) for root in TRUSTED_HOSTS
-    )
+    ))
 
 
 def announcement_page_url(url: str) -> str:
@@ -240,17 +241,22 @@ def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], dig
     the older fact set. Ordinary partial reviews retain only unmatched facts;
     a replaced child retires its containing branch rather than weakening it.
     """
-    from app.qualification import is_metadata
+    from app.qualification import coverage_scope_complete, generic_admission_coverage_complete, is_metadata, source_bound_superseded_kinds, source_bound_waivers
 
     for rule in incoming:
-        if rule.get("kind") != "condition_coverage" or rule.get("document_hash") != digest:
+        if (rule.get("kind") != "condition_coverage" or rule.get("document_hash") != digest
+                or rule.get("verification") != "official"):
             continue
-        source = reviewed_source_for_document(str(rule.get("evidence_url") or ""), digest)
-        reviews = [rule, *(scope for scope in rule.get("scopes") or [] if isinstance(scope, dict))]
-        if (source and source.get("admission_review_version") and source.get("admission_reviewed_pages")
-                and any(review.get("review_version") == source["admission_review_version"]
-                        and set(source["admission_reviewed_pages"]) <= set(review.get("reviewed_pages") or [])
-                        for review in reviews)):
+        # Structural review is tied to current bytes and all traversed source
+        # pages, independent of project name, notice id or a known-hash catalog.
+        has_current_admission = any(candidate.get("source") == "official_document_parser"
+                                    and candidate.get("verification") == "official"
+                                    and candidate.get("parser_version") == PARSER_VERSION
+                                    and candidate.get("document_hash") == digest and not is_metadata(candidate)
+                                    and candidate.get("effect") not in {"priority", "procedure", "instruction"}
+                                    and candidate.get("purpose") not in {"first_rank", "second_rank", "selection"}
+                                    for candidate in incoming)
+        if generic_admission_coverage_complete(rule) and has_current_admission:
             return incoming
 
     fields = ("supply_type", "supply_types", "unit_type", "unit_types", "purpose", "restriction", "scope")
@@ -271,6 +277,11 @@ def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], dig
                    or bool(values(first, single, plural) & values(second, single, plural))
                    for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
 
+    def covers(first, second):
+        return all(not values(first, single, plural) or
+                   bool(values(second, single, plural)) and values(second, single, plural) <= values(first, single, plural)
+                   for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
+
     def walk(rule, parent):
         scope = scoped(rule, parent)
         yield rule, scope
@@ -281,19 +292,23 @@ def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], dig
 
     replacements = [(rule, scope) for entry in incoming for rule, scope in walk(entry, {})
                     if rule.get("verification") == "official" and not is_metadata(rule)
+                    and rule.get("kind") != "unparsed"
                     and not scope.get("selection_only")
                     and rule.get("status") not in {"partial", "unsupported", "unreadable", "error"}]
+    waivers = [waiver for entry in incoming for waiver in source_bound_waivers(entry, digest=digest, parser_version=PARSER_VERSION)]
     complete_scopes = [scope for rule in incoming if rule.get("kind") == "condition_coverage"
                        and rule.get("verification") == "official" and rule.get("document_hash") == digest
-                       for scope in rule.get("scopes") or [] if isinstance(scope, dict) and scope.get("complete") is True
-                       and all(not topic.get("required", True) or topic.get("status") in {"verified", "not_applicable"}
-                               for topic in scope.get("topics") or [] if isinstance(topic, dict))
+                       and rule.get("source") == "official_document_parser" and rule.get("parser_version") == PARSER_VERSION
+                       for scope in rule.get("scopes") or [] if coverage_scope_complete(scope)
                        and any(overlaps(scope, condition_scope) for _, condition_scope in replacements)]
 
     def replaced(old, old_scope):
-        return any(old.get("kind") == new.get("kind") and overlaps(old_scope, new_scope)
-                   and all(old_scope.get(field) == new_scope.get(field) for field in ("purpose", "restriction", "scope"))
-                   and (old.get("kind") not in {"all", "any", "not", "condition_group"} or old.get("label") == new.get("label"))
+        return any((old.get("kind") == new.get("kind") and overlaps(old_scope, new_scope)
+                    and all(old_scope.get(field) == new_scope.get(field) for field in ("purpose", "restriction", "scope"))
+                    and (old.get("kind") not in {"all", "any", "not", "condition_group"} or old.get("label") == new.get("label")))
+                   or (old.get("kind") in source_bound_superseded_kinds(new, digest=digest, parser_version=PARSER_VERSION)
+                       and covers(new_scope, old_scope)
+                       and all(old_scope.get(field) == new_scope.get(field) for field in ("purpose", "restriction")))
                    for new, new_scope in replacements)
 
     retained = []
@@ -306,6 +321,10 @@ def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], dig
         old_conditions = list(walk(rule, {}))
         if any(replaced(old, scope) for old, scope in old_conditions):
             continue
+        if any(not scope.get("selection_only") and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
+               and any(old.get("kind") == kind and covers(waiver_scope, scope) for kind, waiver_scope in waivers)
+               for old, scope in old_conditions):
+            continue
         if any(scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
                and any(overlaps(scope, complete) for complete in complete_scopes)
                for _, scope in old_conditions):
@@ -316,12 +335,51 @@ def _retain_same_hash_conditions(previous: list[dict], incoming: list[dict], dig
     return [*incoming, *retained]
 
 
-def _reviewed_correction(reviewed_links: list[str], announcement_date) -> dict | None:
-    """Precedence requires an explicit reviewed successor for this date/id."""
-    return next((source for source in REVIEWED_SOURCES.values()
-                 if source.get("document_url") in reviewed_links and source.get("correction_reviewed") is True
-                 and source.get("supersedes_document_hash")
-                 and source.get("announcement_date") == str(announcement_date)[:10]), None)
+def _public_https_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        port = parsed.port
+        host = (parsed.hostname or "").lower()
+    except ValueError:
+        return False
+    if (parsed.scheme != "https" or not host or parsed.username or parsed.password
+            or port not in {None, 443} or parsed.fragment
+            or host == "localhost" or host.endswith((".localhost", ".local", ".internal"))):
+        return False
+    try:
+        return ipaddress.ip_address(host).is_global
+    except ValueError:
+        return "." in host
+
+
+def _persisted_document_urls(payload: dict) -> list[str]:
+    """Reuse a current document's stored provenance if discovery is unavailable."""
+    known = payload.get("document_hash")
+    official = urlparse(str(payload.get("official_url") or ""))
+    official_number = (parse_qs(official.query).get("houseManageNo") or [None])[0]
+    result = []
+    for rule in payload.get("rules") or []:
+        if (rule.get("source") != "official_document_parser" or rule.get("verification") != "official"
+                or not known or rule.get("document_hash") != known):
+            continue
+        urls = [rule.get("evidence_url")]
+        if rule.get("kind") == "document_diagnostics":
+            urls.extend(entry.get("evidence_url") for entry in rule.get("diagnostics") or []
+                        if entry.get("status") == "ok" and entry.get("code") in {"document_read", "document_downloaded", "attachment_fallback_succeeded"})
+        for url in urls:
+            if not isinstance(url, str) or not _public_https_url(url) or url == payload.get("official_url"):
+                continue
+            parsed = urlparse(url)
+            query = parse_qs(parsed.query)
+            if official_number and (query.get("houseManageNo") or [None])[0] != official_number:
+                # A project-hosted copy has no Applyhome number; a different
+                # numbered Applyhome attachment is never a fallback.
+                if parsed.hostname in {"www.applyhome.co.kr", "static.applyhome.co.kr", "applyhome.co.kr"}:
+                    continue
+            if ((any(parsed.path.lower().endswith(ext) for ext in DOCUMENT_EXTENSIONS)
+                    or re.search(r"file|download|atch", parsed.path, re.I))):
+                result.append(url)
+    return list(dict.fromkeys(result))
 
 
 class _DocumentLinkParser(HTMLParser):
@@ -329,6 +387,7 @@ class _DocumentLinkParser(HTMLParser):
         super().__init__()
         self.base_url = base_url
         self.links: list[str] = []
+        self.priorities: dict[str, tuple[int, tuple[int, int, int]]] = {}
         self._href: str | None = None
         self._text: list[str] = []
         self._attributes: dict[str, str | None] = {}
@@ -360,7 +419,8 @@ class _DocumentLinkParser(HTMLParser):
         if lh_file and (urlparse(self.base_url).hostname or "").lower() == "apply.lh.or.kr" and re.search(r"공고", label) and any(ext in label for ext in DOCUMENT_EXTENSIONS):
             target = urljoin(self.base_url, "/lhapply/lhFile.do?fileid=" + lh_file.group(1))
             lower_target = target.lower()
-        if _trusted_url(target) and (
+        linked_pdf = _public_https_url(target) and re.search(r"공고|notice", label) and any(urlparse(target).path.lower().endswith(ext) for ext in DOCUMENT_EXTENSIONS)
+        if (_trusted_url(target) or linked_pdf) and (
             any(extension in lower_target for extension in DOCUMENT_EXTENSIONS)
             or any(extension in label for extension in DOCUMENT_EXTENSIONS)
             or (
@@ -372,10 +432,11 @@ class _DocumentLinkParser(HTMLParser):
                 self._href = None
                 self._attributes = {}
                 return
-            if lh_file and ".pdf" in label:
-                self.links.insert(0, target)
-            else:
-                self.links.append(target)
+            corrected = bool(re.search(r"정정|수정|변경|최신|현재", label))
+            dates = re.findall(r"(20\d{2})[.년/-]\s*(\d{1,2})[.월/-]\s*(\d{1,2})", label)
+            publication = max((tuple(map(int, date)) for date in dates), default=(0, 0, 0))
+            self.priorities[target] = (2 if corrected else 1 if lh_file and ".pdf" in label else 0, publication)
+            self.links.append(target)
         self._href = None
         self._attributes = {}
 
@@ -386,7 +447,7 @@ def find_document_links(html: str, base_url: str) -> list[str]:
         return []
     parser = _DocumentLinkParser(base_url)
     parser.feed(html)
-    return list(dict.fromkeys(parser.links))
+    return list(dict.fromkeys(sorted(parser.links, key=lambda link: parser.priorities[link], reverse=True)))
 
 
 async def _download(url: str, client: httpx.AsyncClient, *, diagnostics: list[dict] | None = None, stage: str = "download") -> tuple[bytes, str]:
@@ -432,6 +493,44 @@ async def _download(url: str, client: httpx.AsyncClient, *, diagnostics: list[di
                 raise DocumentDownloadFailed([*failures, *_download_failures(exc, current, stage=stage)]) from exc
             await asyncio.sleep(DOWNLOAD_RETRY_DELAY_SECONDS)
     raise ValueError("Too many document redirects")
+
+
+async def _isolated_document_operation(operation: str, *, url: str, data: bytes, content_type: str,
+                                       payload: dict | None = None, digest: str | None = None) -> dict:
+    """Terminate local parsing and its converter descendants when interrupted."""
+    request = json.dumps({'operation': operation, 'url': url, 'data': base64.b64encode(data).decode(),
+                          'content_type': content_type, 'payload': payload, 'digest': digest}).encode()
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, '-m', 'app.extract.document_process', stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
+        start_new_session=os.name == 'posix',
+    )
+    try:
+        async with asyncio.timeout(LOCAL_PROCESS_TIMEOUT_SECONDS):
+            process.stdin.write(request)
+            await process.stdin.drain()
+            process.stdin.close()
+            output = bytearray()
+            while chunk := await process.stdout.read(64 * 1024):
+                output.extend(chunk)
+                if len(output) > MAX_PROCESS_OUTPUT_BYTES:
+                    raise ValueError('Local document result exceeds output limit')
+            if await process.wait() != 0:
+                raise ValueError('Local document process failed')
+            result = json.loads(output)
+            if not isinstance(result, dict):
+                raise ValueError('Invalid local document result')
+            return result
+    finally:
+        if process.returncode is None:
+            try:
+                if os.name == 'posix':
+                    os.killpg(process.pid, signal.SIGKILL)
+                else:
+                    process.kill()
+            except ProcessLookupError:
+                pass
+            await asyncio.shield(process.wait())
 
 
 def _hwpx_text(data: bytes) -> str:
@@ -520,7 +619,7 @@ def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
         # Some official PDFs draw a section heading after its table in the
         # content stream. Plain extraction assigns that table to the previous
         # supply type. Coordinate layout restores visual heading/body order.
-        layout = page.extract_text(extraction_mode="layout") or ""
+        layout = (page.extract_text(extraction_mode="layout") or "") if page.get('/Contents') else ""
         text = "\n".join(re.sub(r"\s+", " ", line).strip() for line in layout.splitlines())
         length += len(text)
         if length > 1_500_000:
@@ -571,19 +670,26 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
     source_format = "pdf" if data.startswith(b"%PDF") else "hwp" if data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") else "hwpx" if data.startswith(b"PK") else "unknown"
     diagnostics.append(document_diagnostic("download", "document_downloaded", url, status="ok", source_format=source_format))
     try:
-        pages = document_pages(url, data, content_type)
+        processed = await _isolated_document_operation('interpret', url=url, data=data,
+                    content_type=content_type, payload=payload, digest=digest)
+        if processed.get('error_stage') == 'decode':
+            raise ValueError('Local document decoding failed')
+    except TimeoutError:
+        raise
     except Exception:
         result = {"rules": [], "offered_supply_types": [], "status": "unreadable", "local_status": "unreadable"}
         code = "hwp_converter_missing" if source_format == "hwp" and not (shutil.which("libreoffice") or shutil.which("soffice")) else "hwp_conversion_failed" if source_format == "hwp" else "unexpected_response" if source_format == "unknown" else "document_decode_failed"
         diagnostics.append(document_diagnostic("conversion" if source_format == "hwp" else "decode", code, url, source_format=source_format))
     else:
-        if not any(p["text"].strip() for p in pages):
+        if not processed.get('has_text'):
             result = {"rules": [], "offered_supply_types": [], "status": "unreadable"}
             diagnostics.append(document_diagnostic("decode", "document_no_text", url, source_format=source_format))
         else:
             diagnostics.append(document_diagnostic("decode", "document_read", url, status="ok", source_format=source_format))
             try:
-                result = parse_official_rules(pages, url=url, digest=digest, payload=payload)
+                if processed.get('error_stage') == 'interpretation':
+                    raise ValueError('Local document interpretation failed')
+                result = processed['result']
             except Exception:
                 result = {"rules": [], "offered_supply_types": [], "status": "error"}
                 diagnostics.append(document_diagnostic("interpretation", "parser_failed", url, source_format=source_format))
@@ -689,7 +795,11 @@ async def extract_document(
         digest = hashlib.sha256(data).hexdigest()
         if known_hash == digest:
             return {"prices": [], "rules": [], "document_hash": digest, "unchanged": True}
-        part = _document_part(url, data, content_type)
+        if data.startswith((b'PK', b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')):
+            processed = await _isolated_document_operation('model_part', url=url, data=data, content_type=content_type)
+            part = processed['part']
+        else:
+            part = _document_part(url, data, content_type)
         prompt = (
             "Extract housing application prices and eligibility conditions from this PUBLIC Korean "
             "announcement only. Return JSON with prices and conditions arrays. For each price include "
@@ -733,7 +843,7 @@ async def enrich_notice(
         enriched["document_hash"] = known_document_hash
     official_url = str(payload.get("official_url") or "")
     diagnostics = []
-    correction = None
+    link_token = None
     if not _trusted_url(official_url):
         return _with_diagnostics(enriched, [document_diagnostic("discovery", "provider_not_supported", "")], "unsupported")
     owns_client = client is None
@@ -757,15 +867,10 @@ async def enrich_notice(
             except (httpx.HTTPError, ValueError) as exc:
                 diagnostics.extend(_download_failures(exc, current_page_url, stage="discovery"))
                 links = []
-            reviewed_links = reviewed_document_urls(official_url, announcement_date=payload.get("announcement_date"))
-            correction = _reviewed_correction(reviewed_links, payload.get("announcement_date"))
-            if not links and correction:
-                # With no current attachment discovery, use the reviewed
-                # corrected copy before its known superseded original.
-                reviewed_links = [correction["document_url"], *(link for link in reviewed_links if link != correction["document_url"])]
-            # Official discovery stays first. Exact reviewed copies remain
-            # available if the current page or its attachment host is down.
-            links = list(dict.fromkeys([*links, *reviewed_links]))
+            # Current official discovery takes precedence; stored provenance
+            # is a fallback only for this already-retained document identity.
+            retained_links = _persisted_document_urls(enriched)
+            links = list(dict.fromkeys([*links, *retained_links]))
             seen_attachments = set()
             unique_links = []
             for link in links:
@@ -774,11 +879,15 @@ async def enrich_notice(
                     seen_attachments.add(identity)
                     unique_links.append(link)
             links = unique_links
-            # Reserve the final bounded attempt for an exact reviewed copy.
-            # Ancillary files must not fill all three slots before it is tried.
-            preferred = correction["document_url"] if correction else next((link for link in reversed(reviewed_links) if link in links), None)
-            if preferred and preferred not in links[:MAX_DOCUMENT_LINKS]:
-                links = [*links[:MAX_DOCUMENT_LINKS - 1], preferred]
+            # Keep a slot for the already retained current copy when a page
+            # exposes many ancillary files. Current discovery still leads;
+            # the fallback is authorized by this document's stored evidence.
+            retained_candidate = next((link for link in links if link in retained_links), None)
+            if retained_candidate and retained_candidate not in links[:MAX_DOCUMENT_LINKS]:
+                links = [*links[:MAX_DOCUMENT_LINKS - 1], retained_candidate]
+        delegated = frozenset(link for link in links if _public_https_url(link) and not _trusted_url(link))
+        if delegated:
+            link_token = _LINKED_DOCUMENT_URLS.set(_LINKED_DOCUMENT_URLS.get() | delegated)
         if not links:
             diagnostics.append(document_diagnostic("discovery", "attachment_not_found", official_url))
             return _with_diagnostics(enriched, diagnostics, "unreadable")
@@ -818,12 +927,13 @@ async def enrich_notice(
         if best is None or not best.get("document_hash"):
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         digest = best["document_hash"]
-        correction_pending = bool(correction and digest == correction["supersedes_document_hash"]
-                                  and any(entry.get("evidence_url") == correction["document_url"]
-                                          and entry.get("status") not in {"ok", "resolved"} for entry in diagnostics))
-        if correction_pending and known_document_hash == correction["document_hash"]:
-            # A failed current correction cannot downgrade an already reviewed
-            # successor to its superseded bytes or replace its fact set.
+        # A failed current attachment cannot silently downgrade an already
+        # retained successor by selecting an older cached copy with new bytes.
+        current_failures = any(entry.get("evidence_url") in links[:1]
+                               and entry.get("code") == "document_download_failed"
+                               and entry.get("status") not in {"ok", "resolved"}
+                               for entry in diagnostics)
+        if current_failures and known_document_hash and digest != known_document_hash:
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         changed = bool(known_document_hash and digest != known_document_hash)
         existing_rules = list(enriched.get("rules") or [])
@@ -871,7 +981,9 @@ async def enrich_notice(
         cap = next((r.get("value") for r in best.get("rules", []) if r.get("kind") == "price_cap" and r.get("verification") == "official"), None)
         if cap in {"yes", "no", "not_applicable"}:
             enriched["price_cap_status"] = cap
-        return _with_diagnostics(enriched, diagnostics, "unreadable" if correction_pending else best.get("status", "partial"))
+        return _with_diagnostics(enriched, diagnostics, "unreadable" if current_failures else best.get("status", "partial"))
     finally:
+        if link_token is not None:
+            _LINKED_DOCUMENT_URLS.reset(link_token)
         if owns_client:
             await client.aclose()

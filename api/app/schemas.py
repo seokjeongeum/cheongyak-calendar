@@ -155,6 +155,7 @@ class NoticePublic(BaseModel):
     sort_date: date | None = None
     application_end_date: date | None = None
     official_url: str | None = None
+    hogangnono_url: str | None = None
     document_hash: str | None = None
     price_cap_status: str
     events: list[EventPublic] = Field(default_factory=list)

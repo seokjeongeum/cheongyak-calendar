@@ -46,6 +46,11 @@ class Notice(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    # A raw source poll differs from the merged document condition snapshot.
+    # Keep a scalar checksum so unchanged polls need not download that JSON.
+    last_feed_hash: Mapped[str | None] = mapped_column(String(64))
+    last_feed_version: Mapped[int | None] = mapped_column(Integer)
+    last_feed_review_hash: Mapped[str | None] = mapped_column(String(64))
     fingerprint: Mapped[str | None] = mapped_column(String(64))
     duplicate_of_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("notices.id"), nullable=True)
 
@@ -158,6 +163,7 @@ class DocumentExtractionState(Base):
     source: Mapped[str] = mapped_column(String(80), primary_key=True)
     external_id: Mapped[str] = mapped_column(String(240), primary_key=True)
     audited_on: Mapped[date | None] = mapped_column(Date)
+    document_checkpoint: Mapped[dict | None] = mapped_column(JSON)
     deferred_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 

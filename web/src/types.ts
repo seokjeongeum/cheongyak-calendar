@@ -113,6 +113,7 @@ export interface ContractSchedule {
 }
 
 export interface Notice {
+  hogangnono_url?: string | null
   document_hash?: string | null
   selection_methods?: NoticeRule[]
   winning_scores?: WinningScore[]

@@ -1,0 +1,33 @@
+{
+  "checked_at_kst": "2026-10-10",
+  "public_search_url": "https://hogangnono.com/search?q=더샵 오산역아크시티 오피스텔",
+  "public_detail_url": "https://hogangnono.com/apt/gZL96",
+  "search_candidates": [
+    {
+      "id": "gZL96",
+      "name": "더샵오산역아크시티(오)",
+      "address": "경기도 오산시 가수동 453",
+      "type_name": "오피스텔",
+      "type": 1
+    },
+    {
+      "id": "gKhea",
+      "name": "더샵오산역아크시티(공공지원민간임대)",
+      "address": "경기도 오산시 가수동 453",
+      "type_name": "아파트",
+      "type": 0
+    }
+  ],
+  "detail": {
+    "id": "gZL96",
+    "name": "더샵오산역아크시티(오)",
+    "address": "경기도 오산시 가수동 453",
+    "type": 1,
+    "baseinfo": {
+      "applyHomeInfo": {
+        "houseManageNo": 2026950086,
+        "pblancNo": 2026950086
+      }
+    }
+  }
+}

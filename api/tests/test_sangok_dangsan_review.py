@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 from app.extract.official_rules import parse_official_rules
-from app.extract.reviewed_sources import reviewed_source_for_document
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 SANGOK = next(row for row in json.loads((FIXTURES / 'current-oct8-regions.json').read_text()) if row['external_id'] == '2026000458')
@@ -55,26 +54,28 @@ def test_dangsan_current_domestic_adult_scope_with_reordered_pdf_cutoff():
     assert kinds['applicant_regions']['scope_complete'] is True
     assert kinds['rank_applicability']['account_required'] is False
     assert all(r['criterion_date'] == '2026-10-06' and r['document_hash'] == DANGSAN['document_hash'] for r in result['rules'])
-    assert reviewed_source_for_document(DANGSAN['document_url'], DANGSAN['document_hash'])
 
 
-def test_dangsan_changed_bytes_or_wrong_notice_cannot_borrow_review():
-    assert parse(DANGSAN, digest='0' * 64)['status'] != 'complete'
+def test_dangsan_new_hash_uses_current_clauses_and_wrong_notice_cannot_borrow_them():
+    changed = parse(DANGSAN, digest='0' * 64)
+    assert changed['status'] == 'complete'
+    assert all(rule['document_hash'] == '0' * 64 for rule in changed['rules'])
+    age_page = next(rule['evidence_page'] for rule in changed['rules'] if rule['kind'] == 'age_min')
+    assert parse(DANGSAN, pages=[page for page in DANGSAN['pages'] if page['page'] != age_page])['status'] != 'complete'
     payload = {**DANGSAN['payload'], 'official_url': DANGSAN['payload']['official_url'].replace('2026950087', '2026950085')}
     assert parse(DANGSAN, payload=payload)['rules'] == []
 
 
-def test_focused_retry_preserves_other_same_day_audits_and_runs_once():
+def test_generic_version_retry_preserves_completed_audits_without_a_project_registry():
     from datetime import date
     from app.extract.pipeline import _with_diagnostics
-    from app.extract.reviewed_sources import focused_review_version
     from app.ingest.worker import _failed_document_needs_new_pipeline
     from app.models import Notice
     for fixture in [SANGOK, DANGSAN]:
         payload = fixture['payload']
         row = Notice(source='cheongyak_home', external_id=payload['external_id'], official_url=payload['official_url'], announcement_date=date.fromisoformat(payload['announcement_date']), rules=[])
+        row.rules = _with_diagnostics(dict(payload), [], 'complete')['rules']
+        next(rule for rule in row.rules if rule['kind'] == 'document_diagnostics')['parser_version'] = 'previous-parser'
         assert _failed_document_needs_new_pipeline(row) is True
         row.rules = _with_diagnostics(dict(payload), [], 'complete')['rules']
         assert _failed_document_needs_new_pipeline(row) is False
-        assert focused_review_version(payload['official_url'], '2026-10-01') is None
-    assert focused_review_version(DANGSAN['payload']['official_url'].replace('2026950087', '2026950086'), '2026-10-07') is None

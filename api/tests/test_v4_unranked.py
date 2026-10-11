@@ -35,7 +35,7 @@ def walk(rules):
     ("2026910250", "unranked_after", "2026-10-01", "2021-07-22", "11"),
     ("2026930040", "cancelled_resupply", "2026-09-23", "2024-05-31", "11"),
 ])
-def test_reviewed_nonranked_offers_have_actual_complete_conditions_at_current_cutoff(number, method, current, original, region):
+def test_source_clauses_complete_nonranked_conditions_at_current_cutoff(number, method, current, original, region):
     result = parse(number)
     assert result["status"] == "complete"
     assert result["offered_supply_types"] == ["일반공급"]
@@ -53,7 +53,7 @@ def test_reviewed_nonranked_offers_have_actual_complete_conditions_at_current_cu
     assert next(r for r in rules if r["kind"] == "homeless")["value"] is True
     assert not any(r.get("purpose") == "first_rank" or r["kind"] == "rank_requirements" for r in rules)
     coverage = next(r for r in rules if r["kind"] == "condition_coverage")
-    assert coverage["completion_basis"] == "document_hash_review"
+    assert coverage["completion_basis"] == "document_structure_reviewed_standard_branch"
     assert coverage["scopes"][0]["complete"] is True
     for rule in walk(rules):
         assert rule["criterion_date"] == current
@@ -117,13 +117,15 @@ def test_overseas_and_foreigner_conditions_are_retained_after_nonranked_classifi
         assert next(r for r in rules if r["kind"] == "citizenship")["allowed_values"] == ["korean"]
 
 
-def test_changed_hash_cannot_reuse_complete_review_or_project_restrictions():
+def test_changed_hash_reparses_explicit_project_restrictions_from_current_source():
     f = fixture("2026910249")
     result = parse_official_rules(f["pages"], url=f["document_url"], digest="corrected-document", payload={"category": "unsold"})
-    assert result["status"] == "partial"
+    assert result["status"] == "complete"
     assert any(r["kind"] == "residence_region" for r in result["rules"])
-    assert not any(r["kind"] == "application_restriction" for r in result["rules"])
-    assert next(r for r in result["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["complete"] is False
+    restrictions = [r for r in result["rules"] if r["kind"] == "application_restriction"]
+    assert restrictions and all(r["document_hash"] == "corrected-document" for r in restrictions)
+    assert next(r for r in restrictions if r["restriction"] == "prior_project_contract")["project_id"] == "2026000323"
+    assert next(r for r in result["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["complete"] is True
 
 
 def test_current_cutoff_is_not_replaced_by_old_project_metadata_and_conflicting_current_date_blocks_parsing():
@@ -227,3 +229,57 @@ def test_routine_feed_recollection_preserves_reviewed_nonranked_metadata_and_cur
     assert corrected["housing_kind"] == "unknown"
     assert corrected["qualification_context"]["application_criterion_date"] is None
     assert not any(r.get("source") == "official_document_parser" for r in corrected["rules"])
+
+
+@pytest.mark.parametrize("number", ["2026910249", "2026910250", "2026930040"])
+def test_unknown_notice_identity_new_hash_date_and_shifted_eligibility_pages_use_same_clauses(number):
+    f = fixture(number)
+    current = f["announcement_date"]
+    changed = "2027-03-15"
+    for page in f["pages"]:
+        page["text"] = (page["text"].replace(current.replace("-", "."), changed.replace("-", "."))
+                        .replace(number, "2027999901"))
+        page["page"] += 2
+    f["pages"].insert(0, {"page": 1, "text": "새로운 단지 안내 표지"})
+    # The original project is read from the changed source, not a catalog.
+    project = "2026000323" if number == "2026910249" else "2021000515" if number == "2026910250" else "2024000226"
+    for page in f["pages"]:
+        page["text"] = page["text"].replace(project, "2025999911")
+    result = parse_official_rules(f["pages"], url="https://www.applyhome.co.kr/new-source.pdf", digest="new-source-hash",
+                                  payload={"category": "unsold", "external_id": "2027999901", "title": "새 단지", "announcement_date": changed})
+    assert result["status"] == "complete"
+    assert all(r["criterion_date"] == changed and r["document_hash"] == "new-source-hash" for r in walk(result["rules"]))
+    for rule in result["rules"]:
+        if rule.get("restriction", "").startswith("prior_project_"):
+            assert rule["project_id"] == "2025999911"
+    assert all(r.get("evidence_page") is None or r["evidence_page"] >= 3 for r in result["rules"])
+
+
+def test_original_project_number_is_required_only_for_an_explicit_same_project_prohibition():
+    f = fixture("2026910249")
+    for page in f["pages"]:
+        page["text"] = page["text"].replace("최초 주택관리번호는 2026000323", "최초 사업 식별자 미기재")
+    result = parse_official_rules(f["pages"], url=f["document_url"], digest="source-without-original-project")
+    assert result["status"] == "partial"
+    assert not any(r.get("restriction", "").startswith("prior_project_") for r in result["rules"])
+    assert any(r.get("restriction") == "ineligible_restriction_active" for r in result["rules"])
+
+
+def test_new_mandatory_qualification_clause_is_a_source_gap_instead_of_silent_approval():
+    f = fixture("2026910249")
+    page = next(p for p in f["pages"] if "청약자격 및 당첨자 선정 방법" in p["text"])
+    page["text"] = page["text"].replace("■ 아래에 해당하는 경우", "■ 별도 자산기준 3억원 이하인 신청자\n■ 아래에 해당하는 경우")
+    result = parse_official_rules(f["pages"], url=f["document_url"], digest="new-asset-condition")
+    assert result["status"] == "partial"
+    gaps = next(r for r in result["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["missing_topics"]
+    assert any("자산기준" in gap for gap in gaps)
+
+
+def test_conflicting_applicant_regions_prevent_whole_eligibility_completion():
+    f = fixture("2026910249")
+    page = next(p for p in f["pages"] if "청약자격 및 당첨자 선정 방법" in p["text"])
+    page["text"] = page["text"].replace("세종특별자치시", "서울특별시")
+    result = parse_official_rules(f["pages"], url=f["document_url"], digest="contradictory-region")
+    assert result["status"] == "partial"
+    gaps = next(r for r in result["rules"] if r["kind"] == "condition_coverage")["scopes"][0]["missing_topics"]
+    assert any("불일치" in gap for gap in gaps)

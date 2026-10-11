@@ -1,4 +1,4 @@
-"""Reviewed corrections precede superseded fallback copies, not new discovery."""
+"""Current official links and stored document provenance determine precedence."""
 import copy
 import json
 from pathlib import Path
@@ -34,7 +34,7 @@ async def test_failed_discovery_prefers_explicit_current_correction_even_when_or
 
     monkeypatch.setattr(pipeline, "extract_local_document", extract)
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(403))) as client:
-        result = await pipeline.enrich_notice(CORRECTED["payload"], client, allow_gemini=False)
+        result = await pipeline.enrich_notice({**CORRECTED["payload"], "document_hash": corrected["document_hash"], "rules": corrected["rules"]}, client, allow_gemini=False)
     assert calls == [CORRECTED["document_url"]]
     assert result["document_hash"] == CORRECTED["document_hash"] != ORIGINAL["document_hash"]
     allocation = next(rule for rule in result["rules"] if rule["kind"] == "regional_allocation" and rule.get("supply_type") == "다자녀가구 특별공급")
@@ -82,7 +82,8 @@ async def test_failed_current_correction_remains_visible_and_never_downgrades_re
         return original
 
     monkeypatch.setattr(pipeline, "extract_local_document", extract)
-    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(403))) as client:
+    html = f'<a href="{ORIGINAL["document_url"]}">모집공고문 PDF</a><a href="{CORRECTED["document_url"]}">정정 모집공고문 PDF</a>'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, text=html))) as client:
         result = await pipeline.enrich_notice(payload, client, known_document_hash=known_hash, allow_gemini=False)
     assert calls == [CORRECTED["document_url"], ORIGINAL["document_url"]]
     assert result["document_hash"] == (CORRECTED["document_hash"] if known == "corrected" else ORIGINAL["document_hash"])

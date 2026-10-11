@@ -87,8 +87,12 @@ def test_real_shinhee_is_not_forced_into_general_first_rank_or_seven_years_only(
     assert not any(r.get("purpose") == "first_rank" for r in result["rules"])
     rules = list(walk(result["rules"]))
     alternatives = next(r for r in rules if r.get("label") == "혼인·자녀 요건")
-    assert alternatives["kind"] == "any"
-    assert [r["kind"] for r in alternatives["conditions"]] == ["marriage_months_max", "children_min"]
+    assert alternatives["kind"] == "all"
+    assert alternatives["conditions"][0]["kind"] == "marital_status"
+    assert alternatives["conditions"][0]["allowed_values"] == ["married"]
+    family_options = alternatives["conditions"][1]
+    assert family_options["kind"] == "any"
+    assert [r["kind"] for r in family_options["conditions"]] == ["marriage_months_max", "children_min"]
 
 
 @pytest.mark.parametrize("number", ["2026000494", "2026000414", "2026820010"])

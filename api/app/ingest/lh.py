@@ -59,7 +59,7 @@ def normalize(row: dict[str, Any], category_code: str) -> dict[str, Any] | None:
     return omit_empty_enrichment(payload)
 
 
-async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -> list[dict[str, Any]]:
+async def collect(client: httpx.AsyncClient, key: str, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     for code in HOUSING_CATEGORIES:
         for page in range(1, 51):
@@ -72,10 +72,14 @@ async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -
                 "CLSG_DT": end.strftime("%Y.%m.%d"),
             })
             rows, total = body_rows(body, "dsList", "data", "items")
+            batch = []
             for row in rows:
                 normalized = normalize(row, code)
                 if normalized:
                     notices.append(normalized)
+                    batch.append(normalized)
+            if on_rows and batch:
+                await on_rows(batch)
             if not rows or (total is not None and page * 100 >= total) or len(rows) < 100:
                 break
         else:
