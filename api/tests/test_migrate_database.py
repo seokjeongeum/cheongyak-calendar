@@ -126,7 +126,7 @@ def test_read_snapshot_rejects_an_attempted_source_write(monkeypatch):
     def unexpected_source_write(read, _write, _tables, _batch_size):
         read.execute(IntegrationSetting.__table__.update().values(value="wrong"))
     monkeypatch.setattr(migration, "_copy_snapshot", unexpected_source_write)
-    with pytest.raises(migration.MigrationError, match="target_copy_failed"):
+    with pytest.raises(migration.MigrationError, match="target_transaction_failed"):
         migration.copy_application_database(source, target)
     assert snapshot(source) == before_source
     with target.connect() as connection:
@@ -171,3 +171,21 @@ def test_command_reports_only_fixed_codes_for_private_connection_failures(monkey
     monkeypatch.setattr(migration, "_configured_engine", invalid_connection)
     assert migration.main() == 1
     assert capsys.readouterr().out == '{"status": "failed", "code": "migration_failed"}\n'
+
+
+def test_placeholder_password_is_rejected_without_connecting():
+    with pytest.raises(migration.MigrationError, match="database_password_placeholder"):
+        migration._configured_engine("postgresql://postgres.test:[YOUR-PASSWORD]@example.invalid:5432/postgres")
+
+
+def test_target_connection_preflight_stops_before_source_reads(monkeypatch, capsys):
+    source, _ = seeded_source()
+    target = local_engine()
+    engines = iter((source, target))
+    monkeypatch.setattr(migration, "_configured_engine", lambda _: next(engines))
+    def unavailable():
+        raise RuntimeError("private address " + SECRET)
+    monkeypatch.setattr(target, "connect", unavailable)
+    monkeypatch.setattr(source, "connect", lambda: pytest.fail("Source must not be read before target connectivity is established"))
+    assert migration.main() == 1
+    assert capsys.readouterr().out == '{"status": "failed", "code": "target_unavailable"}\n'

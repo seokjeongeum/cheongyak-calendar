@@ -200,8 +200,11 @@ def copy_application_database(source_engine: Engine, target_engine: Engine, *, b
             except Exception:
                 raise MigrationError("source_unavailable") from None
             try:
+                target_stage = "target_unavailable"
                 with target_engine.begin() as target:
+                    target_stage = "target_schema_failed"
                     _prepare_target(target)
+                    target_stage = "target_transaction_failed"
                     report = _copy_snapshot(source, target, tables, batch_size)
                     # End the read-only snapshot before the destination can
                     # commit. A source connection failure still rolls back
@@ -210,7 +213,7 @@ def copy_application_database(source_engine: Engine, target_engine: Engine, *, b
             except MigrationError:
                 raise
             except Exception:
-                raise MigrationError("target_copy_failed") from None
+                raise MigrationError(target_stage) from None
             return report
     finally:
         if source is not None:
@@ -231,12 +234,27 @@ def _configured_engine(value):
         value = "postgresql+psycopg://" + value[len("postgresql://"):]
     try:
         url = make_url(value)
+        if url.password and "[your-password]" in url.password.lower():
+            raise MigrationError("database_password_placeholder")
         options = {"hide_parameters": True, "pool_pre_ping": True, "echo": False}
         if url.get_backend_name() == "postgresql":
             options["connect_args"] = {"connect_timeout": 10, "application_name": "cheongyak_database_copy"}
         return create_engine(url, **options)
+    except MigrationError:
+        raise
     except Exception:
         raise MigrationError("database_secret_invalid") from None
+
+
+def _check_target_connection(engine):
+    """Fail before any source transfer when the new secret cannot connect."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception as error:
+        state = getattr(getattr(error, "orig", None), "sqlstate", None)
+        code = "target_authentication_failed" if state and str(state).startswith("28") else "target_unavailable"
+        raise MigrationError(code) from None
 
 
 def main():
@@ -244,6 +262,7 @@ def main():
     try:
         source = _configured_engine(os.getenv("SOURCE_DATABASE_URL"))
         target = _configured_engine(os.getenv("TARGET_DATABASE_URL"))
+        _check_target_connection(target)
         report = copy_application_database(source, target)
         print(json.dumps(asdict(report), sort_keys=True))
         return 0
