@@ -7,6 +7,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -243,11 +244,19 @@ def test_manual_subprocess_keeps_api_responsive_and_shutdown_reaps_group(client,
         parent = int(parent_pid.read_text())
         with pytest.raises(ProcessLookupError):
             os.kill(parent, 0)
-        # Both were in the new process group; the grandchild may briefly be a
-        # zombie awaiting PID1 but cannot still run after group termination.
+        # Signal delivery to the grandchild is asynchronous. Wait briefly for
+        # termination; it may then be a zombie awaiting PID1, but must not run.
         proc_stat = f"/proc/{int(child_pid.read_text())}/stat"
-        if os.path.exists(proc_stat):
-            assert open(proc_stat).read().split()[2] == "Z"
+        termination_deadline = time.monotonic() + 1
+        while True:
+            try:
+                child_state = Path(proc_stat).read_text().split()[2]
+            except FileNotFoundError:
+                break
+            if child_state == "Z":
+                break
+            assert time.monotonic() < termination_deadline, f"Descendant still running: {child_state}"
+            time.sleep(0.01)
     finally:
         manager.shutdown()
 

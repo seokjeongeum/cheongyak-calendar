@@ -63,3 +63,41 @@ reprocess checks pass 77 tests. The full Hyangnam PDF, processed in the child
 with retained date values, produces all eight exclusive areas from page 8 with
 the original document hash. Synthetic new unit codes also pass; this change
 does not depend on a notice name, number or catalog of areas.
+
+Production V16 reprocess run `38137010670` completed successfully after Render
+deployment of `11bdccd`. Public detail responses confirm 6/8/9 exclusive areas
+for Hangang/Hyangnam/Sangok, unchanged document hashes and price/competition
+counts, and retained revision history for all five selected notices. Busan
+Yeonji remains complete and Seonun remains explicitly unreadable.
+
+The 375px browser regression was rerun with the actual new Hangang and Hyangnam
+public DTOs against the deployed application: 31 checks passed, no JavaScript
+errors or horizontal overflow, and the shared deposit edit painted in 16ms.
+Evidence expansion, bank input and focus return performed no extra API calls
+and sent no private profile. All deposit tiers passing yields first-rank
+conditions satisfied without a confirmation question; a mixed-tier failure
+stays visible beside the passed account type and recognition period.
+
+A final projection regression was reproduced with the actual archived Hangang
+rules: after the runtime parser changed to V16, a same-hash duplicate's V8 tax
+requirement could reappear beside a still-valid V15 tax model. Public projection
+now selects the current or newest compatible source review per scoped kind and
+exact hash. Unanswered prior supersession and waiver proof survives unrelated
+partial updates, but cannot delete a newer relevant requirement. Whole-scope
+completion still requires the newest admission review; processing diagnostics
+never certify eligibility. The fix changes projection without rewriting stored
+source rows or history. Fifteen focused SQLite regressions pass, including
+real archived documents, changed hashes, incompatible sources, partial reviews,
+supersession revocation and dated version numbering.
+
+Existing repository checks plus those regressions pass 73 tests, including
+inherited selection/procedure/instruction children. The final retirement check
+preserves their role when a child shares a key with an admission requirement.
+The collection checks pass 39 tests. Their process-group shutdown assertion now
+waits up to one second for asynchronous descendant signal delivery instead of
+requiring an immediate zombie state; a live descendant still fails the test.
+
+Final full API regression: 817 passed, 2 skipped in 160.86 seconds. The skipped
+cases require an explicit PostgreSQL test URL; the separate disposable-schema
+PostgreSQL startup checks already passed and are recorded in the startup-lock
+validation document. No production database is used by the API suite.

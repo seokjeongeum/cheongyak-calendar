@@ -706,9 +706,53 @@ def notice_public(
     admission_reviews: dict[str, list[dict[str, Any]]] = {}
     complete_scopes: dict[str, list[dict[str, Any]]] = {}
     full_admission_reviews: set[str] = set()
-    source_waivers: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    source_waivers: dict[str, list[tuple[str, dict[str, Any], str]]] = {}
     superseded_conditions: dict[str, list[tuple[str, dict[str, Any], dict[str, Any]]]] = {}
-    current_diagnostics: dict[str, tuple[float, dict[str, Any]]] = {}
+    current_diagnostics: dict[str, tuple[tuple[int, str, int, float], dict[str, Any]]] = {}
+    review_versions: dict[tuple[str, tuple], str] = {}
+    admission_versions: dict[str, str] = {}
+
+    def version_priority(version: str) -> tuple[int, str, int]:
+        match = re.fullmatch(r"official-sections-(\d{4}-\d{2}-\d{2})-v(\d+)", version)
+        return (int(version == PARSER_VERSION), match[1] if match else "", int(match[2]) if match else -1)
+
+    def compatible_source(rule: dict[str, Any], notice: Notice) -> bool:
+        return (rule.get("source") == "official_document_parser" and rule.get("verification") == "official"
+                and bool(rule.get("document_hash")) and rule.get("document_hash") == notice.document_hash
+                and parser_version_usable(rule, category=notice.category, title=notice.title, rules=notice.rules))
+
+    def select_review_versions(rule: dict[str, Any], notice: Notice, inherited: dict[str, Any]) -> None:
+        scope = scoped(rule, inherited)
+        if scope.get("selection_only"):
+            return
+        if compatible_source(rule, notice):
+            digest, version = rule["document_hash"], rule["parser_version"]
+            substantive = substantive_review(rule)
+            waived = source_bound_waivers(rule, digest=digest, parser_version=version)
+            if substantive:
+                key = (digest, review_key(rule, scope))
+                previous = review_versions.get(key)
+                if previous is None or version_priority(version) > version_priority(previous):
+                    review_versions[key] = version
+            # New area/rank metadata does not discard a prior admission review.
+            if waived or substantive and not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}:
+                previous = admission_versions.get(digest)
+                if previous is None or version_priority(version) > version_priority(previous):
+                    admission_versions[digest] = version
+        for key in ("conditions", "exceptions"):
+            for child in rule.get(key, []):
+                if isinstance(child, dict):
+                    select_review_versions(child, notice, scope)
+
+    for notice in related:
+        for rule in notice.rules or []:
+            select_review_versions(rule, notice, {})
+
+    def proof_version(rule: dict[str, Any], scope: dict[str, Any]) -> str | None:
+        digest = rule.get("document_hash")
+        if rule.get("kind") == "condition_coverage":
+            return admission_versions.get(digest)
+        return review_versions.get((digest, review_key(rule, scope)))
 
     def collect_review(rule: dict[str, Any], notice: Notice, inherited: dict[str, Any]) -> None:
         scope = scoped(rule, inherited)
@@ -717,12 +761,12 @@ def notice_public(
             # is omitted. Selection and instructions do not replace admission.
             return
         digest = rule.get("document_hash")
-        if (rule.get("source") == "official_document_parser" and rule.get("verification") == "official"
-                and rule.get("parser_version") == PARSER_VERSION and digest and digest == notice.document_hash
+        version = proof_version(rule, scope)
+        if (compatible_source(rule, notice) and rule.get("parser_version") == version
                 and substantive_review(rule)):
             replacements.setdefault(digest, set()).add(review_key(rule, scope))
             superseded_conditions.setdefault(digest, []).extend(
-                (kind, scope, rule) for kind in source_bound_superseded_kinds(rule, digest=digest, parser_version=PARSER_VERSION))
+                (kind, scope, rule) for kind in source_bound_superseded_kinds(rule, digest=digest, parser_version=version))
             if not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}:
                 admission_reviews.setdefault(digest, []).append(scope)
         for key in ("conditions", "exceptions"):
@@ -734,20 +778,23 @@ def notice_public(
         for rule in notice.rules or []:
             collect_review(rule, notice, {})
             digest = rule.get("document_hash")
-            if digest and digest == notice.document_hash:
-                source_waivers.setdefault(digest, []).extend(source_bound_waivers(rule, digest=digest, parser_version=PARSER_VERSION))
+            if compatible_source(rule, notice):
+                version = rule["parser_version"]
+                source_waivers.setdefault(digest, []).extend(
+                    (kind, scope, version) for kind, scope in source_bound_waivers(rule, digest=digest, parser_version=version))
             if (rule.get("kind") == "document_diagnostics" and rule.get("source") == "official_document_parser"
-                    and rule.get("verification") == "official" and rule.get("parser_version") == PARSER_VERSION
+                    and compatible_source(rule, notice)
                     and digest and digest == notice.document_hash):
                 updated = notice.updated_at
                 observed = updated.replace(tzinfo=timezone.utc).timestamp() if updated and updated.tzinfo is None else updated.timestamp() if updated else 0
-                if digest not in current_diagnostics or observed > current_diagnostics[digest][0]:
-                    current_diagnostics[digest] = (observed, rule)
+                observed_key = (*version_priority(rule["parser_version"]), observed)
+                if digest not in current_diagnostics or observed_key > current_diagnostics[digest][0]:
+                    current_diagnostics[digest] = (observed_key, rule)
     for notice in related:
         for rule in notice.rules or []:
             digest = rule.get("document_hash")
             if (rule.get("kind") != "condition_coverage" or rule.get("source") != "official_document_parser"
-                    or rule.get("verification") != "official" or rule.get("parser_version") != PARSER_VERSION
+                    or not compatible_source(rule, notice) or rule.get("parser_version") != admission_versions.get(digest)
                     or not digest or digest != notice.document_hash or digest not in replacements
                     or rule.get("status") in {"unreadable", "unsupported", "error"}
                     or rule.get("preserved_review_parser_version") or not rule.get("scopes")):
@@ -796,25 +843,31 @@ def notice_public(
                 and not scope.get("selection_only")
                 and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
                 and any(rule.get("kind") == kind
+                        and version_priority(rule["parser_version"]) <= version_priority(waiver_version)
                         and all(not values(waiver_scope, single, plural) or bool(values(scope, single, plural))
                                 and set(values(scope, single, plural)) <= set(values(waiver_scope, single, plural))
                                 for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
-                        for kind, waiver_scope in source_waivers.get(rule.get("document_hash"), []))):
+                        for kind, waiver_scope, waiver_version in source_waivers.get(rule.get("document_hash"), []))):
             return False
         if (rule.get("source") == "official_document_parser" and not is_metadata(rule)
                 and not scope.get("selection_only")
                 and any(rule.get("kind") == kind and rule != replacement
+                        and version_priority(rule["parser_version"]) <= version_priority(replacement["parser_version"])
                         and all(scope.get(field) == reviewed.get(field) for field in ("purpose", "restriction"))
                         and all(not values(reviewed, single, plural) or bool(values(scope, single, plural))
                                 and set(values(scope, single, plural)) <= set(values(reviewed, single, plural))
                                 for single, plural in (("supply_type", "supply_types"), ("unit_type", "unit_types")))
                         for kind, reviewed, replacement in superseded_conditions.get(rule.get("document_hash"), []))):
             return False
-        if rule.get("source") == "official_document_parser" and rule.get("parser_version") != PARSER_VERSION:
+        if rule.get("source") == "official_document_parser":
             digest = rule.get("document_hash")
-            if (review_key(rule, scope) in replacements.get(digest, set()) or
-                    not is_metadata(rule) and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
-                    and (digest in full_admission_reviews or admission_replaced(scope, digest))):
+            if ((not scope.get("selection_only") and rule.get("parser_version") != proof_version(rule, scope)
+                    and review_key(rule, scope) in replacements.get(digest, set())) or
+                    (not is_metadata(rule) and not scope.get("selection_only")
+                     and scope.get("purpose") not in {"first_rank", "second_rank", "selection"}
+                     and digest in admission_versions
+                     and version_priority(rule["parser_version"]) < version_priority(admission_versions[digest])
+                     and (digest in full_admission_reviews or admission_replaced(scope, digest)))):
                 return False
         # Dropping only a child could weaken an all/any/exception requirement.
         # Retire the containing branch when an obsolete interpretation occurs.
