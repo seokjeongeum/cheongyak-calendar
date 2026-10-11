@@ -254,6 +254,16 @@ def _check_target_connection(engine):
     except Exception as error:
         state = getattr(getattr(error, "orig", None), "sqlstate", None)
         code = "target_authentication_failed" if state and str(state).startswith("28") else "target_unavailable"
+        # Connection-handshake errors often omit SQLSTATE. Match only known
+        # protocol causes; never include private exception text in output.
+        message = str(error).lower()
+        causes = (("network is unreachable", "target_ipv6_unreachable"),
+                  ("could not translate host name", "target_host_unresolved"),
+                  ("name or service not known", "target_host_unresolved"),
+                  ("tenant or user not found", "target_pooler_user_invalid"),
+                  ("password authentication failed", "target_authentication_failed"),
+                  ("connection timeout expired", "target_connection_timed_out"))
+        code = next((public for fragment, public in causes if fragment in message), code)
         raise MigrationError(code) from None
 
 

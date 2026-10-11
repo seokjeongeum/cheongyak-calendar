@@ -189,3 +189,20 @@ def test_target_connection_preflight_stops_before_source_reads(monkeypatch, caps
     monkeypatch.setattr(source, "connect", lambda: pytest.fail("Source must not be read before target connectivity is established"))
     assert migration.main() == 1
     assert capsys.readouterr().out == '{"status": "failed", "code": "target_unavailable"}\n'
+
+
+@pytest.mark.parametrize("message,code", [
+    ("Network is unreachable", "target_ipv6_unreachable"),
+    ("could not translate host name", "target_host_unresolved"),
+    ("Tenant or user not found", "target_pooler_user_invalid"),
+    ("password authentication failed", "target_authentication_failed"),
+    ("connection timeout expired", "target_connection_timed_out"),
+])
+def test_connection_failure_reports_only_public_protocol_cause(monkeypatch, message, code):
+    target = local_engine()
+    def failed():
+        raise RuntimeError(message + " private address/password " + SECRET)
+    monkeypatch.setattr(target, "connect", failed)
+    with pytest.raises(migration.MigrationError) as error:
+        migration._check_target_connection(target)
+    assert str(error.value) == code and SECRET not in str(error.value)
