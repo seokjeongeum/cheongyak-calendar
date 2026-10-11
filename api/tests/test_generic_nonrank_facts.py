@@ -3,7 +3,9 @@ import copy
 import json
 from pathlib import Path
 
-from app.extract.official_rules import _document_area_facts, _document_cap_fact, parse_official_rules
+import pytest
+
+from app.extract.official_rules import PARSER_VERSION, _document_area_facts, _document_cap_fact, parse_official_rules, parser_version_usable
 
 
 def fact(kind, value=None, **fields):
@@ -23,6 +25,48 @@ def test_exclusive_column_is_not_a_supply_area_and_split_header_is_supported():
     assert _document_area_facts([marketing], fact) == []
     wrong_column = {**page, "text": page["text"].replace("72.3456 22.1234", "94.4690 22.1234")}
     assert [unit["unit_type"] for unit in _document_area_facts([wrong_column], fact)[0]["units"]] == ["092.1234B"]
+
+
+def test_actual_joined_supply_cells_restore_every_official_exclusive_area():
+    source = json.loads((Path(__file__).parent / 'fixtures/hyangnam-regional-v9.json').read_text())
+    parsed = parse_official_rules(source['pages'], url=source['document_url'],
+        digest=source['document_hash'], payload=source['payload'])
+    areas = next(rule for rule in parsed['rules'] if rule['kind'] == 'unit_exclusive_areas')
+    assert areas['units'] == [
+        {'unit_type': '071.8178', 'exclusive_area_sqm': 71.8178},
+        {'unit_type': '084.9592A', 'exclusive_area_sqm': 84.9592},
+        {'unit_type': '084.9767B', 'exclusive_area_sqm': 84.9767},
+        {'unit_type': '084.9221C', 'exclusive_area_sqm': 84.9221},
+        {'unit_type': '084.9140D', 'exclusive_area_sqm': 84.9140},
+        {'unit_type': '107.9722A', 'exclusive_area_sqm': 107.9722},
+        {'unit_type': '107.8263B', 'exclusive_area_sqm': 107.8263},
+        {'unit_type': '147.9931P', 'exclusive_area_sqm': 147.9931},
+    ]
+    assert areas['document_hash'] == source['document_hash'] and areas['evidence_page'] == 8
+    assert areas['parser_version'] == PARSER_VERSION
+    assert '24.8285109.7877' in areas['evidence_text']
+
+
+def test_new_unit_codes_joined_cells_and_spaced_variable_precision_share_sum_validation():
+    page = {'page': 42, 'text': '''주택형 주택공급면적 전용면적 공용면적 소계
+01 079.1234Z 79Z 79.1234 21.4321100.5555 50.1234
+02 113.4567Y 113Y 113.4567 30.5 143.9567 60.1234'''}
+    result = _document_area_facts([page], fact)
+    assert result[0]['units'] == [{'unit_type': '079.1234Z', 'exclusive_area_sqm': 79.1234},
+                                  {'unit_type': '113.4567Y', 'exclusive_area_sqm': 113.4567}]
+    assert result[0]['page'] == 42
+
+
+@pytest.mark.parametrize('joined', ['21.4321100.7555', '21.43211100.5555', '21.4321100.55555'])
+def test_joined_cells_with_wrong_sum_or_ambiguous_precision_are_rejected(joined):
+    page = {'page': 3, 'text': '주택형 주택공급면적 전용면적 공용면적\n'
+            f'01 079.1234Z 79Z 79.1234 {joined} 50.1234'}
+    assert _document_area_facts([page], fact) == []
+
+
+def test_previous_parser_facts_stay_compatible_while_new_area_review_is_pending():
+    old = {'source': 'official_document_parser', 'parser_version': 'official-sections-2026-10-11-v15'}
+    assert parser_version_usable(old, category='apt') is True
 
 
 def test_price_cap_declaration_ignores_another_housing_kind_in_statute_table():

@@ -36,6 +36,7 @@ def isolate_external_detail_lookup(monkeypatch):
     ("partial", None, PARSER_VERSION, "discovery", None, 0),
     ("complete", None, PARSER_VERSION, "discovery", None, 0),
     ("partial", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
+    ("partial", DOCUMENT_PIPELINE_VERSION, "official-sections-2026-10-11-v15", "decode", None, 1),
     ("unsupported", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
     ("complete", DOCUMENT_PIPELINE_VERSION, "older-parser", "discovery", None, 1),
     ("partial", "older-download-pipeline", PARSER_VERSION, "discovery", "error", 1),

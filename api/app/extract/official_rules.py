@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-11-v15"
+PARSER_VERSION = "official-sections-2026-10-11-v16"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -34,7 +34,7 @@ def parser_version_usable(rule: dict, *, category: str = "", title: str = "", ru
         return True
     # Later reviewed geography/admission supplements add source-bound facts.
     # Prior valid facts remain available until their document is reparsed.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13", "official-sections-2026-10-11-v15"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -229,9 +229,16 @@ def _document_area_facts(pages, make):
         if not all(label in header for label in ("주택형", "주택공급면적", "전용면적", "공용면적")):
             continue
         units, evidence = [], []
-        pattern = r"(?<![\d.])(\d{2,3}\.\d{4})([A-Z]?)\s+(\d{2,3}[A-Z]?)\s+(\d{2,3}\.\d{4})\s+(\d+\.\d+)\s+(\d+\.\d+)"
+        # Fixed four-decimal common/subtotal cells can touch in PDF layout
+        # text. Split only that explicit precision; the area sum below must
+        # still establish the independent columns. Spaced cells retain their
+        # existing variable-precision representation.
+        pattern = (r"(?<![\d.])(\d{2,3}\.\d{4})([A-Z]?)\s+(\d{2,3}[A-Z]?)\s+(\d{2,3}\.\d{4})\s+"
+                   r"(?:(\d+\.\d+)\s+(\d+\.\d+)|(\d+\.\d{4})(\d+\.\d{4})(?![\d.]))")
         for match in re.finditer(pattern, page["text"]):
-            model, suffix, alias, exclusive, common, subtotal = match.groups()
+            model, suffix, alias, exclusive, common, subtotal, joined_common, joined_subtotal = match.groups()
+            if common is None:
+                common, subtotal = joined_common, joined_subtotal
             if float(model) != float(exclusive) or alias != str(int(float(model))) + suffix:
                 continue
             if abs(float(exclusive) + float(common) - float(subtotal)) > .0002:

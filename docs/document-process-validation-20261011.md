@@ -48,3 +48,18 @@ retention policy as enrichment. Explicit waivers, replacements, complete
 source reviews and changed document hashes still retire old facts. The
 reprocess/condition-retention checks pass 48 tests, including preserved dates,
 prices, source provenance, history and idempotence.
+
+The final browser check against the new production snapshots found a separate
+area-table regression: Hyangnam's PDF joins the four-decimal common and supply
+area cells without whitespace, so only one of eight exclusive areas survived
+the stricter column parser. The parser now supports that fixed-precision layout
+and still requires agreement between the model, alias and printed exclusive
+area, plus a valid exclusive/common/subtotal sum. Spaced variable-precision
+cells remain supported; wrong sums and ambiguous precision are rejected.
+
+Parser V16 triggers another review of V15 partial results and preserves V15
+facts while that review is pending. Generic area, retry, region/contract and
+reprocess checks pass 77 tests. The full Hyangnam PDF, processed in the child
+with retained date values, produces all eight exclusive areas from page 8 with
+the original document hash. Synthetic new unit codes also pass; this change
+does not depend on a notice name, number or catalog of areas.
