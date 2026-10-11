@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import re
+import socket
+import ssl
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -117,6 +119,7 @@ _RESULT_ALIASES = {
     "UNREGISTERED_IP_ERROR": "32",
 }
 _SUCCESS_CODES = {"0", "00", "000", "200", "Y", "SUCCESS"}
+_TRANSIENT_RESULT_CODES = {"01", "02", "04", "05"}
 
 
 def _result_code(raw: Any) -> str | None:
@@ -146,7 +149,9 @@ def _coded_error(raw: Any, status_code: int | None) -> FeedError | None:
     if status_code is not None:
         prefix = f"상위 API HTTP {status_code}, 오류 코드 {code}"
     return FeedError(f"{prefix}: {cause}", status_code=status_code, result_code=code,
-                     retryable=status_code in {429, 500, 502, 503, 504})
+                     retryable=(status_code is None or status_code in {429, 500, 502, 503, 504})
+                     and (code in _TRANSIENT_RESULT_CODES
+                          or (code not in _RESULT_CAUSES and status_code is not None)))
 
 
 def _http_error(status_code: int) -> FeedError:
@@ -203,6 +208,31 @@ def gateway_error(body: Any, *, status_code: int | None = None) -> FeedError | N
     return None
 
 
+def _network_failure_cause(exc: BaseException) -> str | None:
+    """Expose only stable network categories, never upstream exception text."""
+    allowed = (
+        (ssl.SSLCertVerificationError, "SSLCertVerificationError"),
+        (socket.gaierror, "gaierror"),
+        (ConnectionRefusedError, "ConnectionRefusedError"),
+        (TimeoutError, "TimeoutError"),
+    )
+    pending = [exc]
+    visited: set[int] = set()
+    for _ in range(16):
+        if not pending:
+            break
+        current = pending.pop(0)
+        if id(current) in visited:
+            continue
+        visited.add(id(current))
+        for category, label in allowed:
+            if isinstance(current, category):
+                return label
+        pending.extend(cause for cause in (current.__cause__, current.__context__)
+                       if isinstance(cause, BaseException) and id(cause) not in visited)
+    return None
+
+
 async def get_json(client: httpx.AsyncClient, url: str, params: dict[str, Any], *, attempts: int = 3) -> dict[str, Any] | list[Any]:
     """GET with bounded retries for transient errors and no secret-bearing logs."""
     last: FeedError | None = None
@@ -222,7 +252,9 @@ async def get_json(client: httpx.AsyncClient, url: str, params: dict[str, Any], 
                 raise _http_error(response.status_code)
             return body
         except httpx.RequestError as exc:
-            last = FeedError(f"상위 API 연결 실패: {type(exc).__name__}", retryable=True)
+            cause = _network_failure_cause(exc)
+            suffix = f" ({cause})" if cause else ""
+            last = FeedError(f"상위 API 연결 실패: {type(exc).__name__}{suffix}", retryable=True)
         except FeedError as exc:
             last = exc
         if last is not None:

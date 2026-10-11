@@ -624,7 +624,10 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 source_warning = None
                 if source == "cheongyak_home":
                     async def save_current_rows(current_rows: list[dict]) -> None:
-                        await save_feed_batch(source, current_rows)
+                        changed = [row for row in current_rows
+                            if streamed_rows.get(source, {}).get(row.get("external_id")) != row]
+                        if changed or not current_rows:
+                            await save_feed_batch(source, changed)
                         with SessionLocal() as session:
                             state = session.get(SourceStatus, source)
                             state.message = f"현재 접수 공고 {len(durable_identities.get(source, set()))}건 저장 · 과거 공고 가격 조회 중"
@@ -632,13 +635,15 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                         competition_ready.set()
 
                     rows = await reb.collect(client, key, start, end,
-                        today=today, on_current_rows=save_current_rows)
+                        today=today, on_current_rows=save_current_rows,
+                        on_rows=lambda batch: save_feed_batch(source, batch))
                 elif source == "myhome":
                     rows = await myhome.collect(client, key, start, end, on_rows=lambda batch: save_feed_batch(source, batch))
                 elif source == "lh":
                     rows = await lh.collect(client, key, start, end, on_rows=lambda batch: save_feed_batch(source, batch))
                 elif source == "ih":
-                    rows = await ih.collect(client, key, start, end)
+                    rows = await ih.collect(client, key, start, end,
+                        on_rows=lambda batch: save_feed_batch(source, batch))
                 elif source == "sh":
                     rows = await boards.collect_sh(client, start, end, on_rows=lambda batch: save_feed_batch(source, batch))
                 else:

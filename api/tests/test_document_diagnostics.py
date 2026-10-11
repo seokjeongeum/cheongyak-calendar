@@ -172,7 +172,32 @@ async def test_failed_feed_attempt_retains_known_hash_in_diagnostics_when_feed_o
     rule = next(rule for rule in result["rules"] if rule["kind"] == "document_diagnostics")
     assert result["document_hash"] == rule["document_hash"] == "last-reviewed-document"
     assert rule["status"] == "unreadable"
-    assert any(entry["status"] == "error" and entry["code"] == "attachment_not_found" for entry in rule["diagnostics"])
+    assert any(entry["status"] == "error" and entry["code"] == "announcement_download_failed" for entry in rule["diagnostics"])
+    assert not any(entry["code"] == "attachment_not_found" for entry in rule["diagnostics"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["http_503", "timeout", "missing_anchor"])
+async def test_unseen_notice_distinguishes_unavailable_page_from_page_without_attachment(monkeypatch, failure):
+    monkeypatch.setattr(pipeline, "MAX_DOWNLOAD_ATTEMPTS", 1)
+    payload = {"official_url": "https://www.gmcc.co.kr/board.es?list_no=98765",
+               "title": "새 모집공고", "announcement_date": "2027-07-08", "rules": []}
+
+    def transport(request):
+        if failure == "timeout":
+            raise httpx.ReadTimeout("private-request-detail", request=request)
+        return httpx.Response(503 if failure == "http_503" else 200,
+                              text="public notice without attachment")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(transport)) as client:
+        result = await pipeline.enrich_notice(payload, client, allow_gemini=False)
+    entries = diagnostics(result)
+    expected = "attachment_not_found" if failure == "missing_anchor" else "announcement_download_failed"
+    assert {entry["code"] for entry in entries} == {expected}
+    assert all(entry["stage"] == "discovery" and entry["status"] == "error" for entry in entries)
+    assert entries[0]["missing_items"] == ["현재 모집공고문의 첨부 주소"]
+    assert result["local_extraction_status"] == "unreadable"
+    assert "private-request-detail" not in json.dumps(entries)
 
 
 @pytest.mark.asyncio

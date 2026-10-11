@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-11-v16"
+PARSER_VERSION = "official-sections-2026-10-11-v17"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -34,7 +34,7 @@ def parser_version_usable(rule: dict, *, category: str = "", title: str = "", ru
         return True
     # Later reviewed geography/admission supplements add source-bound facts.
     # Prior valid facts remain available until their document is reparsed.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13", "official-sections-2026-10-11-v15"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13", "official-sections-2026-10-11-v15", "official-sections-2026-10-11-v16"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -316,7 +316,16 @@ def parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: d
             return regional_fact
         method = next((r.get("value") for r in result.get("rules", []) if r.get("kind") == "application_method"), None)
         regions = explicit_applicant_regions(pages, cutoff=cutoff, make=regional_make, provinces=PROVINCES, method=method)
-        if regions:
+        if method in {"unranked_after", "optional_supply", "cancelled_resupply"} and any(
+            r.get("kind") == "applicant_regions" and not r.get("supply_type") for r in result.get("rules", [])
+        ):
+            # The generic unranked review already bound common geography to
+            # its numbered applicant route. Cover summaries and legal-method
+            # comparison tables must not overwrite that operative evidence.
+            # Distinct special-supply paragraphs remain independently scoped.
+            regions = [r for r in regions if r.get("supply_type") and r["supply_type"] != "일반공급"]
+            result["rules"].extend(regions)
+        elif regions:
             # An earlier subtype paragraph or a bank exemption can mention a
             # province without describing the common applicant geography.
             # Resolve that geography independently from the operative source.

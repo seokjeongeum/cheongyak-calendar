@@ -8,6 +8,7 @@ not interpreted as deposits unless the official announcement supplies that unit.
 
 from __future__ import annotations
 
+import asyncio
 import copy
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -24,6 +25,8 @@ from .common import FeedError, add_event, body_rows, date_iso, decimal_number, g
 BASE = "https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1"
 SOURCE = "cheongyak_home"
 CLASSIFICATION_SOURCE_URL = "https://www.data.go.kr/data/15098547/openapi.do"
+MODEL_CONCURRENCY = 3
+MODEL_BATCH_SIZE = 6
 
 
 @dataclass(frozen=True)
@@ -300,18 +303,36 @@ def _current_receipt_date(detail: dict[str, Any], today: date) -> str | None:
 async def collect(
     client: httpx.AsyncClient, key: str, start: date, end: date, *, today: date | None = None,
     on_current_rows: Callable[[list[dict[str, Any]]], Awaitable[None]] | None = None,
+    on_rows: Callable[[list[dict[str, Any]]], Awaitable[None]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Fetch every notice, optionally delivering current rows before archival models."""
+    """Fetch current notices first, committing ready model batches when requested."""
     all_notices: list[dict[str, Any]] = []
     pending: list[tuple[Pair, dict[str, Any]]] = []
+    model_slots = asyncio.Semaphore(MODEL_CONCURRENCY)
 
     async def model_row(pair: Pair, detail: dict[str, Any]) -> dict[str, Any] | None:
-        models = await _pages(client, f"{BASE}/{pair.model}", {
-            "serviceKey": key,
-            "cond[HOUSE_MANAGE_NO::EQ]": value(detail, "HOUSE_MANAGE_NO"),
-            "cond[PBLANC_NO::EQ]": value(detail, "PBLANC_NO"),
-        }, max_pages=20)
+        async with model_slots:
+            models = await _pages(client, f"{BASE}/{pair.model}", {
+                "serviceKey": key,
+                "cond[HOUSE_MANAGE_NO::EQ]": value(detail, "HOUSE_MANAGE_NO"),
+                "cond[PBLANC_NO::EQ]": value(detail, "PBLANC_NO"),
+            }, max_pages=20)
         return normalize(detail, models, pair)
+
+    async def model_batches(entries: list[tuple[Pair, dict[str, Any]]]) -> None:
+        for offset in range(0, len(entries), MODEL_BATCH_SIZE):
+            # Each request retains its own bounded retry policy; concurrent
+            # model calls do not hold a database transaction or connection.
+            outcomes = await asyncio.gather(*(model_row(pair, detail) for pair, detail
+                in entries[offset:offset + MODEL_BATCH_SIZE]), return_exceptions=True)
+            batch = [row for row in outcomes if isinstance(row, dict)]
+            all_notices.extend(batch)
+            if on_rows is not None and batch:
+                await on_rows(copy.deepcopy(batch))
+            # A failure is still public, but ready siblings are durable first.
+            failure = next((row for row in outcomes if isinstance(row, BaseException)), None)
+            if failure is not None:
+                raise failure
 
     for pair in PAIRS:
         details = await _pages(client, f"{BASE}/{pair.detail}", {
@@ -324,25 +345,33 @@ async def collect(
             notice_no = value(detail, "PBLANC_NO")
             if house_no is None or notice_no is None:
                 continue
-            if on_current_rows is not None:
+            if on_current_rows is not None or on_rows is not None:
                 pending.append((pair, detail))
                 continue
             normalized = await model_row(pair, detail)
             if normalized:
                 all_notices.append(normalized)
-    if on_current_rows is not None:
+    if on_current_rows is not None or on_rows is not None:
         today = today or datetime.now(ZoneInfo("Asia/Seoul")).date()
         current = [(pair, detail) for pair, detail in pending if _current_receipt_date(detail, today) is not None]
         archival = [(pair, detail) for pair, detail in pending if _current_receipt_date(detail, today) is None]
-        for pair, detail in sorted(current, key=lambda entry: _current_receipt_date(entry[1], today)):
-            normalized = await model_row(pair, detail)
-            if normalized:
-                all_notices.append(normalized)
+        ordered_current = sorted(current, key=lambda entry: _current_receipt_date(entry[1], today))
+        if on_rows is not None:
+            await model_batches(ordered_current)
+        else:
+            for pair, detail in ordered_current:
+                normalized = await model_row(pair, detail)
+                if normalized:
+                    all_notices.append(normalized)
         # A consumer may normalize/save its copy without changing the final
         # complete feed. Empty current batches also release its waiting gate.
-        await on_current_rows(copy.deepcopy(all_notices))
-        for pair, detail in archival:
-            normalized = await model_row(pair, detail)
-            if normalized:
-                all_notices.append(normalized)
+        if on_current_rows is not None:
+            await on_current_rows(copy.deepcopy(all_notices))
+        if on_rows is not None:
+            await model_batches(archival)
+        else:
+            for pair, detail in archival:
+                normalized = await model_row(pair, detail)
+                if normalized:
+                    all_notices.append(normalized)
     return all_notices

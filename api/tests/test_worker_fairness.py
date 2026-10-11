@@ -226,7 +226,7 @@ async def test_reb_current_batch_is_durable_and_starts_rates_before_archival_mod
     audited = []
     competition_calls = []
 
-    async def reb_collect(client, key, start, end, *, today, on_current_rows):
+    async def reb_collect(client, key, start, end, *, today, on_current_rows, on_rows=None):
         assert today == TODAY
         original = copy.deepcopy(current)
         await on_current_rows(current)
@@ -308,7 +308,7 @@ async def test_empty_current_callback_releases_rates_while_archival_models_wait(
     archival_started = asyncio.Event()
     rates_started = asyncio.Event()
 
-    async def reb_collect(client, key, start, end, *, today, on_current_rows):
+    async def reb_collect(client, key, start, end, *, today, on_current_rows, on_rows=None):
         await on_current_rows([])
         archival_started.set()
         await asyncio.Event().wait()
@@ -737,7 +737,7 @@ async def test_feed_timeout_is_bounded_and_retains_already_saved_current_batch(s
     rows = {source: rows_for(source) for source in SOURCES}
     mock_feeds(monkeypatch, rows, [])
     monkeypatch.setattr(worker, "FEED_TIMEOUT_SECONDS", .02)
-    async def reb_collect(client, key, start, end, *, today, on_current_rows):
+    async def reb_collect(client, key, start, end, *, today, on_current_rows, on_rows=None):
         await on_current_rows(copy.deepcopy(rows["cheongyak_home"]))
         await asyncio.Event().wait()
     async def competition(**kwargs):
@@ -888,3 +888,80 @@ async def test_streamed_unchanged_rows_are_not_written_again_when_complete_feed_
         result = await worker.run_once(today=TODAY, client=client)
     assert result['lh']['count'] == 1
     assert writes.count(('lh', rows['lh'][0]['external_id'])) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('source', ['cheongyak_home', 'ih'])
+async def test_streamed_feed_batch_survives_next_request_failure_without_erasing_history(store, monkeypatch, source):
+    factory, _ = store
+    rows = {name: [] for name in SOURCES}
+    mock_feeds(monkeypatch, rows, [])
+    row = rows_for(source)[0]
+    with factory() as session:
+        notice = upsert_notice(session, {**row, 'document_hash': 'existing-official-document'})
+        notice_id = notice.id
+        prior_prices = [(price.unit_type, price.amount_krw) for price in notice.prices]
+        prior_revision_count = len(notice.revisions)
+        session.commit()
+    ready = copy.deepcopy(row)
+    ready['title'] = '새로 받은 공식 제목'
+    ready.pop('prices')
+    ready.pop('rules')
+    async def failing_feed(client, key, start, end, *, on_rows, **kwargs):
+        await on_rows([ready])
+        with factory() as session:
+            saved = session.get(Notice, notice_id)
+            assert saved.title == ready['title']
+            assert [(price.unit_type, price.amount_krw) for price in saved.prices] == prior_prices
+            assert saved.document_hash == 'existing-official-document'
+            assert len(saved.revisions) >= prior_revision_count
+        raise FeedError('상위 API 연결 실패: ConnectError', retryable=True)
+    monkeypatch.setattr(worker.reb if source == 'cheongyak_home' else worker.ih, 'collect', failing_feed)
+    monkeypatch.setattr(worker, 'DOCUMENT_BUDGET_SECONDS', 0)
+    async def competition(**kwargs):
+        return {'status': 'ok', 'count': 0}
+    monkeypatch.setattr(worker.competition, 'run_once', competition)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        result = await worker.run_once(today=TODAY, client=client)
+    assert result[source]['status'] == 'partial' and result[source]['count'] == 1
+    with factory() as session:
+        state = session.get(SourceStatus, source)
+        assert state.record_count == 1 and state.status == 'partial'
+        assert 'ConnectError' in state.message and '나머지 공고 조회 미완료' in state.message
+        assert state.last_success_at.replace(tzinfo=timezone.utc) > BEFORE
+        saved = session.get(Notice, notice_id)
+        assert [(price.unit_type, price.amount_krw) for price in saved.prices] == prior_prices
+        assert saved.document_hash == 'existing-official-document'
+        assert len(saved.revisions) >= prior_revision_count
+
+
+@pytest.mark.asyncio
+async def test_worker_does_not_write_streamed_current_rows_again_on_current_and_final_callbacks(store, monkeypatch):
+    factory, _ = store
+    mock_feeds(monkeypatch, {source: [] for source in SOURCES}, [])
+    current, archive = rows_for('cheongyak_home', 2)
+    archive['announcement_date'] = '2026-05-01'
+    archive['events'] = [{'kind': 'general', 'label': '접수', 'start_date': '2026-05-12'}]
+    writes = []
+    save_rows = worker._save_rows
+    async def observe_rows(source, rows, *args, **kwargs):
+        if source == 'cheongyak_home' and kwargs.get('audit_documents') is False:
+            writes.extend(row['external_id'] for row in rows)
+        return await save_rows(source, rows, *args, **kwargs)
+    monkeypatch.setattr(worker, '_save_rows', observe_rows)
+    async def feed(client, key, start, end, *, on_rows, on_current_rows, **kwargs):
+        await on_rows([copy.deepcopy(current)])
+        await on_current_rows([copy.deepcopy(current)])
+        await on_rows([copy.deepcopy(archive)])
+        return copy.deepcopy([current, archive])
+    monkeypatch.setattr(worker.reb, 'collect', feed)
+    monkeypatch.setattr(worker, 'DOCUMENT_BUDGET_SECONDS', 0)
+    async def competition(**kwargs):
+        return {'status': 'ok', 'count': 0}
+    monkeypatch.setattr(worker.competition, 'run_once', competition)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(no_network)) as client:
+        result = await worker.run_once(today=TODAY, client=client)
+    assert writes == [current['external_id'], archive['external_id']]
+    assert result['cheongyak_home']['count'] == 2
+    with factory() as session:
+        assert len(list(session.scalars(select(Notice).where(Notice.source == 'cheongyak_home')))) == 2

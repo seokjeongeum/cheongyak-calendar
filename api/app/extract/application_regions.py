@@ -84,7 +84,7 @@ def _region_names(text, cutoff, provinces):
     # A listed full province already includes a city in the same OR clause.
     codes = {r["region_code"] for r in found if len(r["region_code"]) == 2}
     found = [r for r in found if len(r["region_code"]) == 2 or r["region_code"][:2] not in codes]
-    return list({r["region_code"]: r for r in found}.values())
+    return sorted({r["region_code"]: r for r in found}.values(), key=lambda region: region["region_code"])
 
 
 def _historical_maps(pages, cutoff):
@@ -207,7 +207,7 @@ def explicit_applicant_regions(pages, *, cutoff, make, provinces, method=None):
         for match in re.finditer(date_label + r"(?:\s*\([^)]{0,35}\))?\s*현재[^■▌Ÿ•]{0,1100}", text):
             quote = match.group(0)
             flat = _flat(quote)
-            if not re.search(r"청약이?가능|신청가능|신청할수|신청자격|무주택세대(?:구성원|주)|대상으로공급", flat):
+            if not re.search(r"청약이?가능|신청가능|신청할수|신청자격|무주택세대(?:구성원|(?:의세대)?주)|대상으로공급", flat):
                 continue
             if re.search(r"과거|이전공고|했던|당시|최초공고의", flat):
                 continue

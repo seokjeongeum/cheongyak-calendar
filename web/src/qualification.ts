@@ -1248,13 +1248,26 @@ export interface RegionDecision {
   evidenceText?: string | null
 }
 
+function regionalSetOrder(value: unknown, key?: string): unknown {
+  if (Array.isArray(value)) {
+    const normalized = value.map((entry) => regionalSetOrder(entry))
+    // A regions list is an OR scope. Keep every member's conditions, but the
+    // order in which the document prints those alternatives is immaterial.
+    return key === 'regions'
+      ? normalized.sort((a, b) => (JSON.stringify(a) ?? '').localeCompare(JSON.stringify(b) ?? ''))
+      : normalized
+  }
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.entries(value).map(([entryKey, entry]) => [entryKey, regionalSetOrder(entry, entryKey)]))
+}
+
 function applicantRegionMetadata(notice: Notice, selection: RegionScopeSelection): NoticeRule | undefined {
   const candidates = (notice.rules || []).filter((rule) => rule.kind === 'applicant_regions' && rule.effect === 'metadata' && rule.verification === 'official')
   const exact = candidates.filter((rule) => scopedRule(rule, selection.unitType, selection.supplyType))
     .sort((a, b) => Number(!!b.supply_type) + Number(!!b.unit_type) - Number(!!a.supply_type) - Number(!!a.unit_type))[0]
   if (exact || selection.supplyType || selection.unitType || !candidates.length) return exact
   // A notice summary can use identical regional scopes shared by every offer.
-  const signature = (rule: NoticeRule) => JSON.stringify(['regions', 'unrestricted', 'domestic_only', 'local_priority', 'other_gyeonggi', 'priority_applicable', 'priority_division', 'exceptions', 'criterion_date', 'criterion_basis'].map((key) => rule[key]))
+  const signature = (rule: NoticeRule) => JSON.stringify(['regions', 'unrestricted', 'domestic_only', 'local_priority', 'other_gyeonggi', 'priority_applicable', 'priority_division', 'exceptions', 'criterion_date', 'criterion_basis', 'scope_complete'].map((key) => regionalSetOrder(rule[key], key)))
   return candidates.every((rule) => signature(rule) === signature(candidates[0])) ? { ...candidates[0], supply_type: null, unit_type: null, unit_types: undefined } : undefined
 }
 function regionMilitaryException(metadata: NoticeRule, profile: LocalProfile, notice: Notice, area?: string): EligibilityReason | null {

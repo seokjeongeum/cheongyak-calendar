@@ -11,7 +11,7 @@ from .application_regions import explicit_applicant_regions, region_catalog
 
 ADULT_LAW_URL = "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0026&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR"
 ADULT_LAW_TEXT = "제26조제5항: 국내에 거주하는 성년자로서 다음 각 호의 요건을 모두 갖춘 사람"
-REVIEW_VERSION = "generic-admission-unranked-2026-10-10-v1"
+REVIEW_VERSION = "generic-admission-unranked-2026-10-11-v2"
 ACCOUNT_WAIVER = r"청약통장\s*(?:(?:가입여부)?\s*(?:와|에)?\s*(?:무관|관계없이)|이?\s*필요(?:없|하지\s*않))"
 
 
@@ -46,6 +46,10 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
     rules, missing = [], []
     section, bounded = _qualification_section(pages)
     provinces = {row["name"]: row["code"] for row in region_catalog()["provinces"]}
+    qualification_pages = {}
+    for line in section:
+        qualification_pages.setdefault(line["page"], []).append(line["text"])
+    restriction_pages = [{"page": page, "text": "\n".join(lines)} for page, lines in qualification_pages.items()]
 
     def find(pattern, source=None):
         for page in pages if source is None else source:
@@ -54,11 +58,57 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
                 return {"page": page["page"], "quote": match.group(0)}
         return None
 
-    regions = explicit_applicant_regions(pages, cutoff=cutoff, make=make, provinces=provinces, method=method)
+    # The numbered applicant table defines this route. A cover summary or a
+    # generic law-comparison table must not replace its applicant scope.
+    applicant_pages = restriction_pages if section else pages
+    regions = explicit_applicant_regions(applicant_pages, cutoff=cutoff, make=make, provinces=provinces, method=method)
+    common_regions = [region for region in explicit_applicant_regions(pages, cutoff=cutoff, make=make, provinces=provinces, method=method)
+                      if not region.get("supply_type")]
+    region_scope = lambda region: (tuple(sorted(row["region_code"] for row in region.get("regions", []))),
+                                   bool(region.get("unrestricted")))
+    if regions:
+        operative_scopes = {region_scope(region) for region in regions}
+        # A differently ordered summary is the same OR scope. A genuinely
+        # contradictory current applicant clause still prevents certification.
+        regions.extend(region for region in common_regions if region_scope(region) not in operative_scopes)
+    else:
+        # Some cancellation documents put the common residence clause before
+        # their subtype tables. Keep that verified clause even when the table
+        # heading/layout cannot establish a complete general branch.
+        regions = common_regions
+    for region in regions:
+        priorities = [candidate for candidate in common_regions
+                      if region_scope(candidate) == region_scope(region) and candidate.get("local_priority")]
+        distinct = []
+        for candidate in priorities:
+            if candidate["local_priority"] not in distinct:
+                distinct.append(candidate["local_priority"])
+        if len(distinct) > 1 or (distinct and region.get("local_priority") and region["local_priority"] != distinct[0]):
+            region["scope_complete"] = False
+            missing.append("현재 신청자격 문단 사이의 지역 우선배정 조건 불일치")
+        elif distinct and not region.get("local_priority"):
+            # General notes can state a priority that the applicant table
+            # abbreviates. Keep its separate source proof with the same scope.
+            region["priority_applicable"] = True
+            region["local_priority"] = dict(distinct[0])
+            region["regional_priority_evidence"] = {key: priorities[0][key] for key in
+                ("evidence_page", "evidence_text", "evidence_url", "document_hash") if key in priorities[0]}
+    selection = _clause(section, r"당첨자\s+(?:및\s+)?[^■]{0,90}■\s*한국부동산원\s*입주자\s*선정\s*프로그램에\s*의해\s*주택형별\s*무작위\s*추첨으로\s*무순위\s*\(사후\)\s*당첨자\s*선정\s*및\s*동[·ㆍ]?호수\s*배정")
+    if (selection and not any(region.get("local_priority") or region.get("scope_complete") is False for region in regions)
+            and not re.search(r"지역[^■]{0,60}(?:우선|선정)|우선공급", normal(" ".join(row["text"] for row in section)))):
+        for region in regions:
+            # All applicants in the route share the printed random draw.
+            # Attach that selection evidence rather than infer from the site.
+            region["priority_applicable"] = False
+            selection_fact = make("regional_selection", effect="metadata", **selection)
+            region["regional_selection_evidence"] = {key: selection_fact[key] for key in
+                ("evidence_page", "evidence_text", "evidence_url", "document_hash") if key in selection_fact}
     rules.extend(regions)
     scopes = {(tuple(sorted(r["region_code"] for r in rule.get("regions", []))), bool(rule.get("unrestricted"))) for rule in regions}
     if len(scopes) > 1:
         missing.append("현재 신청자격 문단 사이의 거주지역 조건 불일치")
+        for region in regions:
+            region["scope_complete"] = False
     if regions:
         source = regions[0]
         evidence = {"page": source.get("evidence_page"), "quote": source["evidence_text"]}
@@ -71,12 +121,12 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
             rules.append(make("domestic_residence", True, supply="일반공급", **evidence))
     else:
         missing.append("현재 신청자격 문단의 거주지역 조건")
-    homeless = find(r"입주자모집공고일\s*현재[^■]{0,350}?무주택\s*세대(?:구성원|주|의\s*세대주)")
+    homeless = find(r"입주자모집공고일\s*현재[^■]{0,350}?무주택\s*세대(?:구성원|주|의\s*세대주)", applicant_pages)
     if homeless:
         rules.append(make("homeless", True, supply="일반공급", unit="boolean", **homeless))
     else:
         missing.append("현재 일반공급 대상자의 주택 소유 조건")
-    head = find(r"입주자모집공고일\s*현재[^■]{0,350}?무주택\s*세대(?:의\s*세대)?주")
+    head = find(r"입주자모집공고일\s*현재[^■]{0,350}?무주택\s*세대(?:의\s*세대)?주", applicant_pages)
     if head:
         rules.append(make("household_head", True, supply="일반공급", **head))
     foreign = find(r"(?:외국인\s*(?:청약불가|제외)|외국인은[^■]{0,180}?청약이?\s*불가)")
@@ -118,10 +168,6 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
 
     project = find(r"최초\s*(?:주택관리|사업)번호는?\s*\d{10}")
     project_id = re.search(r"\d{10}", project["quote"])[0] if project else None
-    qualification_pages = {}
-    for line in section:
-        qualification_pages.setdefault(line["page"], []).append(line["text"])
-    restriction_pages = [{"page": page, "text": "\n".join(lines)} for page, lines in qualification_pages.items()]
     patterns = [
         ("prior_project_contract", "해당 사업의 과거 계약·추가입주자 이력", r"동\s*주택에\s*당첨되어\s*계약을\s*체결한\s*분\s*또는\s*예비입주자\s*중\s*추가입주자로\s*선정된\s*분"),
         ("prior_project_winner", "해당 사업의 과거 당첨 이력", r"동\s*주택에\s*당첨되었으나\s*계약을\s*체결하지\s*않은\s*분"),

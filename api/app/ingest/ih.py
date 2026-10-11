@@ -7,7 +7,9 @@ application dates, type prices, or price cap. Those remain explicitly unknown.
 
 from __future__ import annotations
 
+import copy
 import hashlib
+from collections.abc import Awaitable, Callable
 from datetime import date
 from typing import Any
 
@@ -45,7 +47,10 @@ def normalize(row: dict[str, Any]) -> dict[str, Any] | None:
     return omit_empty_enrichment(payload)
 
 
-async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -> list[dict[str, Any]]:
+async def collect(
+    client: httpx.AsyncClient, key: str, start: date, end: date, *,
+    on_rows: Callable[[list[dict[str, Any]]], Awaitable[None]] | None = None,
+) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
     for page in range(1, 51):
         body = await get_json(client, URL, {
@@ -56,10 +61,14 @@ async def collect(client: httpx.AsyncClient, key: str, start: date, end: date) -
             "endCrtrYmd": end.isoformat(),
         })
         rows, total = body_rows(body, "posts")
+        batch = []
         for row in rows:
             normalized = normalize(row)
             if normalized:
                 notices.append(normalized)
+                batch.append(normalized)
+        if on_rows is not None and batch:
+            await on_rows(copy.deepcopy(batch))
         if not rows or (total is not None and page * PAGE_SIZE >= total) or len(rows) < PAGE_SIZE:
             break
     else:

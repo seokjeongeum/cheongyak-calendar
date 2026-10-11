@@ -918,7 +918,12 @@ async def enrich_notice(
         if delegated:
             link_token = _LINKED_DOCUMENT_URLS.set(_LINKED_DOCUMENT_URLS.get() | delegated)
         if not links:
-            diagnostics.append(document_diagnostic("discovery", "attachment_not_found", official_url))
+            # A failed page request did not inspect its attachment anchors.
+            # Keep that actual failure instead of claiming the page lacks a file.
+            if not any(entry.get("stage") == "discovery"
+                       and entry.get("code") == "announcement_download_failed"
+                       and entry.get("status") == "error" for entry in diagnostics):
+                diagnostics.append(document_diagnostic("discovery", "attachment_not_found", official_url))
             return _with_diagnostics(enriched, diagnostics, "unreadable")
         diagnostics.append(document_diagnostic("discovery", "attachment_found", official_url, status="ok"))
         best = None
