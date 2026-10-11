@@ -46,7 +46,13 @@ def protect_app_tables(connection) -> None:
             name = quote(table.schema) + '.' + name
         # The backend table owner retains access. Browser/Data API roles have
         # no policies and cannot read keys, originals or application state.
-        connection.execute(text(f'ALTER TABLE {name} ENABLE ROW LEVEL SECURITY'))
+        protected = connection.execute(text(
+            "SELECT relrowsecurity FROM pg_catalog.pg_class WHERE oid = to_regclass(:relation)"
+        ), {"relation": name}).scalar_one()
+        # Even a redundant ALTER takes AccessExclusiveLock. A rolling web
+        # restart must not acquire those locks while collection uses the tables.
+        if not protected:
+            connection.execute(text(f'ALTER TABLE {name} ENABLE ROW LEVEL SECURITY'))
 
 
 def init_db(target_engine: Engine | None = None) -> None:
@@ -63,12 +69,20 @@ def init_db(target_engine: Engine | None = None) -> None:
         Base.metadata.create_all(connection)
         protect_app_tables(connection)
         if selected.dialect.name == "postgresql":
-            connection.execute(text("ALTER TABLE competition_state ADD COLUMN IF NOT EXISTS proof_invalidated BOOLEAN NOT NULL DEFAULT FALSE"))
-            connection.execute(text("ALTER TABLE document_extraction_state ADD COLUMN IF NOT EXISTS audited_on DATE"))
-            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_hash VARCHAR(64)"))
-            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_version INTEGER"))
-            connection.execute(text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS last_feed_review_hash VARCHAR(64)"))
-            connection.execute(text("ALTER TABLE document_extraction_state ADD COLUMN IF NOT EXISTS document_checkpoint JSON"))
+            upgrades = {
+                "competition_state": [("proof_invalidated", "BOOLEAN NOT NULL DEFAULT FALSE")],
+                "document_extraction_state": [("audited_on", "DATE"), ("document_checkpoint", "JSON")],
+                "notices": [("last_feed_hash", "VARCHAR(64)"), ("last_feed_version", "INTEGER"),
+                            ("last_feed_review_hash", "VARCHAR(64)")],
+            }
+            schema = inspect(connection)
+            for table_name, columns in upgrades.items():
+                present = {column["name"] for column in schema.get_columns(table_name)}
+                for column_name, sql_type in columns:
+                    # IF NOT EXISTS also locks an already upgraded table. Check
+                    # the catalog under the schema advisory lock before DDL.
+                    if column_name not in present:
+                        connection.execute(text(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {column_name} {sql_type}"))
         elif "proof_invalidated" not in {c["name"] for c in inspect(connection).get_columns("competition_state")}:
             connection.execute(text("ALTER TABLE competition_state ADD COLUMN proof_invalidated BOOLEAN NOT NULL DEFAULT FALSE"))
         if selected.dialect.name == 'sqlite' and 'audited_on' not in {
@@ -83,7 +97,7 @@ def init_db(target_engine: Engine | None = None) -> None:
                 connection.execute(text('ALTER TABLE document_extraction_state ADD COLUMN document_checkpoint JSON'))
         # Legacy pending states created by a notice correction must not become
         # valid historical evidence merely because a later retry failed.
-        connection.execute(text("UPDATE competition_state SET proof_invalidated = TRUE WHERE message = :message"), {"message": "공고 변경 후 경쟁률 재확인 대기"})
+        connection.execute(text("UPDATE competition_state SET proof_invalidated = TRUE WHERE message = :message AND proof_invalidated = FALSE"), {"message": "공고 변경 후 경쟁률 재확인 대기"})
 
 
 def get_session() -> Generator[Session, None, None]:
