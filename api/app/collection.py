@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.orm import sessionmaker
 
 from app.db import SessionLocal
 from app.hosted_runner import _shutdown
@@ -164,8 +165,9 @@ def _claim_interrupted_manual_resume() -> tuple[CollectionPublic, bool]:
     return claim_collection(trigger, interrupted_from=previous)
 
 
-def renew_collection(job_id: str) -> bool:
-    with SessionLocal() as session:
+def renew_collection(job_id: str, *, session_factory=None) -> bool:
+    factory = session_factory if session_factory is not None else SessionLocal
+    with factory() as session:
         result = session.execute(update(CollectionRun).where(
             CollectionRun.name == NAME, CollectionRun.job_id == job_id,
             CollectionRun.status == "running", CollectionRun.lease_expires_at > _now(),
@@ -192,6 +194,10 @@ class CollectionHeartbeat:
 
     def __init__(self, job_id: str):
         self.job_id = job_id
+        # A stopped heartbeat may still be inside a renewal after the caller's
+        # bounded collector context restores the shared factory. Snapshot its
+        # session configuration now, so even that late renewal stays bounded.
+        self.session_factory = sessionmaker(class_=SessionLocal.class_, **SessionLocal.kw)
         self.stopped = threading.Event()
         self.thread = threading.Thread(target=self._run, daemon=True)
 
@@ -199,7 +205,7 @@ class CollectionHeartbeat:
         last_success = monotonic()
         while not self.stopped.wait(HEARTBEAT_SECONDS):
             try:
-                renewed = renew_collection(self.job_id)
+                renewed = renew_collection(self.job_id, session_factory=self.session_factory)
                 if self.stopped.is_set():
                     return
                 if not renewed:

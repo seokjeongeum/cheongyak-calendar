@@ -29,7 +29,7 @@ from app.db import SessionLocal, init_db
 from app.models import Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, is_open_ended_application, record_competition_result, record_source_status
 
-from .common import FeedError, get_json, integer, value
+from .common import FeedError, get_json, integer, value, yield_to_deadlines
 
 SOURCE = "cheongyak_competition"
 API_BASE = "https://api.odcloud.kr/api/ApplyhomeInfoCmpetRtSvc/v1"
@@ -303,136 +303,139 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
             notices = deque(session.scalars(select(Notice).options(defer(Notice.rules)).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all())
             retried: set[str] = set()
             while notices:
-                notice = notices.popleft()
-                identity = _identity(notice)
-                if identity is None:
-                    continue
-                operation, house_no, notice_no = identity
-                now = datetime.now(timezone.utc)
-                if not _is_published_window(notice, today, operation):
-                    record_competition_result(session, notice, "pending", message="접수 시작 전 · 공식 경쟁률 발표 대기", observed_at=now)
-                    session.commit()
-                    counts["pending"] += 1
-                    continue
-                record_competition_result(session, notice, "running", message="공식 경쟁률 확인 중", observed_at=now)
-                session.commit()
-                # The recorder refreshed the retained notice under its lock.
-                # Use that current source identity, and reject a result if a
-                # revision commits while the public network request runs.
-                identity = _identity(notice)
-                if identity is None:
-                    record_competition_result(session, notice, "pending", message="공고 변경 후 경쟁률 재확인 대기", observed_at=now)
-                    session.commit()
-                    counts["pending"] += 1
-                    continue
-                operation, house_no, notice_no = identity
-                fetched_version = notice.version
-                attempt_counts = counts.copy()
-                api_rows: list[dict] = []
-                api_error: FeedError | None = None
-                if key and not api_auth_failed:
-                    try:
-                        api_rows = await collect_api(client, key, operation, house_no, notice_no, now)
-                    except FeedError as exc:
-                        api_error = exc
-                        if exc.status_code in {401, 403} or exc.result_code in {20, 30, "20", "30"}:
-                            api_auth_failed = True
-                result = None
-                request_succeeded = False
                 try:
-                    if operation == "getAPTLttotPblancCmpet":
-                        try:
-                            result = await collect_popup(client, house_no, notice_no,
-                                expected_unit_types=[price.unit_type for price in notice.prices], observed_at=now)
-                        except FeedError as exc:
-                            if not api_rows:
-                                raise
-                            # API figures remain useful even if result-table
-                            # evidence fails. Their result_status stays unknown.
-                            result = CompetitionResult(api_rows, list(dict.fromkeys(row["unit_type"] for row in api_rows)),
-                                False, api_rows[0]["evidence_url"],
-                                f"공식 API 경쟁률 표시 · 마감 결과 확인 실패: {exc}", "partial")
-                            counts["failed"] += 1
-                        # API model identifiers supplement rows, but closure and
-                        # result cells always come from the official popup.
-                        model_ids = {(unit_key(row["unit_type"]), row["rank"], row["residence_area"]): row["model_no"] for row in api_rows}
-                        for row in result.rows:
-                            row["model_no"] = model_ids.get((unit_key(row["unit_type"]), row["rank"], row["residence_area"]))
-                        if not api_rows:
-                            counts["fallback"] += 1
-                        if result.status == "ok" and (api_error or api_auth_failed):
-                            result.message = "공식 공개 경쟁률 화면 사용 · 경쟁률 API 활용신청과 인증키 확인 필요"
-                    elif api_error:
-                        raise api_error
-                    elif not key or api_auth_failed:
-                        raise FeedError("경쟁률 API 인증키와 해당 서비스 활용신청을 확인하세요. 이 유형의 공개 화면 보완은 지원되지 않습니다.")
-                    else:
-                        result = CompetitionResult(api_rows, list(dict.fromkeys(row["unit_type"] for row in api_rows)), False,
-                                                   f"{API_BASE}/{operation}")
-                    request_succeeded = True
-                    if not result.rows:
-                        record_competition_result(session, notice, "pending", evidence_url=result.evidence_url,
-                            message="공식 경쟁률 미공개 · 다음 수집에서 다시 확인", observed_at=now,
-                            expected_notice_version=fetched_version)
+                    notice = notices.popleft()
+                    identity = _identity(notice)
+                    if identity is None:
+                        continue
+                    operation, house_no, notice_no = identity
+                    now = datetime.now(timezone.utc)
+                    if not _is_published_window(notice, today, operation):
+                        record_competition_result(session, notice, "pending", message="접수 시작 전 · 공식 경쟁률 발표 대기", observed_at=now)
+                        session.commit()
                         counts["pending"] += 1
-                    else:
-                        state = record_competition_result(session, notice, result.status, rows=result.rows, unit_types=result.unit_types,
-                            complete=result.complete, evidence_url=result.evidence_url, message=result.message, observed_at=now,
-                            expected_notice_version=fetched_version)
-                        if state.status == "pending":
-                            counts["pending"] += 1
-                        else:
-                            counts["count"] += 1
-                            counts["rows"] += len(result.rows)
-                            counts["complete"] += int(state.complete)
-                except Exception as exc:
-                    message = str(exc) if isinstance(exc, FeedError) else f"경쟁률 수집 실패: {type(exc).__name__}"
-                    record_competition_result(session, notice, "error", message=message, observed_at=now,
-                                              expected_notice_version=fetched_version)
-                    counts["failed"] += 1
-                    LOGGER.warning("Official competition collection failed: %s", type(exc).__name__)
-                session.commit()
-                if request_succeeded and notice.version != fetched_version and notice.id not in retried:
-                    # Parallel document review can advance the version while
-                    # the public result request is in flight. The recorder has
-                    # rejected that snapshot; fetch anew against its refreshed
-                    # notice once, preserving all existing identity/unit guards.
-                    counts.update(attempt_counts)
-                    retried.add(notice.id)
-                    notices.appendleft(notice)
-                    continue
-                if operation == "getAPTLttotPblancCmpet":
-                    from .winning_scores import collect_winning_scores, record_winning_scores
-                    table_failed = result is None or "selectAPTCompetitionPopup.do" not in result.evidence_url
-                    status_score = "error" if table_failed else "success" if result.winning_scores else "unpublished"
-                    rows_score = result.winning_scores if result else []
+                        continue
+                    record_competition_result(session, notice, "running", message="공식 경쟁률 확인 중", observed_at=now)
+                    session.commit()
+                    # The recorder refreshed the retained notice under its lock.
+                    # Use that current source identity, and reject a result if a
+                    # revision commits while the public network request runs.
+                    identity = _identity(notice)
+                    if identity is None:
+                        record_competition_result(session, notice, "pending", message="공고 변경 후 경쟁률 재확인 대기", observed_at=now)
+                        session.commit()
+                        counts["pending"] += 1
+                        continue
+                    operation, house_no, notice_no = identity
+                    fetched_version = notice.version
+                    attempt_counts = counts.copy()
+                    api_rows: list[dict] = []
+                    api_error: FeedError | None = None
                     if key and not api_auth_failed:
                         try:
-                            api_scores, api_score_status = await collect_winning_scores(client, key, house_no, notice_no)
-                            if api_scores:
-                                # Keep independently published popup rows when
-                                # the API has only part of the score inventory.
-                                # Conflicting official values remain separate
-                                # so the browser can decline a comparison.
-                                merged_scores = []
-                                seen_scores = set()
-                                for row in [*api_scores, *rows_score]:
-                                    score_identity = (unit_key(row["unit_type"]), row["residence_area"],
-                                        row["house_manage_no"], row["notice_no"], row["supply_type"], row["rank"],
-                                        row["selection_path"], row["min_score"], row["max_score"], row["average_score"])
-                                    if score_identity not in seen_scores:
-                                        seen_scores.add(score_identity)
-                                        merged_scores.append(row)
-                                rows_score, status_score = merged_scores, api_score_status
-                            elif not rows_score:
-                                status_score = api_score_status
-                        except Exception:
-                            # Current official popup evidence remains useful
-                            # even if the additional score API cannot respond.
-                            if not rows_score:
-                                status_score = "error"
-                    record_winning_scores(session, notice.id, rows_score, status_score, expected_version=fetched_version, criterion_date=notice.announcement_date.isoformat() if notice.announcement_date else None)
+                            api_rows = await collect_api(client, key, operation, house_no, notice_no, now)
+                        except FeedError as exc:
+                            api_error = exc
+                            if exc.status_code in {401, 403} or exc.result_code in {20, 30, "20", "30"}:
+                                api_auth_failed = True
+                    result = None
+                    request_succeeded = False
+                    try:
+                        if operation == "getAPTLttotPblancCmpet":
+                            try:
+                                result = await collect_popup(client, house_no, notice_no,
+                                    expected_unit_types=[price.unit_type for price in notice.prices], observed_at=now)
+                            except FeedError as exc:
+                                if not api_rows:
+                                    raise
+                                # API figures remain useful even if result-table
+                                # evidence fails. Their result_status stays unknown.
+                                result = CompetitionResult(api_rows, list(dict.fromkeys(row["unit_type"] for row in api_rows)),
+                                    False, api_rows[0]["evidence_url"],
+                                    f"공식 API 경쟁률 표시 · 마감 결과 확인 실패: {exc}", "partial")
+                                counts["failed"] += 1
+                            # API model identifiers supplement rows, but closure and
+                            # result cells always come from the official popup.
+                            model_ids = {(unit_key(row["unit_type"]), row["rank"], row["residence_area"]): row["model_no"] for row in api_rows}
+                            for row in result.rows:
+                                row["model_no"] = model_ids.get((unit_key(row["unit_type"]), row["rank"], row["residence_area"]))
+                            if not api_rows:
+                                counts["fallback"] += 1
+                            if result.status == "ok" and (api_error or api_auth_failed):
+                                result.message = "공식 공개 경쟁률 화면 사용 · 경쟁률 API 활용신청과 인증키 확인 필요"
+                        elif api_error:
+                            raise api_error
+                        elif not key or api_auth_failed:
+                            raise FeedError("경쟁률 API 인증키와 해당 서비스 활용신청을 확인하세요. 이 유형의 공개 화면 보완은 지원되지 않습니다.")
+                        else:
+                            result = CompetitionResult(api_rows, list(dict.fromkeys(row["unit_type"] for row in api_rows)), False,
+                                                       f"{API_BASE}/{operation}")
+                        request_succeeded = True
+                        if not result.rows:
+                            record_competition_result(session, notice, "pending", evidence_url=result.evidence_url,
+                                message="공식 경쟁률 미공개 · 다음 수집에서 다시 확인", observed_at=now,
+                                expected_notice_version=fetched_version)
+                            counts["pending"] += 1
+                        else:
+                            state = record_competition_result(session, notice, result.status, rows=result.rows, unit_types=result.unit_types,
+                                complete=result.complete, evidence_url=result.evidence_url, message=result.message, observed_at=now,
+                                expected_notice_version=fetched_version)
+                            if state.status == "pending":
+                                counts["pending"] += 1
+                            else:
+                                counts["count"] += 1
+                                counts["rows"] += len(result.rows)
+                                counts["complete"] += int(state.complete)
+                    except Exception as exc:
+                        message = str(exc) if isinstance(exc, FeedError) else f"경쟁률 수집 실패: {type(exc).__name__}"
+                        record_competition_result(session, notice, "error", message=message, observed_at=now,
+                                                  expected_notice_version=fetched_version)
+                        counts["failed"] += 1
+                        LOGGER.warning("Official competition collection failed: %s", type(exc).__name__)
                     session.commit()
+                    if request_succeeded and notice.version != fetched_version and notice.id not in retried:
+                        # Parallel document review can advance the version while
+                        # the public result request is in flight. The recorder has
+                        # rejected that snapshot; fetch anew against its refreshed
+                        # notice once, preserving all existing identity/unit guards.
+                        counts.update(attempt_counts)
+                        retried.add(notice.id)
+                        notices.appendleft(notice)
+                        continue
+                    if operation == "getAPTLttotPblancCmpet":
+                        from .winning_scores import collect_winning_scores, record_winning_scores
+                        table_failed = result is None or "selectAPTCompetitionPopup.do" not in result.evidence_url
+                        status_score = "error" if table_failed else "success" if result.winning_scores else "unpublished"
+                        rows_score = result.winning_scores if result else []
+                        if key and not api_auth_failed:
+                            try:
+                                api_scores, api_score_status = await collect_winning_scores(client, key, house_no, notice_no)
+                                if api_scores:
+                                    # Keep independently published popup rows when
+                                    # the API has only part of the score inventory.
+                                    # Conflicting official values remain separate
+                                    # so the browser can decline a comparison.
+                                    merged_scores = []
+                                    seen_scores = set()
+                                    for row in [*api_scores, *rows_score]:
+                                        score_identity = (unit_key(row["unit_type"]), row["residence_area"],
+                                            row["house_manage_no"], row["notice_no"], row["supply_type"], row["rank"],
+                                            row["selection_path"], row["min_score"], row["max_score"], row["average_score"])
+                                        if score_identity not in seen_scores:
+                                            seen_scores.add(score_identity)
+                                            merged_scores.append(row)
+                                    rows_score, status_score = merged_scores, api_score_status
+                                elif not rows_score:
+                                    status_score = api_score_status
+                            except Exception:
+                                # Current official popup evidence remains useful
+                                # even if the additional score API cannot respond.
+                                if not rows_score:
+                                    status_score = "error"
+                        record_winning_scores(session, notice.id, rows_score, status_score, expected_version=fetched_version, criterion_date=notice.announcement_date.isoformat() if notice.announcement_date else None)
+                        session.commit()
+                finally:
+                    await yield_to_deadlines()
             status = "error" if counts["failed"] and not counts["count"] else "partial" if counts["failed"] or counts["pending"] or counts["fallback"] or counts["complete"] < counts["count"] else "ok"
             message = f"공고 {counts['count']}건 · 경쟁률 {counts['rows']}행 · 전체 주택형 확인 {counts['complete']}건"
             if counts["pending"]:

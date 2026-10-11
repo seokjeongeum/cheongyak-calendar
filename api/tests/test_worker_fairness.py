@@ -403,11 +403,12 @@ async def test_stop_during_first_pdf_keeps_its_raw_row_and_all_feed_attempts_wit
         cycle = asyncio.create_task(worker.run_once(today=TODAY, client=client))
         await asyncio.wait_for(started.wait(), timeout=5)
         await asyncio.wait_for(competition_started.wait(), timeout=5)
-        for _ in range(20):
+        for _ in range(1000):
             with factory() as session:
-                if len(session.scalars(select(Notice)).all()) == sum(map(len, rows.values())):
+                if (len(session.scalars(select(Notice)).all()) == sum(map(len, rows.values()))
+                        and all(session.get(SourceStatus, source).status != "running" for source in SOURCES)):
                     break
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.001)
         await asyncio.sleep(0)
         assert engine.pool.checkedout() == 0  # No connection while awaiting a PDF/turn.
         cycle.cancel()

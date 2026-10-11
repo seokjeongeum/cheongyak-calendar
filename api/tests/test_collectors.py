@@ -554,7 +554,7 @@ async def test_save_progress_is_visible_before_next_document_without_changing_at
         result = await worker._save_rows("myhome", rows, client, date(2026, 10, 9))
     assert observed == [
         ("sale-1", 17, "공식 공고 수집 중", set()),
-        ("sale-2", 1, "공식 공고 저장 중 · 1/3건 저장", {"sale-1"}),
+        ("sale-2", 1, "공식 공고 1건 저장 · 문서 확인 1/3건", {"sale-1"}),
     ]
     assert result[0:2] == (2, 1)
     assert result[-1] == "partial"

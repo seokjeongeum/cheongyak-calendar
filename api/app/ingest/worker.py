@@ -26,7 +26,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session, defer, lazyload
 from sqlalchemy.orm.attributes import NO_VALUE
 
-from app.db import SessionLocal, init_db
+from app.db import SessionLocal, collector_session_limits, init_db
 from app.collection import CollectionHeartbeat, claim_collection, finish_collection, renew_collection
 from app.integration_settings import setting_value
 from app.extract.pipeline import DOCUMENT_PIPELINE_VERSION, _diagnostics_rule, enrich_notice, extraction_configured
@@ -37,7 +37,7 @@ from app.repository import NON_APPLICATION_KINDS, feed_payload_hash, feed_review
 from app.schemas import EventPublic
 
 from . import boards, competition, ih, lh, myhome, reb
-from .common import FeedError, date_iso
+from .common import FeedError, date_iso, yield_to_deadlines
 from .detail_links import enrich_detail_link
 
 LOGGER = logging.getLogger("cheongyak.ingest")
@@ -149,11 +149,12 @@ def _failed_document_needs_new_pipeline(existing: Notice | None, state: Document
 def _save_progress(
     session: Session, state: SourceStatus | None, source: str, saved: int, total: int,
     stored_count: int | None = None, progress_floor: int = 0,
+    *, phase: str,
 ) -> SourceStatus:
     """Commit progress with its notice, retaining the source attempt/success times."""
     count = stored_count if stored_count is not None else max(saved, progress_floor)
-    message = (f"공식 공고 {count}건 저장 · 문서 확인 {saved}/{total}건"
-               if stored_count is not None or count > saved else f"공식 공고 저장 중 · {saved}/{total}건 저장")
+    message = (f"공식 공고 저장 중 · {saved}/{total}건 저장" if phase == "raw" else
+               f"공식 공고 {count}건 저장 · 문서 확인 {saved}/{total}건")
     if state is None:
         return record_source_status(session, source, "running", message, record_count=count)
     state.status = "running"
@@ -192,228 +193,231 @@ async def _save_rows(
     missing_dates = 0
     with SessionLocal() as session:
         for payload in rows if preserve_row_order else sorted(rows, key=lambda row: _save_priority(row, today)):
-            # Await a fair document turn before opening a read transaction.
-            # Each prior row has already committed, releasing its connection.
-            async with (document_semaphore or nullcontext()):
-                if audit_documents and document_deadline is not None and monotonic() >= document_deadline:
-                    break
-                quota_state = session.get(DocumentExtractionState, QUOTA_STATE_KEY, populate_existing=True)
-                source_state = session.get(SourceStatus, source, populate_existing=True)
-                if payload.get("source") != source:
-                    invalid += 1
-                    session.commit()
-                    continue
-                identity = (source, str(payload.get("external_id") or ""))
-                has_ingest_warning = bool(payload.pop("ingest_warning", None))
-                if has_ingest_warning:
-                    missing += 1
-                try:
-                    raw_hash = feed_payload_hash(payload)
-                    review_hash = feed_review_hash(payload)
-                except (ValueError, TypeError):
-                    invalid += 1
-                    session.commit()
-                    LOGGER.warning("Skipped invalid %s notice: normalization failed", source)
-                    continue
-                raw_payload = copy.deepcopy(payload)
-                existing = session.scalar(select(Notice).options(
-                    defer(Notice.rules), lazyload(Notice.competitions),
-                ).where(Notice.source == source, Notice.external_id == identity[1]))
-                extraction_state = session.get(DocumentExtractionState, identity)
-                did_audit = False
-                url_changed = existing is not None and existing.official_url != payload.get("official_url")
-                feed_changed = (existing is not None and existing.last_feed_review_hash is not None
-                                and existing.last_feed_review_hash != review_hash)
-                now = datetime.now(timezone.utc)
-                deferred_until = extraction_state.deferred_until if extraction_state else None
-                if deferred_until is not None and deferred_until.tzinfo is None:
-                    # SQLite does not retain DateTime timezone metadata; all new
-                    # cooldown timestamps are written as UTC.
-                    deferred_until = deferred_until.replace(tzinfo=timezone.utc)
-                quota_until = quota_state.deferred_until if quota_state else None
-                if quota_until is not None and quota_until.tzinfo is None:
-                    quota_until = quota_until.replace(tzinfo=timezone.utc)
-                quota_blocked = quota_until is not None and quota_until > now
-                if audit_documents and quota_blocked and extraction_configured() and payload.get("official_url") and _active_notice(payload, today):
-                    deferred += 1
-                should_audit = (
-                    (existing is None or url_changed or feed_changed or (extraction_state is not None and extraction_state.audited_on is None) or (
-                        _active_notice(payload, today) and
-                        (extraction_state is None or extraction_state.audited_on != today
-                         or _failed_document_needs_new_pipeline(existing, extraction_state) or (
-                            extraction_configured() and not quota_blocked
-                            and deferred_until is not None and deferred_until <= now
-                        ))
-                    ))
-                )
-                # A timed-out first audit is a durable pending task, with a
-                # cooldown so repeated restarts cannot retry only that row.
-                local_retry_blocked = (extraction_state is not None and extraction_state.audited_on is None
-                        and deferred_until is not None and deferred_until > now
-                        and not url_changed and not feed_changed and not _failed_document_needs_new_pipeline(existing, extraction_state))
-                if local_retry_blocked:
-                    should_audit = False
-                    if audit_documents:
-                        deferred += 1
-                if persist_before_audit and should_audit:
+            try:
+                # Await a fair document turn before opening a read transaction.
+                # Each prior row has already committed, releasing its connection.
+                async with (document_semaphore or nullcontext()):
+                    if audit_documents and document_deadline is not None and monotonic() >= document_deadline:
+                        break
+                    quota_state = session.get(DocumentExtractionState, QUOTA_STATE_KEY, populate_existing=True)
+                    source_state = session.get(SourceStatus, source, populate_existing=True)
+                    if payload.get("source") != source:
+                        invalid += 1
+                        session.commit()
+                        continue
+                    identity = (source, str(payload.get("external_id") or ""))
+                    has_ingest_warning = bool(payload.pop("ingest_warning", None))
+                    if has_ingest_warning:
+                        missing += 1
                     try:
-                        # Commit this row before its own PDF wait, rather than
-                        # blocking every source on a full archival DB pass.
-                        existing = lock_notice(session, source, identity[1])
-                        extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
-                        url_changed = existing is not None and existing.official_url != payload.get("official_url")
-                        payload = _pending_url_payload(payload, existing, url_changed)
-                        existing = upsert_notice(session, payload)
-                        if extraction_state is None:
-                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
-                            session.add(extraction_state)
-                        extraction_state.audited_on = None
-                        existing.last_feed_hash = raw_hash
-                        existing.last_feed_version = existing.version
-                        existing.last_feed_review_hash = review_hash
-                        _cache_loaded_document(existing, extraction_state)
+                        raw_hash = feed_payload_hash(payload)
+                        review_hash = feed_review_hash(payload)
+                    except (ValueError, TypeError):
+                        invalid += 1
+                        session.commit()
+                        LOGGER.warning("Skipped invalid %s notice: normalization failed", source)
+                        continue
+                    raw_payload = copy.deepcopy(payload)
+                    existing = session.scalar(select(Notice).options(
+                        defer(Notice.rules), lazyload(Notice.competitions),
+                    ).where(Notice.source == source, Notice.external_id == identity[1]))
+                    extraction_state = session.get(DocumentExtractionState, identity)
+                    did_audit = False
+                    url_changed = existing is not None and existing.official_url != payload.get("official_url")
+                    feed_changed = (existing is not None and existing.last_feed_review_hash is not None
+                                    and existing.last_feed_review_hash != review_hash)
+                    now = datetime.now(timezone.utc)
+                    deferred_until = extraction_state.deferred_until if extraction_state else None
+                    if deferred_until is not None and deferred_until.tzinfo is None:
+                        # SQLite does not retain DateTime timezone metadata; all new
+                        # cooldown timestamps are written as UTC.
+                        deferred_until = deferred_until.replace(tzinfo=timezone.utc)
+                    quota_until = quota_state.deferred_until if quota_state else None
+                    if quota_until is not None and quota_until.tzinfo is None:
+                        quota_until = quota_until.replace(tzinfo=timezone.utc)
+                    quota_blocked = quota_until is not None and quota_until > now
+                    if audit_documents and quota_blocked and extraction_configured() and payload.get("official_url") and _active_notice(payload, today):
+                        deferred += 1
+                    should_audit = (
+                        (existing is None or url_changed or feed_changed or (extraction_state is not None and extraction_state.audited_on is None) or (
+                            _active_notice(payload, today) and
+                            (extraction_state is None or extraction_state.audited_on != today
+                             or _failed_document_needs_new_pipeline(existing, extraction_state) or (
+                                extraction_configured() and not quota_blocked
+                                and deferred_until is not None and deferred_until <= now
+                            ))
+                        ))
+                    )
+                    # A timed-out first audit is a durable pending task, with a
+                    # cooldown so repeated restarts cannot retry only that row.
+                    local_retry_blocked = (extraction_state is not None and extraction_state.audited_on is None
+                            and deferred_until is not None and deferred_until > now
+                            and not url_changed and not feed_changed and not _failed_document_needs_new_pipeline(existing, extraction_state))
+                    if local_retry_blocked:
+                        should_audit = False
+                        if audit_documents:
+                            deferred += 1
+                    if persist_before_audit and should_audit:
+                        try:
+                            # Commit this row before its own PDF wait, rather than
+                            # blocking every source on a full archival DB pass.
+                            existing = lock_notice(session, source, identity[1])
+                            extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
+                            url_changed = existing is not None and existing.official_url != payload.get("official_url")
+                            payload = _pending_url_payload(payload, existing, url_changed)
+                            existing = upsert_notice(session, payload)
+                            if extraction_state is None:
+                                extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                                session.add(extraction_state)
+                            extraction_state.audited_on = None
+                            existing.last_feed_hash = raw_hash
+                            existing.last_feed_version = existing.version
+                            existing.last_feed_review_hash = review_hash
+                            _cache_loaded_document(existing, extraction_state)
+                            if track_source_progress:
+                                source_state = _save_progress(session, source_state, source, saved + 1, len(rows),
+                                    progress_floor=progress_floor, phase="document" if audit_documents else "raw")
+                            session.commit()
+                            if on_raw_saved:
+                                on_raw_saved(payload)
+                        except (ValueError, TypeError) as exc:
+                            session.rollback()
+                            invalid += 1
+                            LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
+                            continue
+                    if audit_documents and should_audit:
+                        did_audit = True
+                        try:
+                            # Public PDF/HWP/HWPX parsing does not require a model key.
+                            # A Gemini cooldown never blocks local official facts.
+                            allow_gemini = not quota_blocked and (deferred_until is None or deferred_until <= now)
+                            feed_payload = copy.deepcopy(payload)
+                            if existing:
+                                incoming_rules = payload.get("rules", [])
+                                payload["rules"] = merge_poll_rules(existing.rules or [], incoming_rules, metadata_only=all(is_metadata(r) for r in incoming_rules))
+                            known_hash = existing.document_hash if existing else None
+                            # No notice/state lock or read transaction is retained
+                            # during downloading. Reprocessing may commit meanwhile.
+                            session.commit()
+                            async def enrich_public_facts():
+                                enriched = await enrich_notice(payload, client=client, known_document_hash=known_hash, allow_gemini=allow_gemini)
+                                if _active_notice(payload, today):
+                                    enriched = await enrich_detail_link(enriched, client=client, previous_rules=existing.rules if existing else [])
+                                return enriched
+
+                            if document_timeout_seconds is None:
+                                enriched = await enrich_public_facts()
+                            else:
+                                remaining = document_timeout_seconds if document_deadline is None else min(document_timeout_seconds, max(0, document_deadline - monotonic()))
+                                async with asyncio.timeout(remaining):
+                                    enriched = await enrich_public_facts()
+                            existing = lock_notice(session, source, identity[1])
+                            extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
+                            stale_document = existing is not None and existing.document_hash not in {known_hash, enriched.get("document_hash")}
+                            if stale_document:
+                                # A concurrent local audit may have seen a corrected
+                                # attachment while this download received stale bytes.
+                                # Keep its hash/facts and apply only this feed's fields.
+                                enriched = {**feed_payload, "document_hash": existing.document_hash,
+                                            "rules": merge_poll_rules(existing.rules or [], feed_payload.get("rules", []),
+                                                metadata_only=all(is_metadata(r) for r in feed_payload.get("rules", [])))}
+                            if extraction_state is None:
+                                extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                                session.add(extraction_state)
+                            extraction_status = enriched.get("extraction_status")
+                            if stale_document:
+                                extraction_state.audited_on = None
+                            elif extraction_status in {"deferred", "quota"}:
+                                extraction_state.audited_on = today
+                                deferred += 1
+                                delay = timedelta(hours=24 if extraction_status == "quota" else 3)
+                                extraction_state.deferred_until = now + delay
+                                if extraction_status == "quota":
+                                    if quota_state is None:
+                                        quota_state = DocumentExtractionState(source=QUOTA_STATE_KEY[0], external_id=QUOTA_STATE_KEY[1])
+                                        session.add(quota_state)
+                                    quota_state.deferred_until = now + delay
+                            else:
+                                extraction_state.audited_on = today
+                                extraction_state.deferred_until = None
+                            # An unchanged document yields empty extraction arrays. Do
+                            # not erase previously persisted AI candidates on a poll.
+                            if existing and enriched.get("document_hash") == existing.document_hash:
+                                for key in ("prices", "rules"):
+                                    if not enriched.get(key) and not payload.get(key):
+                                        enriched.pop(key, None)
+                            payload = enriched
+                        except Exception as exc:  # one bad document cannot block a feed
+                            session.rollback()
+                            LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
+                            deferred += 1
+                            extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
+                            if extraction_state is None:
+                                extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                                session.add(extraction_state)
+                            extraction_state.audited_on = None
+                            extraction_state.deferred_until = datetime.now(timezone.utc) + timedelta(seconds=POLL_SECONDS)
+                            diagnostic = _diagnostics_rule([{
+                                "stage": "processing", "code": "audit_timeout" if isinstance(exc, TimeoutError) else "audit_failed",
+                                "status": "error", "evidence_url": payload.get("official_url"),
+                                "message": "공고문 확인 시간 한도에 도달했습니다. 저장된 자료를 유지하며 다음 수집에서 이어서 확인합니다." if isinstance(exc, TimeoutError) else "공고문 확인 실행에 실패했습니다. 저장된 자료를 유지하며 다음 수집에서 다시 확인합니다.",
+                                "missing_items": ["현재 공고문 확인의 완료 기록"],
+                            }], "error", known_hash)
+                            payload["rules"] = [rule for rule in payload.get("rules", []) if rule.get("kind") != "document_diagnostics"] + [diagnostic]
+                    try:
+                        if not audit_documents:
+                            payload = _pending_url_payload(payload, existing, url_changed)
+                        # Recheck the scalar checksum under the same row lock used
+                        # by real writes. A concurrent correction/review increments
+                        # version and conservatively invalidates this shortcut.
+                        current = lock_notice(session, source, identity[1], include_rules=False)
+                        if (not did_audit and current is not None and current.last_feed_hash == raw_hash
+                                and current.last_feed_version == current.version):
+                            notice = current
+                            notice.last_seen_at = datetime.now(timezone.utc)
+                        else:
+                            notice = upsert_notice(session, payload)
+                        notice.last_feed_hash = raw_hash
+                        notice.last_feed_version = notice.version
+                        notice.last_feed_review_hash = review_hash
+                        if not audit_documents and (existing is None or url_changed or feed_changed):
+                            # Keep a durable pending first/revised-URL audit across
+                            # stops without inventing an attempted or read date.
+                            if extraction_state is None:
+                                extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
+                                session.add(extraction_state)
+                            extraction_state.audited_on = None
+                            if feed_changed:
+                                extraction_state.deferred_until = None
+                        _cache_loaded_document(notice, extraction_state)
                         if track_source_progress:
-                            source_state = _save_progress(session, source_state, source, saved + 1, len(rows), progress_floor=progress_floor)
+                            source_state = _save_progress(session, source_state, source, saved + 1, len(rows),
+                                stored_count, progress_floor, phase="document" if audit_documents else "raw")
                         session.commit()
                         if on_raw_saved:
                             on_raw_saved(payload)
+                        if not audit_documents and (should_audit or local_retry_blocked) and on_audit_pending:
+                            checkpoint = extraction_state.audited_on if extraction_state else None
+                            on_audit_pending(raw_payload, None if _failed_document_needs_new_pipeline(notice, extraction_state) else checkpoint)
+                        saved += 1
+                        row_missing_prices = not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices)
+                        row_missing_dates = not any(event.kind not in NON_APPLICATION_KINDS for event in notice.events)
+                        if row_missing_prices:
+                            missing_prices += 1
+                        if row_missing_dates:
+                            missing_dates += 1
+                        if on_row_result:
+                            on_row_result({"external_id": identity[1], "missing_prices": row_missing_prices,
+                                           "missing_dates": row_missing_dates, "missing_detail": has_ingest_warning})
                     except (ValueError, TypeError) as exc:
                         session.rollback()
                         invalid += 1
                         LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
-                        continue
-                if audit_documents and should_audit:
-                    did_audit = True
-                    try:
-                        # Public PDF/HWP/HWPX parsing does not require a model key.
-                        # A Gemini cooldown never blocks local official facts.
-                        allow_gemini = not quota_blocked and (deferred_until is None or deferred_until <= now)
-                        feed_payload = copy.deepcopy(payload)
-                        if existing:
-                            incoming_rules = payload.get("rules", [])
-                            payload["rules"] = merge_poll_rules(existing.rules or [], incoming_rules, metadata_only=all(is_metadata(r) for r in incoming_rules))
-                        known_hash = existing.document_hash if existing else None
-                        # No notice/state lock or read transaction is retained
-                        # during downloading. Reprocessing may commit meanwhile.
-                        session.commit()
-                        async def enrich_public_facts():
-                            enriched = await enrich_notice(payload, client=client, known_document_hash=known_hash, allow_gemini=allow_gemini)
-                            if _active_notice(payload, today):
-                                enriched = await enrich_detail_link(enriched, client=client, previous_rules=existing.rules if existing else [])
-                            return enriched
-
-                        if document_timeout_seconds is None:
-                            enriched = await enrich_public_facts()
-                        else:
-                            remaining = document_timeout_seconds if document_deadline is None else min(document_timeout_seconds, max(0, document_deadline - monotonic()))
-                            async with asyncio.timeout(remaining):
-                                enriched = await enrich_public_facts()
-                        existing = lock_notice(session, source, identity[1])
-                        extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
-                        stale_document = existing is not None and existing.document_hash not in {known_hash, enriched.get("document_hash")}
-                        if stale_document:
-                            # A concurrent local audit may have seen a corrected
-                            # attachment while this download received stale bytes.
-                            # Keep its hash/facts and apply only this feed's fields.
-                            enriched = {**feed_payload, "document_hash": existing.document_hash,
-                                        "rules": merge_poll_rules(existing.rules or [], feed_payload.get("rules", []),
-                                            metadata_only=all(is_metadata(r) for r in feed_payload.get("rules", [])))}
-                        if extraction_state is None:
-                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
-                            session.add(extraction_state)
-                        extraction_status = enriched.get("extraction_status")
-                        if stale_document:
-                            extraction_state.audited_on = None
-                        elif extraction_status in {"deferred", "quota"}:
-                            extraction_state.audited_on = today
-                            deferred += 1
-                            delay = timedelta(hours=24 if extraction_status == "quota" else 3)
-                            extraction_state.deferred_until = now + delay
-                            if extraction_status == "quota":
-                                if quota_state is None:
-                                    quota_state = DocumentExtractionState(source=QUOTA_STATE_KEY[0], external_id=QUOTA_STATE_KEY[1])
-                                    session.add(quota_state)
-                                quota_state.deferred_until = now + delay
-                        else:
-                            extraction_state.audited_on = today
-                            extraction_state.deferred_until = None
-                        # An unchanged document yields empty extraction arrays. Do
-                        # not erase previously persisted AI candidates on a poll.
-                        if existing and enriched.get("document_hash") == existing.document_hash:
-                            for key in ("prices", "rules"):
-                                if not enriched.get(key) and not payload.get(key):
-                                    enriched.pop(key, None)
-                        payload = enriched
-                    except Exception as exc:  # one bad document cannot block a feed
-                        LOGGER.warning("Document enrichment failed for %s: %s", source, type(exc).__name__)
-                        deferred += 1
-                        extraction_state = session.get(DocumentExtractionState, identity, populate_existing=True)
-                        if extraction_state is None:
-                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
-                            session.add(extraction_state)
-                        extraction_state.audited_on = None
-                        extraction_state.deferred_until = datetime.now(timezone.utc) + timedelta(seconds=POLL_SECONDS)
-                        diagnostic = _diagnostics_rule([{
-                            "stage": "processing", "code": "audit_timeout" if isinstance(exc, TimeoutError) else "audit_failed",
-                            "status": "error", "evidence_url": payload.get("official_url"),
-                            "message": "공고문 확인 시간 한도에 도달했습니다. 저장된 자료를 유지하며 다음 수집에서 이어서 확인합니다." if isinstance(exc, TimeoutError) else "공고문 확인 실행에 실패했습니다. 저장된 자료를 유지하며 다음 수집에서 다시 확인합니다.",
-                            "missing_items": ["현재 공고문 확인의 완료 기록"],
-                        }], "error", known_hash)
-                        payload["rules"] = [rule for rule in payload.get("rules", []) if rule.get("kind") != "document_diagnostics"] + [diagnostic]
-                try:
-                    if not audit_documents:
-                        payload = _pending_url_payload(payload, existing, url_changed)
-                    # Recheck the scalar checksum under the same row lock used
-                    # by real writes. A concurrent correction/review increments
-                    # version and conservatively invalidates this shortcut.
-                    current = lock_notice(session, source, identity[1], include_rules=False)
-                    if (not did_audit and current is not None and current.last_feed_hash == raw_hash
-                            and current.last_feed_version == current.version):
-                        notice = current
-                        notice.last_seen_at = datetime.now(timezone.utc)
-                    else:
-                        notice = upsert_notice(session, payload)
-                    notice.last_feed_hash = raw_hash
-                    notice.last_feed_version = notice.version
-                    notice.last_feed_review_hash = review_hash
-                    if not audit_documents and (existing is None or url_changed or feed_changed):
-                        # Keep a durable pending first/revised-URL audit across
-                        # stops without inventing an attempted or read date.
-                        if extraction_state is None:
-                            extraction_state = DocumentExtractionState(source=source, external_id=identity[1])
-                            session.add(extraction_state)
-                        extraction_state.audited_on = None
-                        if feed_changed:
-                            extraction_state.deferred_until = None
-                    _cache_loaded_document(notice, extraction_state)
-                    if track_source_progress:
-                        source_state = _save_progress(session, source_state, source, saved + 1, len(rows), stored_count, progress_floor)
-                    session.commit()
-                    if on_raw_saved:
-                        on_raw_saved(payload)
-                    if not audit_documents and (should_audit or local_retry_blocked) and on_audit_pending:
-                        checkpoint = extraction_state.audited_on if extraction_state else None
-                        on_audit_pending(raw_payload, None if _failed_document_needs_new_pipeline(notice, extraction_state) else checkpoint)
-                    saved += 1
-                    row_missing_prices = not any(price.amount_krw is not None or price.monthly_krw is not None for price in notice.prices)
-                    row_missing_dates = not any(event.kind not in NON_APPLICATION_KINDS for event in notice.events)
-                    if row_missing_prices:
-                        missing_prices += 1
-                    if row_missing_dates:
-                        missing_dates += 1
-                    if on_row_result:
-                        on_row_result({"external_id": identity[1], "missing_prices": row_missing_prices,
-                                       "missing_dates": row_missing_dates, "missing_detail": has_ingest_warning})
-                except (ValueError, TypeError) as exc:
-                    session.rollback()
-                    invalid += 1
-                    LOGGER.warning("Skipped invalid %s notice: %s", source, type(exc).__name__)
-                except Exception:
-                    session.rollback()
-                    raise
-            # Raw saves and cached rows must yield too. Timeouts and competing
-            # providers remain responsive even when no download is necessary.
-            await asyncio.sleep(0)
+                    except Exception:
+                        session.rollback()
+                        raise
+            finally:
+                await yield_to_deadlines()
         status = "partial" if invalid or deferred or missing or missing_prices or missing_dates or source_warning or not rows else "ok"
         message_parts = [f"{saved}건 저장"]
         if invalid:
@@ -435,7 +439,8 @@ async def _save_rows(
             record_source_status(session, source, status, ", ".join(message_parts), record_count=max(saved, progress_floor))
         elif track_source_progress:
             state = session.get(SourceStatus, source)
-            _save_progress(session, state, source, saved, len(rows), progress_floor=progress_floor)
+            _save_progress(session, state, source, saved, len(rows), progress_floor=progress_floor,
+                phase="document" if audit_documents else "raw")
             state = session.get(SourceStatus, source)
             state.message = f"공식 공고 {saved}건 저장 · 문서 확인 대기"
         session.commit()
@@ -679,9 +684,14 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
             await client.aclose()
 
 
-async def run_cycle(*, job_id: str | None = None) -> dict[str, dict] | None:
+async def run_cycle(*, job_id: str | None = None, collector_database: bool = False) -> dict[str, dict] | None:
     """Share collection ownership across manual, Compose and scheduled CLI runs."""
     init_db()
+    with collector_session_limits(SessionLocal) if collector_database else nullcontext():
+        return await _run_initialized_cycle(job_id=job_id)
+
+
+async def _run_initialized_cycle(*, job_id: str | None = None) -> dict[str, dict] | None:
     if job_id:
         if not renew_collection(job_id):
             LOGGER.info("Collection job is no longer owned; skipping")
@@ -716,7 +726,7 @@ async def run_cycle(*, job_id: str | None = None) -> dict[str, dict] | None:
 async def _forever() -> None:
     while True:
         started = monotonic()
-        result = await run_cycle()
+        result = await run_cycle(collector_database=True)
         LOGGER.info("Collection cycle complete: %s", result)
         await asyncio.sleep(max(60, POLL_SECONDS - (monotonic() - started)))
 
@@ -735,7 +745,7 @@ def main() -> None:
     previous_term = signal.signal(signal.SIGTERM, stop)
     try:
         if args.once:
-            result = asyncio.run(run_cycle(job_id=args.job_id))
+            result = asyncio.run(run_cycle(job_id=args.job_id, collector_database=True))
             if args.job_id and result is None:
                 raise SystemExit(1)
             LOGGER.info("Collection cycle complete: %s", result)

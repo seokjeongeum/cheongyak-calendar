@@ -56,8 +56,68 @@ Validation before deployment:
 - The full downloaded Sangdong source with its public API inventory produces
   a complete general-supply review and page 8 regional/home-ownership evidence.
 
-Production deployment, explicit source reprocessing and browser verification
-are recorded separately once completed. The latest predeployment iH failure
-was a first-page `ConnectError`; its upstream cause was not yet established.
-Incremental persistence improves recovery but does not itself prove that the
-external service is reachable.
+Production validation:
+
+- Commit `023e3c74fb17cf72f84a228ec269180d39e8211d` deployed successfully on
+  free Render at 2026-10-11 20:05 UTC, with browser asset `index-iDPuMwe4.js`.
+- Explicit document reprocessing run `38170826402` completed successfully.
+  Sangdong's public response is version 8 with V17 page 8 capital-region and
+  homeless-household evidence, the original SHA-256, and documented shared
+  random selection. All 7 prices and its competition rows are unchanged;
+  revision history grew from 7 to 8. Seonun is version 6, retains its original
+  null hash and empty prices/results, and retains all 6 revisions. Its failed
+  official-page download is reported without an extra unsupported claim that
+  no attachment exists.
+- Actual deployed collection-status refresh made a new coverage GET and
+  updated its status time. Shared-key labels agree across services, saved
+  password inputs remain empty, no private facts or POSTs were transmitted,
+  there were no JavaScript errors, and the 375px page had no overflow.
+- Deployed-asset Chromium checks for synthetic new notices passed all 12
+  checks: equivalent regional sets retain admission and reception candidates,
+  genuinely differing scopes remain separate, and the excluded supply stays
+  closed with its reason available. Focus/visibility return makes no API query.
+- Strict source-only Chromium validation of the refreshed production Sangdong
+  DTO passed all 16 checks. Hwaseong is admitted without a regional division;
+  an outside-capital-region profile has the official province-range reason
+  visible on its closed card. Source hash, announcement date and page evidence
+  agree with the baseline and refreshed API. There are no extra focus requests,
+  personal facts in API traffic, JavaScript exceptions or 375px overflow.
+
+## Collector deadline follow-up
+
+An older scheduled collection remained active well after its cooperative feed
+and competition deadlines. Code inspection confirms synchronous database work
+and competition branches with no await can delay those timers. It does not
+establish which database operation caused that production delay. The run
+eventually completed successfully as `38168617049`; its already committed
+source data remained available throughout.
+
+CLI collection now uses a separate PostgreSQL engine with a 10-second connect
+timeout and transaction-local 5-second lock and 30-second statement limits.
+The shared session factory is bound only inside the CLI cycle; web, migration,
+schema initialization and SQLite keep their existing engines. A heartbeat
+captures its own bounded factory so a delayed final renewal cannot switch to
+the restored web factory. Both save and competition loops yield to overdue
+timers on every path. A failed audit rolls back before reading recovery state.
+Raw-page and document-review progress labels use explicit phases.
+
+Validation after this follow-up:
+
+- Full isolated API suite: 860 passed, 2 opt-in cases skipped (156.29 seconds).
+- Focused lifecycle, deadline and recovery regression: 97 passed.
+- Actual local PostgreSQL: 4 checks passed using only a connection-private
+  temporary table and a unique test advisory lock. The server reports the
+  expected 5s/30s limits. Reduced per-transaction test limits trigger query
+  cancellation (`57014`) and lock timeout (`55P03`); rollback retains the
+  previously committed row and the next transaction is reusable. Ordinary
+  sessions retain their original settings. No application tables, roles or
+  persistent schemas were changed.
+- Independent final review confirmed heartbeat binding, rollback and phase
+  handling with no remaining confirmed blocker.
+
+PostgreSQL statement limits bound server execution, not every possible stalled
+network socket read. The latest predeployment iH failure was a first-page
+`ConnectError`; its upstream cause was not yet established. No-key public
+probes from this workspace reach both API hosts (401/400), which does not prove
+authorized collection from the GitHub runner. Incremental persistence and
+retries improve recovery but do not prove external service availability.

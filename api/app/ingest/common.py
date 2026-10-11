@@ -27,6 +27,11 @@ class FeedError(RuntimeError):
         self.retryable = retryable
 
 
+async def yield_to_deadlines() -> None:
+    """Let overdue timers run after synchronous work, including fast branches."""
+    await asyncio.sleep(0.001)
+
+
 def value(row: dict[str, Any], *keys: str) -> Any:
     for key in keys:
         item = row.get(key)

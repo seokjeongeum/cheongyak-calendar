@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 from collections.abc import Generator
+from contextlib import contextmanager
 
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import Engine, URL, make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -23,16 +24,49 @@ def database_url() -> str:
     return url
 
 
-def make_engine(url: str | None = None) -> Engine:
+def make_engine(url: str | URL | None = None, *, collector: bool = False) -> Engine:
     url = url or database_url()
     kwargs: dict = {"pool_pre_ping": True, "hide_parameters": True}
-    if url.startswith("sqlite"):
+    backend = make_url(url).get_backend_name()
+    if backend == "sqlite":
         kwargs["connect_args"] = {"check_same_thread": False}
-    return create_engine(url, **kwargs)
+    elif backend == "postgresql" and collector:
+        kwargs["connect_args"] = {"connect_timeout": 10}
+    selected = create_engine(url, **kwargs)
+    if backend == "postgresql" and collector:
+        @event.listens_for(selected, "begin")
+        def bounded_collector_transaction(connection):
+            # SET LOCAL applies only inside this collector transaction, never
+            # to a database role, the web engine or schema/migration startup.
+            connection.exec_driver_sql(
+                "SELECT set_config('lock_timeout', '5000', true), "
+                "set_config('statement_timeout', '30000', true)"
+            )
+    return selected
 
 
 engine = make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+@contextmanager
+def collector_session_limits(factory=SessionLocal):
+    """Bind CLI collection and its finalizers to a separate bounded engine."""
+    previous = factory.kw["bind"]
+    if previous.dialect.name != "postgresql":
+        # Recreating SQLite in-memory/StaticPool engines would discard their
+        # database and custom pool configuration; these limits are PG-only.
+        yield previous
+        return
+    selected = make_engine(previous.url, collector=True)
+    # Existing imports share this factory, including the heartbeat and saved
+    # key lookup. Rebinding the module variable would miss those consumers.
+    factory.configure(bind=selected)
+    try:
+        yield selected
+    finally:
+        factory.configure(bind=previous)
+        selected.dispose()
 
 
 def protect_app_tables(connection) -> None:
