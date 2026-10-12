@@ -159,4 +159,21 @@ Final UI validation: all 633 tests in 54 files passed; the TypeScript and Vite
 production build passed (`index-BTSWR6yv.js`, worker
 `qualification.worker-cfwgCqy9.js`). Actual-source browser validation now also
 checks the absence of an invented period requirement and one clear collapsed
-regional explanation. Its final deployed run is recorded after deployment.
+regional explanation.
+
+Commit `141cf451c582efd629e45ba99365b74e0e60eaaf` deployed successfully on
+2026-10-12 at 09:51:21 UTC. Final Chromium validation of the deployed
+`index-BTSWR6yv.js` and its worker passed all 29 checks across synthetic new
+notices and the verified Sangdong response. The 375px admitted card shows
+`신청지역 충족 · 접수일 후보`; the outside-region card stays closed and shows
+one clear official region failure. Distinct supply scopes remain separate,
+expanding or returning focus makes no extra API request, API traffic contains
+no private facts or POSTs, and there are no JavaScript errors or horizontal
+overflow. The validation retains configured proxy/CA trust and TLS verification.
+
+Reproducible public-source/browser artifacts:
+`/tmp/cheongyak-capital-final-copy-live/result.json`,
+`sangdong-capital-admission-375.png`, and
+`sangdong-outside-collapsed-reason-375.png`. The source comparison still verifies
+the announcement date, original document hash, all 7 prices and revision
+history against the saved baseline.
