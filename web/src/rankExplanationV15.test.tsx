@@ -69,13 +69,22 @@ describe('rank explanations from current official clauses', () => {
 
   it('confirms rank without a unit-selection question only when every actual unit passes its own official tier', () => {
     for (const item of sources) {
-      const facts = profile({ privateDepositKrw: '6000000' })
-      expect(deriveRank(item, facts)).toMatchObject({ rank: 'first', status: 'possible' })
-      const { brief, details } = render(item, facts, true)
-      const summary = brief.split('class="qualification-account-summary"')[1].split('class="qualification-supply-overview"')[0]
-      expect(summary).toContain('민영주택 1순위 조건 충족')
-      expect(summary).not.toContain('qualification-account-pending')
-      expect(details).toContain('면적별 청약통장 조건')
+      for (const privateDepositKrw of ['6000000', '19300000']) {
+        const facts = profile({ privateDepositKrw })
+        const rank = deriveRank(item, facts)
+        expect(rank).toMatchObject({ rank: 'first', status: 'possible' })
+        expect(rank.reasons.find((reason) => reason.label === '민영주택 예치금')).toMatchObject({ status: 'pass', category: 'condition' })
+        for (const cached of [false, true]) {
+          const { brief, details } = render(item, facts, cached)
+          const summary = brief.split('class="qualification-account-summary"')[1].split('class="qualification-supply-overview"')[0]
+          expect(summary).toContain('민영주택 1순위 조건 충족')
+          expect(summary).toContain('민영주택 예치금 충족')
+          expect(summary).not.toContain('qualification-account-pending')
+          expect(details).toContain('면적별 청약통장 조건')
+          expect(details).not.toContain('추가 확인 필요 · 민영주택 예치금')
+        }
+      }
+      const facts = profile({ privateDepositKrw: '19300000' })
       expect(deriveRank(item, profile({ privateDepositKrw: '4000000' })).rank).toBe('unknown')
       expect(deriveRank({ ...item, prices: item.prices.map((price, index) => index === item.prices.length - 1 ? { ...price, exclusive_area_sqm: null } : price) }, facts).rank).toBe('unknown')
       const missingUnit = { ...item, offered_supplies: [{ supply_type: '일반공급', unit_type: 'missing-official-unit', supply_count: 1, verification: 'official' as const }] }

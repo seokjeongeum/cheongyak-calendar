@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from pydantic import ValidationError
-from sqlalchemy import inspect, select
+from sqlalchemy import and_, func, inspect, or_, select
 from sqlalchemy.orm import Session, defer, lazyload
 from sqlalchemy.orm.attributes import NO_VALUE
 
@@ -31,9 +31,10 @@ from app.collection import CollectionHeartbeat, claim_collection, finish_collect
 from app.integration_settings import setting_value
 from app.extract.pipeline import DOCUMENT_PIPELINE_VERSION, _diagnostics_rule, enrich_notice, extraction_configured
 from app.extract.official_rules import PARSER_VERSION
-from app.models import DocumentExtractionState, Notice, SourceStatus
+from app.extract.reprocess import _context as _document_context, _document_patch
+from app.models import DocumentExtractionState, Notice, NoticeEvent, SourceStatus
 from app.qualification import is_metadata, merge_poll_rules
-from app.repository import NON_APPLICATION_KINDS, feed_payload_hash, feed_review_hash, is_open_ended_application, lock_notice, record_source_status, resolve_pending_corrections, upsert_notice
+from app.repository import NON_APPLICATION_KINDS, _existing_payload, feed_payload_hash, feed_review_hash, is_open_ended_application, lock_notice, notice_patch_changed, open_ended_application_clause, record_source_status, resolve_pending_corrections, upsert_notice
 from app.schemas import EventPublic
 
 from . import boards, competition, ih, lh, myhome, reb
@@ -47,6 +48,8 @@ FEED_TIMEOUT_SECONDS = 10 * 60
 DOCUMENT_TIMEOUT_SECONDS = 120
 DOCUMENT_BUDGET_SECONDS = 30 * 60
 COMPETITION_TIMEOUT_SECONDS = 20 * 60
+SAVED_DOCUMENT_LIMIT = 50
+OFFICIAL_SOURCES = ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh")
 LOOKBACK_DAYS = 180
 LOOKAHEAD_DAYS = 60
 QUOTA_STATE_KEY = ("_gemini", "free_quota")
@@ -172,6 +175,115 @@ def _pending_url_payload(payload: dict, existing: Notice | None, url_changed: bo
                 "rules": merge_poll_rules(existing.rules or [], incoming_rules,
                     metadata_only=all(is_metadata(r) for r in incoming_rules))}
     return payload
+
+
+def _saved_document_queue(today: date) -> tuple[dict, dict]:
+    """Select a bounded active backlog without waiting for a provider's feed."""
+    now = datetime.now(timezone.utc)
+    state = DocumentExtractionState
+    first = state.document_checkpoint["diagnostics"][0]
+    stale_parser = and_(first["parser_version"].as_string() != PARSER_VERSION,
+        first["status"].as_string().in_(["complete", "partial", "unsupported", "unreadable", "error"]))
+    stale_pipeline = and_(first["pipeline_version"].as_string() != DOCUMENT_PIPELINE_VERSION,
+        or_(first["status"].as_string().in_(["unreadable", "error"]),
+            first["discovery_failed"].as_boolean().is_(True),
+            first["download_failed"].as_boolean().is_(True)))
+    stale = or_(stale_parser, stale_pipeline)
+    unknown_checkpoint = or_(state.document_checkpoint.is_(None),
+        state.document_checkpoint["notice_version"].as_integer().is_(None),
+        state.document_checkpoint["notice_version"].as_integer() != Notice.version,
+        first["status"].as_string().is_(None))
+    active_reception = select(NoticeEvent.id).where(NoticeEvent.notice_id == Notice.id,
+        NoticeEvent.kind.not_in(NON_APPLICATION_KINDS),
+        or_(func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today,
+            open_ended_application_clause())).exists()
+    statement = (select(Notice, state).outerjoin(state,
+        and_(state.source == Notice.source, state.external_id == Notice.external_id))
+        .options(defer(Notice.rules), lazyload(Notice.competitions), lazyload(Notice.competition_state))
+        .where(Notice.source.in_(OFFICIAL_SOURCES), Notice.official_url.is_not(None),
+            or_(active_reception, Notice.announcement_date >= today - timedelta(days=45)),
+            or_(stale, unknown_checkpoint, state.audited_on.is_(None), state.audited_on != today),
+            or_(stale, unknown_checkpoint, state.deferred_until.is_(None), state.deferred_until <= now))
+        .order_by(stale.desc().nullslast(), state.audited_on.asc().nullsfirst(),
+            Notice.announcement_date.desc(), Notice.id).limit(SAVED_DOCUMENT_LIMIT))
+    pending: dict[str, dict] = {}
+    retained: dict[str, dict] = {}
+    with SessionLocal() as session:
+        for notice, extraction_state in session.execute(statement):
+            # Valid scalar checkpoints decide same-day/cooldown skips without
+            # transferring a full rules JSON. Only selected work needs a copy.
+            changed_parser = _failed_document_needs_new_pipeline(notice, extraction_state)
+            audited = extraction_state.audited_on if extraction_state else None
+            deferred = extraction_state.deferred_until if extraction_state else None
+            if deferred is not None and deferred.tzinfo is None:
+                deferred = deferred.replace(tzinfo=timezone.utc)
+            if not changed_parser and (audited == today or deferred is not None and deferred > now):
+                continue
+            payload = copy.deepcopy(_existing_payload(notice))
+            # The collector's raw payload and priority helpers use ISO dates.
+            if isinstance(payload.get("announcement_date"), date):
+                payload["announcement_date"] = payload["announcement_date"].isoformat()
+            for event in payload.get("events", []):
+                for key in ("start_date", "end_date"):
+                    if isinstance(event.get(key), date):
+                        event[key] = event[key].isoformat()
+            pending.setdefault(notice.source, {})[notice.external_id] = (payload, None if changed_parser else audited)
+            retained.setdefault(notice.source, {})[notice.external_id] = notice.last_feed_review_hash
+        session.commit()
+    return pending, retained
+
+
+async def _review_saved_document(payload: dict, expected_feed_hash: str | None,
+    client: httpx.AsyncClient, today: date, *, deadline: float) -> tuple[int, int]:
+    """Apply a document-only patch to the latest retained source under its lock."""
+    source, external_id = payload["source"], payload["external_id"]
+    identity = (source, external_id)
+    enriched = None
+    failure = None
+    try:
+        async with asyncio.timeout(min(DOCUMENT_TIMEOUT_SECONDS, max(0, deadline - monotonic()))):
+            enriched = await enrich_notice(copy.deepcopy(payload), client=client,
+                known_document_hash=payload.get("document_hash"), allow_gemini=False)
+    except Exception as exc:
+        failure = exc
+        LOGGER.warning("Saved document review failed for %s: %s", source, type(exc).__name__)
+    with SessionLocal() as session:
+        notice = lock_notice(session, source, external_id)
+        if notice is None:
+            return 1, 1
+        current = _existing_payload(notice)
+        allowed_hashes = {payload.get("document_hash"), (enriched or {}).get("document_hash")}
+        if (_document_context(payload) != _document_context(current)
+                or payload.get("title") != current.get("title")
+                or notice.last_feed_review_hash != expected_feed_hash
+                or current.get("document_hash") not in allowed_hashes):
+            # A correction/newer review won the race. Never restore its older
+            # source fields, hashes, prices or checkpoint from this snapshot.
+            return 1, 1
+        state = session.get(DocumentExtractionState, identity, populate_existing=True)
+        if state is None:
+            state = DocumentExtractionState(source=source, external_id=external_id)
+            session.add(state)
+        if failure is not None:
+            diagnostic = _diagnostics_rule([{
+                "stage": "processing", "code": "audit_timeout" if isinstance(failure, TimeoutError) else "audit_failed",
+                "status": "error", "evidence_url": current.get("official_url"),
+                "message": "공고문 확인 시간 한도에 도달했습니다. 저장된 자료를 유지하며 다음 수집에서 이어서 확인합니다." if isinstance(failure, TimeoutError) else "공고문 확인 실행에 실패했습니다. 저장된 자료를 유지하며 다음 수집에서 다시 확인합니다.",
+                "missing_items": ["현재 공고문 확인의 완료 기록"],
+            }], "error", current.get("document_hash"))
+            patch = {"source": source, "external_id": external_id, "replace_rules": True,
+                "rules": [rule for rule in current.get("rules", []) if rule.get("kind") != "document_diagnostics"] + [diagnostic]}
+            state.audited_on = None
+            state.deferred_until = datetime.now(timezone.utc) + timedelta(seconds=POLL_SECONDS)
+        else:
+            patch = _document_patch(current, enriched)
+            state.audited_on = today
+            state.deferred_until = None
+        if notice_patch_changed(notice, patch):
+            notice = upsert_notice(session, patch)
+        state.document_checkpoint = _document_checkpoint(notice)
+        session.commit()
+    return 1, int(failure is not None)
 
 
 async def _save_rows(
@@ -464,6 +576,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
     invalid_rows: dict[str, int] = {}
     competition_ready = asyncio.Event()
     document_deadline = monotonic() + DOCUMENT_BUDGET_SECONDS
+    pending_documents, retained_reviews = _saved_document_queue(today)
 
     def raw_saved(source: str, payload: dict) -> None:
         durable_identities.setdefault(source, set()).add(payload["external_id"])
@@ -472,6 +585,9 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
 
     def pending_audit(source: str, payload: dict, checkpoint: date | None) -> None:
         pending_documents.setdefault(source, {})[payload["external_id"]] = (payload, checkpoint)
+        # A fetched current row replaces the retained snapshot and follows the
+        # existing raw-feed audit path; it must not be reviewed a second time.
+        retained_reviews.get(source, {}).pop(payload["external_id"], None)
 
     async def save_feed_batch(source: str, batch: list[dict]) -> None:
         if not batch:
@@ -571,21 +687,41 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
         # The raw-success timestamp/status is independent of this subphase.
         # Killed hosts leave unstarted audited_on checkpoints pending, while
         # completed rows are skipped on the next run, including archive rows.
-        saved, invalid, deferred, *_ = await _save_rows(
-            source, rows, client, today, document_semaphore=semaphore,
-            finalize=False, track_source_progress=False,
-            document_deadline=document_deadline,
-            document_timeout_seconds=DOCUMENT_TIMEOUT_SECONDS,
-            preserve_row_order=True,
-            on_raw_saved=document_progress,
-        )
+        saved = deferred = retained_saved = 0
+        for row in rows:
+            if monotonic() >= document_deadline:
+                break
+            if row["external_id"] in retained_reviews.get(source, {}):
+                async with semaphore:
+                    if monotonic() >= document_deadline:
+                        break
+                    count, pending = await _review_saved_document(row,
+                        retained_reviews[source][row["external_id"]], client, today,
+                        deadline=document_deadline)
+                    saved += count
+                    deferred += pending
+                    retained_saved += count - pending
+                    document_progress(row)
+                await yield_to_deadlines()
+            else:
+                count, _, pending, *_ = await _save_rows(
+                    source, [row], client, today, document_semaphore=semaphore,
+                    finalize=False, track_source_progress=False,
+                    document_deadline=document_deadline,
+                    document_timeout_seconds=DOCUMENT_TIMEOUT_SECONDS,
+                    preserve_row_order=True,
+                    on_raw_saved=document_progress,
+                )
+                saved += count
+                deferred += pending
         remaining = min(len(rows), max(0, len(rows) - saved) + deferred)
         results[source]["documents_pending"] = remaining
         results[source]["deferred"] = results[source].get("deferred", 0) + deferred
+        results[source]["saved_documents_reviewed"] = retained_saved
         with SessionLocal() as session:
             state = session.get(SourceStatus, source)
             if state is not None:
-                if remaining:
+                if remaining and results[source]["status"] in {"ok", "partial"}:
                     results[source]["status"] = "partial"
                 state.status = results[source]["status"]
                 state.message = (state.message or f"공식 공고 {results[source]['count']}건 저장").split(" · 문서 확인 ")[0] + f" · 문서 확인 {len(rows) - remaining}/{len(rows)}건" + (f" · {remaining}건 다음 수집에서 이어서 확인" if remaining else "")
@@ -660,14 +796,16 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                     state.status = "partial"
                     state.message = (state.message or "") + f" · 문서 확인 0/{len(pending_documents[source])}건"
                     session.commit()
-            await audit_source(source, semaphore)
         except Exception as exc:
             failed_source(source, exc)
-            if pending_documents.get(source):
-                await audit_source(source, semaphore)
         finally:
             if source == "cheongyak_home":
                 competition_ready.set()
+            # Saved documents can be upgraded when this feed failed before its
+            # first row or when its API key is disabled. Preserve that feed's
+            # status/timestamps/count and append document progress separately.
+            if source in results:
+                await audit_source(source, semaphore)
 
     try:
         # Only document work shares a fair turn. Saving a raw feed never waits
@@ -676,7 +814,7 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
         semaphore = asyncio.Semaphore(1)
         async with asyncio.TaskGroup() as tasks:
             tasks.create_task(collect_competition())
-            for source in ("cheongyak_home", "myhome", "lh", "ih", "sh", "gh"):
+            for source in OFFICIAL_SOURCES:
                 tasks.create_task(collect_source(source, semaphore))
         return results
     finally:

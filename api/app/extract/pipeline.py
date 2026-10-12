@@ -36,7 +36,7 @@ from .official_rules import PARSER_VERSION, parse_official_rules, parser_version
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-11-v15"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-12-v16"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 MAX_DOWNLOAD_ATTEMPTS = 3
@@ -94,6 +94,7 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "unexpected_response": "첨부 주소가 PDF·HWP·HWPX 문서 대신 다른 응답을 반환했습니다.",
         "hwp_converter_missing": "HWP 문서 변환기를 사용할 수 없습니다.",
         "hwp_conversion_failed": "HWP 문서를 로컬에서 변환하지 못했습니다.",
+        "model_document_preparation_failed": "공고문 자동 추출을 위한 문서 처리를 마치지 못했습니다.",
         "document_decode_failed": "공고문 파일의 텍스트를 읽지 못했습니다.",
         "document_no_text": "공고문에 읽을 수 있는 텍스트가 없습니다. 스캔 여부를 확인해야 합니다.",
         "document_read": "공고문 텍스트를 로컬에서 읽었습니다.",
@@ -178,6 +179,14 @@ class DocumentDownloadFailed(ValueError):
     def __init__(self, diagnostics: list[dict]):
         super().__init__("Official public download failed")
         self.diagnostics = diagnostics
+
+
+class ModelDocumentPreparationFailed(ValueError):
+    """Optional model preparation failed without invalidating local facts."""
+
+    def __init__(self, diagnostic: dict):
+        super().__init__("Local model document preparation failed")
+        self.diagnostics = [diagnostic]
 
 
 def _download_failures(exc, url: str, *, stage: str = "download") -> list[dict]:
@@ -826,7 +835,16 @@ async def extract_document(
             return {"prices": [], "rules": [], "document_hash": digest, "unchanged": True}
         if data.startswith((b'PK', b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')):
             processed = await _isolated_document_operation('model_part', url=url, data=data, content_type=content_type)
-            part = processed['part']
+            part = processed.get('part')
+            if (processed.get('error_stage') or not isinstance(part, dict)
+                    or not (isinstance(part.get('text'), str) or isinstance(part.get('inlineData'), dict))):
+                # A converter/decoder failure is a valid child-process result,
+                # not a missing-key crash in the whole document audit.
+                raise ModelDocumentPreparationFailed(document_diagnostic(
+                    'model_preparation', 'model_document_preparation_failed', url,
+                    source_format='hwpx' if data.startswith(b'PK') else 'hwp',
+                    exception_type=processed.get('exception_type') or 'ValueError',
+                    error_stage=processed.get('error_stage') or 'process'))
         else:
             part = _document_part(url, data, content_type)
         prompt = (
@@ -954,6 +972,8 @@ async def enrich_notice(
                 except ExtractionDeferred as exc:
                     enriched["extraction_status"] = "quota" if exc.quota_exhausted else "deferred"
                     allow_gemini = False
+                except ModelDocumentPreparationFailed as exc:
+                    diagnostics.extend(exc.diagnostics)
                 except (httpx.HTTPError, ValueError, zipfile.BadZipFile, json.JSONDecodeError):
                     pass
             if conditions and local and local.get("identity_status") != "mismatch":

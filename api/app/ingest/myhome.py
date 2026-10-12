@@ -9,6 +9,8 @@ under the explicit ``공급금액(원) / 계`` heading.
 
 from __future__ import annotations
 
+import asyncio
+import copy
 import html
 import re
 from datetime import date
@@ -23,6 +25,8 @@ BASE = "https://apis.data.go.kr/1613000/HWSPR02"
 SOURCE = "myhome"
 OPERATIONS = (("ltRsdtRcritNtcList", "public_sale"), ("rsdtRcritNtcList", "public_rental"))
 SALE_DETAIL_URL = "https://m.myhome.go.kr/hws/portal/sch/selectLttotHouseDetailView.do"
+DETAIL_CONCURRENCY = 3
+DETAIL_BATCH_SIZE = 6
 
 
 def _js_objects(page: str, array_name: str) -> list[dict[str, str]]:
@@ -141,6 +145,7 @@ def normalize(row: dict[str, Any], category: str) -> dict[str, Any] | None:
 
 async def collect(client: httpx.AsyncClient, key: str, start: date, end: date, *, on_rows=None) -> list[dict[str, Any]]:
     notices: list[dict[str, Any]] = []
+    sale_details: list[tuple[dict[str, Any], str]] = []
     for operation, category in OPERATIONS:
         for page in range(1, 101):
             body = await get_json(client, f"{BASE}/{operation}", {
@@ -156,19 +161,34 @@ async def collect(client: httpx.AsyncClient, key: str, start: date, end: date, *
             if on_rows and batch:
                 # A slow detail endpoint must not discard a successfully read
                 # list page or restart at its first row forever.
-                await on_rows([normalized for _, normalized in batch])
+                await on_rows(copy.deepcopy([normalized for _, normalized in batch]))
             for row, normalized in batch:
-                if normalized:
-                    if category == "public_sale":
-                        try:
-                            await enrich_sale_detail(client, normalized, str(value(row, "pblancId")))
-                        except (httpx.RequestError, FeedError):
-                            # List coverage still succeeds; absent type prices and
-                            # reception dates remain visible as unknown.
-                            normalized["ingest_warning"] = "마이홈 분양 상세 조회 실패"
-                    notices.append(normalized)
+                notices.append(normalized)
+                if category == "public_sale":
+                    sale_details.append((normalized, str(value(row, "pblancId"))))
             if not rows or (total is not None and page * 100 >= total) or len(rows) < 100:
                 break
         else:
             raise FeedError(f"마이홈 {operation} 페이지 상한 초과")
+    # Optional sale prices must not prevent rental/later list pages from being
+    # saved. Commit ready detail batches too, before another batch can time out.
+    slots = asyncio.Semaphore(DETAIL_CONCURRENCY)
+
+    async def detail(payload: dict[str, Any], notice_id: str) -> dict[str, Any]:
+        async with slots:
+            try:
+                await enrich_sale_detail(client, payload, notice_id)
+            except (httpx.RequestError, FeedError):
+                payload["ingest_warning"] = "마이홈 분양 상세 조회 실패"
+        return payload
+
+    for offset in range(0, len(sale_details), DETAIL_BATCH_SIZE):
+        outcomes = await asyncio.gather(*(detail(payload, notice_id) for payload, notice_id
+            in sale_details[offset:offset + DETAIL_BATCH_SIZE]), return_exceptions=True)
+        batch = [outcome for outcome in outcomes if isinstance(outcome, dict)]
+        if on_rows and batch:
+            await on_rows(copy.deepcopy(batch))
+        failure = next((outcome for outcome in outcomes if isinstance(outcome, BaseException)), None)
+        if failure is not None:
+            raise failure
     return notices

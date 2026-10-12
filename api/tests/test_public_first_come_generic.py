@@ -78,6 +78,15 @@ def test_one_person_one_home_is_an_application_instruction_not_missing_personal_
     assert not one(result, "condition_coverage")["scopes"][0]["missing_topics"]
 
 
+def test_viewing_procedure_cannot_hide_an_added_applicant_approval_requirement():
+    pages = copy.deepcopy(SOURCE["pages"])
+    clause = "신청자는 공급기관의 사전승인을 받아야 합니다."
+    pages[0]["text"] = pages[0]["text"].replace("현장을 확인 후 계약하여야 하며", "현장을 확인 후 계약하여야 하며 " + clause)
+    result = parse(pages=pages)
+    assert result["status"] == "partial"
+    assert any(clause in gap["evidence_text"] for gap in one(result, "condition_coverage")["scopes"][0]["source_gaps"])
+
+
 def test_incompatible_current_announcement_date_does_not_borrow_old_review():
     result = parse(payload={**SOURCE["payload"], "announcement_date": "2026-07-11"})
     assert result["status"] == "unsupported" and result["identity_status"] == "mismatch"

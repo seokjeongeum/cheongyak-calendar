@@ -271,13 +271,16 @@ export function applicationInstructions(notice: Notice): ApplicationInstruction[
 export function rankUnitComparisons(notice: Notice, profile: LocalProfile): { units: string[]; reasons: EligibilityReason[] }[] {
   const rules = (notice.rules || []).filter((rule) => rule.verification === 'official' && rule.purpose === 'first_rank' && !rule.supply_type && (Array.isArray(rule.deposit_table) || rule.kind === 'account_type' && rule.area_limit_for_installment !== undefined))
   const units = [...new Set((notice.prices || []).map((price) => price.unit_type).filter(Boolean))]
-  if (!rules.length || !units.length || !rules.some((rule) => evaluateRule(rule, profile, notice).category === 'selection')) return []
+  if (!rules.length || !units.length) return []
+  const hasSelection = rules.some((rule) => evaluateRule(rule, profile, notice).category === 'selection')
+  const depositRequirements = new Set<string>()
   const groups = new Map<string, { units: string[]; reasons: EligibilityReason[] }>()
   for (const unit of units) {
     const reasons = actionableReasons(rules.map((rule) => {
       const reason = evaluateRule(rule, profile, notice, unit)
       // Group identical area-tier requirements without repeating them per unit.
       if (reason.requirement && rule.kind === 'deposit_min_krw') reason.requirement = reason.requirement.replace(`${unit} `, '').replace(/전용면적 [^·]+ · /, '')
+      if (rule.kind === 'deposit_min_krw' && reason.requirement && ['condition', 'missing_input'].includes(reason.category || '')) depositRequirements.add(reason.requirement)
       return reason
     }))
     if (!reasons.length) continue
@@ -285,5 +288,5 @@ export function rankUnitComparisons(notice: Notice, profile: LocalProfile): { un
     if (existing) existing.units.push(unit)
     else groups.set(key, { units: [unit], reasons })
   }
-  return [...groups.values()]
+  return hasSelection || depositRequirements.size > 1 ? [...groups.values()] : []
 }

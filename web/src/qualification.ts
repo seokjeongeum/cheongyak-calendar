@@ -570,7 +570,8 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   let ownershipInventoryDate: string | undefined
   const currentValue = rule.kind === 'marriage_months_max' ? profile.maritalStatus : group === 'ownership' ? profile.applicantOwnsHome : currentField ? profile[currentField] : undefined
   const savedOwnership = group === 'ownership' && profile.factSnapshots?.some((snapshot) => snapshot.group === 'ownership' && snapshot.date === date && Object.keys(snapshot.values).length > 0)
-  if (!['children_min', 'newborn_children_min'].includes(rule.kind) && group && (savedOwnership || currentValue != null && currentValue !== '' && currentValue !== 'unknown')) {
+  const savedDeposit = group === 'bank_private' ? profile.factSnapshots?.find((snapshot) => snapshot.group === 'bank_private' && snapshot.date === date && Object.keys(snapshot.values).length > 0) : undefined
+  if (!['children_min', 'newborn_children_min'].includes(rule.kind) && group && (savedOwnership || savedDeposit || currentValue != null && currentValue !== '' && currentValue !== 'unknown')) {
     const legacy = legacyFactObservation(profile, group)
     const temporal = factsAtDate(profile, group, date, legacy)
     const actualMarriage = group === 'marital' && profile.maritalStatus === 'married' && parseDate(profile.marriageDate) && date && profile.marriageDate <= date && !profile.factChanges?.marital
@@ -578,6 +579,7 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     const actualOwnership = group === 'ownership' && ownershipInventoryComplete(profile) && profile.ownershipFacts.length > 0 && profile.ownershipFacts.every((fact) => parseDate(fact.acquiredDate))
     if (!date) return unsupported(rule, notice, '이 사실을 비교할 공식 기준일이 확인되지 않았습니다.', '공고 기준일의 사실')
     if (!temporal.known && !actualMarriage && !actualSupport && !actualOwnership) return pastFact(rule, notice, group)
+    if (group === 'bank_private' && temporal.source === 'snapshot' && !Object.hasOwn(savedDeposit!.values, 'privateDepositKrw')) return pastFact(rule, notice, group)
     if (group === 'ownership' && temporal.source === 'snapshot') ownershipInventoryDate = date || undefined
     profile = temporal.profile
   }
@@ -778,8 +780,8 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
   }
   if (rule.kind === 'deposit_min_krw' && Array.isArray(rule.deposit_table)) {
     type Tier = { max_area_sqm: number | null; amounts_krw: Record<string, unknown> }
-    const tiers = rule.deposit_table.filter((tier): tier is Tier => !!tier && typeof tier === 'object' && (tier.max_area_sqm === null || typeof tier.max_area_sqm === 'number' && tier.max_area_sqm > 0) && !!tier.amounts_krw && typeof tier.amounts_krw === 'object')
-    const valid = tiers.length === rule.deposit_table.length && tiers.length > 0 && tiers[tiers.length - 1].max_area_sqm === null && tiers.every((tier, index) => (index === tiers.length - 1 || tier.max_area_sqm !== null && (index === 0 || tiers[index - 1].max_area_sqm !== null && tier.max_area_sqm > tiers[index - 1].max_area_sqm!)) && ['seoul_busan', 'other_metropolitan', 'other'].every((bucket) => numberFrom(tier.amounts_krw[bucket], true) !== null))
+    const tiers = rule.deposit_table.filter((tier): tier is Tier => !!tier && typeof tier === 'object' && (tier.max_area_sqm === null || typeof tier.max_area_sqm === 'number' && Number.isFinite(tier.max_area_sqm) && tier.max_area_sqm > 0) && !!tier.amounts_krw && typeof tier.amounts_krw === 'object')
+    const valid = tiers.length === rule.deposit_table.length && tiers.length > 0 && tiers[tiers.length - 1].max_area_sqm === null && tiers.every((tier, index) => (index === tiers.length - 1 || tier.max_area_sqm !== null && (index === 0 || tiers[index - 1].max_area_sqm !== null && tier.max_area_sqm > tiers[index - 1].max_area_sqm!)) && ['seoul_busan', 'other_metropolitan', 'other'].every((bucket) => (numberFrom(tier.amounts_krw[bucket], true) ?? 0) > 0))
     if (!valid) return unsupported(rule, notice, '공식 예치금 표의 면적 구간·지역별 금액을 아직 정리하지 못했습니다.', '민영주택 예치금')
     const province = profile.regionCode || resolveLegacyRegion(profile.region, profile.district).regionCode
     if (!province) return missingInput(rule, notice, '민영주택 예치금', '거주 시도를 선택하면 해당 지역의 예치금 기준과 비교합니다.', undefined, 'regionCode')
@@ -789,11 +791,18 @@ export function evaluateRule(rule: NoticeRule, profile: LocalProfile, notice: No
     if (provenance) return { ...provenance, label: '민영주택 예치금 거주지역', requirement: date ? `${date} 당시 거주 시도의 예치금 기준` : '공식 기준일 거주 시도의 예치금 기준', detail: !date ? '예치금 지역 구분을 비교할 공식 기준일이 필요합니다.' : !provenance.profileField ? `현재 시도 연속 거주 시작일 ${profile.movedInDate}은 공고 기준일 ${date} 이후입니다. 저장된 당시 주소가 없어 과거 거주지역은 판정을 보류합니다.` : `현재 시도 연속 거주 시작일을 입력하면 공고 기준일 ${date}의 거주 시도에 따른 예치금 기준과 비교할 수 있습니다.` }
     const bucket = ['11', '26'].includes(province) ? 'seoul_busan' : ['27', '28', '29', '30', '31'].includes(province) ? 'other_metropolitan' : 'other'
     const prices = (notice.prices || []).filter((price) => !unitType || price.unit_type === unitType)
-    if (!prices.length || prices.some((price) => exclusiveArea(price) === null)) return { ...unsupported(rule, notice, `${unitType || '신청 주택형'}의 공식 전용면적을 확인해야 예치금 표와 비교할 수 있습니다. 공급면적을 대신 사용하지 않습니다.`, '민영주택 예치금'), category: 'source_gap' }
+    const missingOfferedArea = !unitType && (officialOfferedSupplies(notice) || []).some((supply) => supply.unit_type && !prices.some((price) => price.unit_type === supply.unit_type))
+    if (!prices.length || prices.some((price) => exclusiveArea(price) === null) || missingOfferedArea) return { ...unsupported(rule, notice, `${unitType || '신청 주택형'}의 공식 전용면적을 확인해야 예치금 표와 비교할 수 있습니다. 공급면적을 대신 사용하지 않습니다.`, '민영주택 예치금'), category: 'source_gap' }
     const requiredAmounts = [...new Set(prices.map((price) => numberFrom(tiers.find((tier) => tier.max_area_sqm === null || exclusiveArea(price)! <= tier.max_area_sqm)!.amounts_krw[bucket], true)!))]
-    if (requiredAmounts.length !== 1) return { ...unsupported(rule, notice, '주택형의 전용면적별 예치금 기준이 다릅니다. 아래 주택형별 비교를 확인하세요.', '민영주택 예치금'), category: 'selection' }
-    const assessed = numeric({ ...rule, value: requiredAmounts[0] }, notice, numberFrom(profile.privateDepositKrw, true), '민영주택 예치금', '원')
-    assessed.requirement = `${province === '11' ? '서울' : province === '26' ? '부산' : bucket === 'other_metropolitan' ? '그 밖의 광역시' : '그 밖의 지역'} · ${unitType ? `${unitType} ` : ''}전용면적 ${[...new Set(prices.map((price) => exclusiveArea(price)))].join(', ')}㎡ · >= ${requiredAmounts[0].toLocaleString('ko-KR')}원`
+    const actual = numberFrom(profile.privateDepositKrw, true)
+    const comparisons = requiredAmounts.map((amount) => numeric({ ...rule, value: amount }, notice, actual, '민영주택 예치금', '원'))
+    const assessed = comparisons[0]
+    assessed.requirement = `${province === '11' ? '서울' : province === '26' ? '부산' : bucket === 'other_metropolitan' ? '그 밖의 광역시' : '그 밖의 지역'} · ${unitType ? `${unitType} ` : ''}전용면적 ${[...new Set(prices.map((price) => exclusiveArea(price)))].join(', ')}㎡ · ${requiredAmounts.map((amount) => `${rule.operator || '>='} ${amount.toLocaleString('ko-KR')}원`).join(' / ')}`
+    if (requiredAmounts.length > 1 && actual !== null && comparisons.every((comparison) => comparison.status !== 'review')) {
+      if (comparisons.some((comparison) => comparison.status === 'pass') && comparisons.some((comparison) => comparison.status === 'fail')) return { ...reason(rule, notice, 'review', '민영주택 예치금', `주택형의 전용면적별 예치금 기준이 다릅니다. 아래 주택형별 비교를 확인하세요. 내 입력 ${assessed.input}`, assessed.input, assessed.requirement), category: 'selection' }
+      assessed.status = comparisons.every((comparison) => comparison.status === 'pass') ? 'pass' : 'fail'
+      assessed.detail = `내 입력 ${assessed.input} · 모집 주택형의 전용면적별 예치금 기준을 모두 ${assessed.status === 'pass' ? '충족했습니다' : '충족하지 못했습니다'}. 공고 요구 ${requiredAmounts.map((amount) => `${rule.operator || '>='} ${amount.toLocaleString('ko-KR')}원`).join(' / ')}`
+    }
     return assessed
   }
   const numericFields: Record<string, [unknown, string, string, '>=' | '<=']> = {
@@ -1049,9 +1058,11 @@ export interface ConditionCoverage {
 
 /** undefined means inventory has not been collected; [] is an official empty inventory. */
 export function officialOfferedSupplies(notice: Notice): OfferedSupply[] | undefined {
-  if (notice.offered_supplies != null) return notice.offered_supplies.filter((supply) => supply.verification === 'official' && supply.supply_count !== 0)
+  const normalized = (supplies: OfferedSupply[]) => supplies.filter((supply) => supply.verification === 'official' && supply.supply_count !== 0)
+    .map((supply) => supply.unit_type ? { ...supply, unit_type: supply.unit_type.trim() } : supply)
+  if (notice.offered_supplies != null) return normalized(notice.offered_supplies)
   const inventory = (notice.rules || []).find((rule) => rule.kind === 'offered_supplies' && rule.effect === 'metadata' && rule.verification === 'official' && Array.isArray(rule.supplies))
-  return inventory ? (inventory.supplies as OfferedSupply[]).filter((supply) => supply.verification === 'official' && supply.supply_count !== 0) : undefined
+  return inventory ? normalized(inventory.supplies as OfferedSupply[]) : undefined
 }
 function singleOfferedSupplyType(notice: Notice): string | undefined {
   const supplies = [...new Set((officialOfferedSupplies(notice) || []).map((item) => item.supply_type))]
@@ -1086,6 +1097,32 @@ function latestAttachmentUnreviewed(notice: Notice, reviewed: NoticeRule[]): boo
   }))
 }
 
+function publicClauseReviewComplete(scope: Record<string, unknown>, documentHash: string | null, selected: NoticeRule[]): boolean {
+  if (scope.completion_basis !== 'current_document_clause_coverage' && scope.review_version !== 'generic-admission-2026-10-12-public-v1') return true
+  const pages = scope.reviewed_pages
+  const branches = scope.branches
+  const topics = scope.topics
+  const references = new Set<string>()
+  if (!Array.isArray(topics) || !Array.isArray(branches)) return false
+  for (const entry of [...topics.filter((topic) => topic && typeof topic === 'object' && topic.required !== false && topic.status === 'verified'),
+    ...branches.filter((branch) => branch && typeof branch === 'object' && branch.required !== false && Object.hasOwn(branch, 'rule_ids'))]) {
+    if (!Array.isArray(entry.rule_ids) || !entry.rule_ids.length || !entry.rule_ids.every((id: unknown) => typeof id === 'string' && id)) return false
+    entry.rule_ids.forEach((id: string) => references.add(id))
+  }
+  const actual = new Set(selected.filter((rule) => rule.document_hash === documentHash).map((rule) => rule.id))
+  return scope.review_version === 'generic-admission-2026-10-12-public-v1'
+    && scope.completion_basis === 'current_document_clause_coverage'
+    && !!documentHash && scope.reviewed_document_hash === documentHash
+    && Array.isArray(pages) && pages.length > 0 && pages.every((page) => Number.isInteger(page) && Number(page) > 0)
+    && Number.isInteger(scope.verified_rule_count) && Number(scope.verified_rule_count) > 0
+    && references.size === scope.verified_rule_count && [...references].every((id) => actual.has(id))
+    && Array.isArray(scope.missing_topics) && scope.missing_topics.length === 0
+    && Array.isArray(scope.source_gaps) && scope.source_gaps.length === 0
+    && Array.isArray(branches) && branches.length > 0 && branches.every((branch) => !!branch && typeof branch === 'object'
+      && (typeof branch.required === 'boolean' || branch.required === undefined)
+      && (branch.required === false || branch.status === 'verified'))
+}
+
 export function conditionCoverage(notice: Notice, unitType?: string, supplyType?: string): ConditionCoverage {
   const metadata = (notice.rules || []).filter((r) => r.kind === 'condition_coverage' && r.effect === 'metadata')
   const scopes = metadata.flatMap((r) => Array.isArray(r.scopes) ? r.scopes.filter((s): s is Record<string, unknown> => !!s && typeof s === 'object').map((scope) => ({ scope, rule: r, official: r.verification === 'official', documentHash: typeof r.document_hash === 'string' ? r.document_hash : null })) : [])
@@ -1094,10 +1131,12 @@ export function conditionCoverage(notice: Notice, unitType?: string, supplyType?
   const topics = matched.flatMap(({ scope, official }) => official && Array.isArray(scope.topics) ? scope.topics.filter((topic): topic is Record<string, unknown> => !!topic && typeof topic === 'object').map((topic) => ({ topic: String(topic.topic || ''), status: ['verified', 'partial', 'missing', 'not_applicable'].includes(String(topic.status)) ? topic.status as 'verified' | 'partial' | 'missing' | 'not_applicable' : 'missing' as const, ruleIds: Array.isArray(topic.rule_ids) ? topic.rule_ids.filter((id): id is string => typeof id === 'string') : [], required: topic.required !== false && !['application', 'post_selection'].includes(String(topic.phase)), reason: typeof topic.reason === 'string' ? topic.reason : undefined })) : [])
   const changedDocument = matched.some(({ documentHash }) => documentHash && selected.some((rule) => typeof rule.document_hash === 'string' && rule.document_hash !== documentHash))
   const pendingAttachment = latestAttachmentUnreviewed(notice, [...selected, ...matched.map(({ rule }) => rule)])
+  const invalidPublicReview = matched.some(({ scope, documentHash }) => !publicClauseReviewComplete(scope, documentHash, selected)
+    || scope.review_version === 'generic-admission-2026-10-12-public-v1' && notice.document_hash && notice.document_hash !== documentHash)
   return {
-    complete: !changedDocument && !pendingAttachment && (metadata.length ? matched.length > 0 && matched.every(({ scope, official }) => official && scope.complete === true) : notice.rules_complete === true) && topics.every((topic) => !topic.required || ['verified', 'not_applicable'].includes(topic.status)),
+    complete: !changedDocument && !pendingAttachment && !invalidPublicReview && (metadata.length ? matched.length > 0 && matched.every(({ scope, official }) => official && scope.complete === true) : notice.rules_complete === true) && topics.every((topic) => !topic.required || ['verified', 'not_applicable'].includes(topic.status)),
     verifiedCount: selected.length,
-    missingTopics: [...new Set([...matched.flatMap(({ scope }) => !Array.isArray(scope.topics) && Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((x): x is string => typeof x === 'string').map(concreteMissingTopic) : []), ...topics.filter((topic) => topic.required && !['verified', 'not_applicable'].includes(topic.status)).map((topic) => concreteMissingTopic(topic.reason || topic.topic)), ...(changedDocument ? ['신청 조건과 분기별 검토 기록의 문서 해시 불일치'] : []), ...(pendingAttachment ? ['최신 모집공고 첨부의 신청 제한·면제 원문 미확보'] : [])])],
+    missingTopics: [...new Set([...matched.flatMap(({ scope }) => !Array.isArray(scope.topics) && Array.isArray(scope.missing_topics) ? scope.missing_topics.filter((x): x is string => typeof x === 'string').map(concreteMissingTopic) : []), ...topics.filter((topic) => topic.required && !['verified', 'not_applicable'].includes(topic.status)).map((topic) => concreteMissingTopic(topic.reason || topic.topic)), ...(changedDocument ? ['신청 조건과 분기별 검토 기록의 문서 해시 불일치'] : []), ...(pendingAttachment ? ['최신 모집공고 첨부의 신청 제한·면제 원문 미확보'] : []), ...(invalidPublicReview ? ['현재 문서의 신청 분기·검토 페이지·해시 기록 미확보'] : [])])],
     status: metadata.length ? String(metadata[metadata.length - 1].status || 'partial') : selected.length ? 'partial' : 'unsupported',
     topics,
   }
@@ -1201,8 +1240,8 @@ export function deriveRank(notice: Notice, profile: LocalProfile, unitType?: str
     }
   }
   const rankRules = (notice.rules || []).filter((r) => r.effect !== 'metadata' && !r.supply_type && r.kind !== 'first_rank' && (r.purpose === 'first_rank' || ['private_rank_months', 'national_rank_months'].includes(r.kind)))
-  const applicable = rankRules.filter((r) => (!r.housing_kind || r.housing_kind === kind) && (!r.unit_type || r.unit_type === unitType)).filter((r) => kind === 'private' ? r.kind !== 'national_rank_months' : r.kind !== 'private_rank_months')
-  const metadata = (notice.rules || []).find((r) => r.effect === 'metadata' && r.verification === 'official' && r.kind === 'rank_requirements' && (!r.housing_kind || r.housing_kind === kind) && (!r.unit_type || r.unit_type === unitType))
+  const applicable = rankRules.filter((r) => (!r.housing_kind || r.housing_kind === kind) && scopedRule(r, unitType)).filter((r) => kind === 'private' ? r.kind !== 'national_rank_months' : r.kind !== 'private_rank_months')
+  const metadata = (notice.rules || []).find((r) => r.effect === 'metadata' && r.verification === 'official' && r.kind === 'rank_requirements' && (!r.housing_kind || r.housing_kind === kind) && scopedRule({ ...r, supply_type: undefined, supply_types: undefined }, unitType))
   const reasons: EligibilityReason[] = []
   if (profile.accountType === 'unknown') reasons.push({ status: 'review', category: 'missing_input', profileField: 'accountType', label: '통장 종류', detail: '보유한 청약통장 종류를 선택하세요.' })
   if (profile.accountType === 'none') reasons.push({ status: 'fail', category: 'condition', label: '통장 종류', detail: '청약통장이 없다고 입력했습니다. 통장이 필요한 1순위 요건을 충족하지 않습니다.' })
@@ -1213,18 +1252,26 @@ export function deriveRank(notice: Notice, profile: LocalProfile, unitType?: str
   const hasMoney = kind === 'private' ? kinds.includes('deposit_min_krw') : kinds.includes('recognized_payments_min')
   const required = Array.isArray(metadata?.required_kinds) ? metadata.required_kinds.filter((k): k is string => typeof k === 'string') : []
   const complete = metadata?.complete === true || applicable.some((r) => r.rank_rules_complete === true && r.verification === 'official')
-  const unitScopeMissing = !unitType && rankRules.some((r) => r.unit_type)
+  const unitScopeMissing = !unitType && rankRules.some((r) => r.unit_type || Array.isArray(r.unit_types))
   if (!hasDuration || !hasMoney || !kinds.includes('account_type') || !complete || required.some((k) => !kinds.includes(k)) || unitScopeMissing) reasons.push({ status: 'review', category: 'source_gap', label: '공고별 1순위 요건', detail: unitScopeMissing ? '주택형별 예치금·통장 요건이 다릅니다. 각 주택형의 순위 비교를 확인하세요.' : `${prefix} 기간·${kind === 'private' ? '지역·전용면적별 예치금' : '납입인정횟수'}·통장 종류와 공고의 추가 1순위 요건을 확인하고 있습니다.`, evidenceUrl: metadata?.evidence_url || (kind === 'private' ? law28 : law27) })
   if (!unitType && (unitScopeMissing || reasons.some((reason) => reason.category === 'selection'))) {
     const units = [...new Set([...(notice.prices || []).map((price) => price.unit_type), ...(officialOfferedSupplies(notice) || []).map((supply) => supply.unit_type)].filter((unit): unit is string => typeof unit === 'string' && !!unit.trim()))]
-    // A choice is unnecessary when every real offered/priced unit independently
-    // passes complete official rank rules. Missing inventory areas and any unit
-    // failing a higher tier retain review; unrelated eligibility is unchanged.
-    if (units.length > 0 && units.every((unit) => deriveRank(notice, profile, unit).rank === 'first')) return {
+    const compared = units.map((unit) => ({ unit, result: deriveRank(notice, profile, unit) }))
+    // A choice is unnecessary when every offered/priced unit independently
+    // has the same established outcome. Unknown units still retain review.
+    if (compared.length > 0 && compared.every((entry) => entry.result.rank === 'first')) return {
       status: 'possible', rank: 'first', label: `${prefix} 1순위 조건 충족`,
       reasons: [...reasons.filter((reason) => reason.status === 'pass'), { status: 'pass', category: 'condition', label: '주택형별 1순위 요건',
         detail: `모집 주택형 ${units.length}개 각각의 공식 가입기간·${kind === 'private' ? '지역·전용면적별 예치금' : '납입인정횟수'}·통장 종류와 추가 1순위 요건을 모두 충족했습니다.`,
         requirement: units.join(' · '), criterionDate: typeof metadata?.criterion_date === 'string' ? metadata.criterion_date : notice.announcement_date, evidenceUrl: metadata?.evidence_url || notice.official_url }],
+    }
+    if (compared.length > 0 && compared.every((entry) => entry.result.status === 'mismatch')) return {
+      status: 'mismatch', rank: 'unknown', label: `${prefix} 1순위 요건 불일치`,
+      reasons: [...reasons.filter((reason) => reason.category !== 'selection' && !(reason.category === 'source_gap' && reason.label === '공고별 1순위 요건')), {
+        status: 'fail', category: 'condition', label: '주택형별 1순위 요건',
+        detail: compared.map((entry) => `${entry.unit}: ${entry.result.reasons.filter((reason) => reason.status === 'fail').map((reason) => `${reason.label} ${reason.detail}`).join(' / ')}`).join(' · '),
+        requirement: units.join(' · '), criterionDate: typeof metadata?.criterion_date === 'string' ? metadata.criterion_date : notice.announcement_date, evidenceUrl: metadata?.evidence_url || notice.official_url,
+      }],
     }
   }
   const assessed = result(reasons), first = assessed.status === 'possible'

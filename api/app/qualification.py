@@ -63,6 +63,43 @@ def is_metadata(rule: dict[str, Any]) -> bool:
     return rule.get("effect") == "metadata" or rule.get("kind") in METADATA_KINDS
 
 
+def _review_basis_supported(scope: dict[str, Any]) -> bool:
+    if scope.get("review_version") == "generic-admission-2026-10-12-public-v1":
+        return scope.get("completion_basis") == "current_document_clause_coverage"
+    if scope.get("completion_basis") == "document_structure_reviewed_standard_branch":
+        return True
+    return False
+
+
+def _public_review_references(scope: dict[str, Any]) -> set[str] | None:
+    references = set()
+    for topic in scope.get("topics", []):
+        if topic.get("required", True) and topic.get("status") == "verified":
+            ids = topic.get("rule_ids")
+            if not isinstance(ids, list) or not ids or any(not isinstance(value, str) or not value for value in ids):
+                return None
+            references.update(ids)
+    for branch in scope.get("branches", []):
+        if branch.get("required", True) and "rule_ids" in branch:
+            ids = branch["rule_ids"]
+            if not isinstance(ids, list) or not ids or any(not isinstance(value, str) or not value for value in ids):
+                return None
+            references.update(ids)
+    return references
+
+
+def _public_scope_bound(scope: dict[str, Any], metadata: dict[str, Any], rules: list[dict[str, Any]]) -> bool:
+    if scope.get("review_version") != "generic-admission-2026-10-12-public-v1":
+        return True
+    digest = metadata.get("document_hash")
+    references = _public_review_references(scope)
+    actual = {rule.get("id") for rule in rules if rule.get("verification") == "official"
+              and rule.get("document_hash") == digest and not is_metadata(rule)
+              and rule.get("effect") not in {"priority", "instruction", "procedure"}
+              and rule.get("purpose") not in {"first_rank", "second_rank", "selection"}}
+    return bool(digest and scope.get("reviewed_document_hash") == digest and references and references <= actual)
+
+
 def coverage_scope_complete(scope: Any) -> bool:
     """Validate completion flags without ignoring malformed source metadata."""
     if not isinstance(scope, dict) or scope.get("complete") is not True:
@@ -86,10 +123,24 @@ def coverage_scope_complete(scope: Any) -> bool:
     version = scope.get("review_version")
     if version is not None and not isinstance(version, str):
         return False
+    if (scope.get("completion_basis") == "current_document_clause_coverage"
+            and version != "generic-admission-2026-10-12-public-v1"):
+        return False
     if isinstance(version, str) and version.startswith("generic-admission-"):
         pages = scope.get("reviewed_pages")
         count = scope.get("verified_rule_count")
-        return bool(scope.get("completion_basis") == "document_structure_reviewed_standard_branch"
+        if version == "generic-admission-2026-10-12-public-v1":
+            branches = scope.get("branches")
+            if (not isinstance(scope.get("reviewed_document_hash"), str) or not scope["reviewed_document_hash"]
+                    or scope.get("source_gaps") != [] or not isinstance(branches, list) or not branches
+                    or any(not isinstance(branch, dict) or type(branch.get("required", True)) is not bool
+                           or branch.get("required", True) and branch.get("status") != "verified"
+                           for branch in branches)):
+                return False
+            references = _public_review_references(scope)
+            if not references or len(references) != count:
+                return False
+        return bool(_review_basis_supported(scope)
                     and isinstance(pages, list) and pages
                     and all(type(page) is int and page > 0 for page in pages)
                     and type(count) is int and count > 0
@@ -111,6 +162,8 @@ def generic_admission_coverage_complete(rule: dict[str, Any]) -> bool:
     if not all(coverage_scope_complete(scope)
                and isinstance(scope.get("review_version"), str)
                and scope["review_version"].startswith("generic-admission-")
+               and (scope.get("review_version") != "generic-admission-2026-10-12-public-v1"
+                    or scope.get("reviewed_document_hash") == rule["document_hash"])
                and isinstance(scope.get("supply_type"), str)
                and not scope.get("unit_type") and not scope.get("unit_types")
                for scope in scopes):
@@ -132,7 +185,7 @@ def source_bound_waivers(rule: dict[str, Any], *, digest: str, parser_version: s
         if (not isinstance(scope, dict) or not isinstance(scope.get("review_version"), str)
                 or not scope["review_version"].startswith("generic-admission-")
                 or not isinstance(scope.get("supply_type"), str) or not scope["supply_type"]
-                or scope.get("completion_basis") != "document_structure_reviewed_standard_branch"
+                or not _review_basis_supported(scope)
                 or not isinstance(scope.get("reviewed_pages"), list) or not scope["reviewed_pages"]
                 or not all(type(page) is int and page > 0 for page in scope["reviewed_pages"])
                 or not isinstance(scope.get("topics"), list)):
@@ -183,7 +236,9 @@ def requirements_complete(rules: list[dict[str, Any]], declared: bool) -> bool:
     coverage = [rule for rule in rules if rule.get("kind") == "condition_coverage" and rule.get("verification") == "official"]
     if coverage:
         declared = all(isinstance(item.get("scopes"), list) and item["scopes"]
-                       and all(coverage_scope_complete(scope) for scope in item["scopes"])
+                       and all(coverage_scope_complete(scope)
+                               and _public_scope_bound(scope, item, rules)
+                               for scope in item["scopes"])
                        for item in coverage)
     return bool(declared and requirements and all(verified(rule) for rule in requirements))
 

@@ -615,7 +615,7 @@ def office_qualification(pages):
     candidates = []
     for page in pages:
         body = _normal(page['text'])
-        heading = re.search(r'청약\s*자격\s*및\s*유의사항|청약신청\s*자격\s*및\s*공급일정', body)
+        heading = re.search(r'(?:청약|신청)\s*자격\s*및\s*유의사항|청약\s*신청\s*자격\s*및\s*공급일정', body)
         if not heading:
             continue
         start = heading.end()
@@ -624,7 +624,15 @@ def office_qualification(pages):
         match = re.search(r'(?:분양|모집)광고일.{0,100}?대한민국에\s*거주하는.{0,450}?신청\s*가능(?:합니다|함)', section)
         if not match:
             continue
-        quote = match[0]
+        # A PDF may place the age/date after the sentence and the next
+        # bullet's duplicate-application counts before its glyph. Read only
+        # this applicant bullet; numbers from the next procedure are not
+        # alternative age values.
+        tail = section[match.start():]
+        stop = re.search(r'[•⦁■▣Ÿ]|청약\s*신청(?:은|이)', tail)
+        quote = tail[:stop.start()] if stop else tail
+        if stop and re.match(r'[•⦁■▣Ÿ]\s*청약\s*신청은\s*인당\s*개실', tail[stop.start():]):
+            quote = re.sub(r'\s+(?:\d+\s*[,.;]*\s*){3}$', '', quote)
         dates = set()
         from datetime import date
         for y, m, d in re.findall(r'(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})', quote):
@@ -632,29 +640,21 @@ def office_qualification(pages):
                 dates.add(date(int(y), int(m), int(d)).isoformat())
             except ValueError:
                 pass
-        if not dates:
-            # In some PDF streams the qualification date moves just after the
-            # sentence, before the rest of that same qualification bullet.
-            for y, m, d in re.findall(r'(20\d{2})[.]\s*(\d{1,2})[.]\s*(\d{1,2})', section[:900]):
-                try:
-                    dates.add(date(int(y), int(m), int(d)).isoformat())
-                except ValueError:
-                    pass
         adult = re.search(r'(?:만\s*)?(\d+)세\s*이상인\s*자', quote)
         if adult:
             age = int(adult[1])
         elif re.search(r'만\s*세\s*이상인\s*자', quote):
-            without_dates = re.sub(r'20\d{2}\.\d{1,2}\.\d{1,2}\.?', '', section[:900])
-            integers = re.findall(r'(?<!\d)(\d{1,2})(?!\d)', without_dates.split('청약신청')[0])
+            # The displaced date, age and opening inclusion bracket retain
+            # their own token order. A new financial amount elsewhere in
+            # this bullet must remain an auditable condition, not erase age.
+            integers = re.findall(r'\(20\d{2}\.\d{1,2}\.\d{1,2}\.?\)\s*(\d{1,2})(?!\d)\s*\[', quote)
+            if not integers:
+                without_dates = re.sub(r'20\d{2}\.\d{1,2}\.\d{1,2}\.?', '', quote)
+                integers = re.findall(r'(?<!\d)(\d{1,2})(?!\d)', without_dates)
             age = int(integers[0]) if len(integers) == 1 else None
         else:
             age = None
         if len(dates) == 1 and age is not None:
-            # Reordered numeric PDF tokens are still part of the same
-            # applicant bullet and must appear in its visible evidence.
-            if not adult:
-                stop = re.search(r'청약신청(?:은|이)|청약\s*신청은', section[match.start():])
-                quote = section[match.start():match.start() + stop.start()] if stop else section[match.start():match.start()+700]
             candidates.append({'page': page['page'], 'quote': quote, 'age': age, 'date': next(iter(dates)), 'section': section})
     if len(candidates) != 1:
         return None
@@ -678,9 +678,10 @@ def generic_office_admission(pages, *, make, cutoff):
         if not bullet:
             continue
         remainder = _office_procedure_residual(bullet)
-        if re.search(r'이상|이하|초과|미만|필수|필요|해야|하여야|있어야|없어야|(?:인|하는|받으신|받은|한|있는|없는)\s*(?:자|분)(?:만)?|(?:자|분)만|신청.{0,20}(?:불가|가능)|자격.{0,20}(?:충족|만족)', remainder):
+        if _office_mandatory_predicate(remainder):
             missing.append('오피스텔 추가 신청 조건: ' + remainder.strip()[:160])
-    instructions = _find(pages, r'(?:1인당|청약\s*신청은\s*1인|청약신청은\s*인당).{0,180}?중복\s*신청.{0,100}?(?:무효|무효처리)')
+    missing.extend(_office_document_admission_gaps(pages, anchor))
+    instructions = _find(pages, r'(?:(?:\d+\s*[,.;]*\s*){3}[•⦁]\s*청약\s*신청은\s*인당|\d+인당|청약\s*신청은\s*(?:\d+)?인당).{0,180}?중복\s*신청.{0,100}?무효\s*처리\s*(?:합니다|되므로\s*유의하시기\s*바랍니다|됩니다)(?:\s*(?:\d+\s*[,.;]*\s*){3})?')
     if instructions:
         proof = make('application_instructions', effect='metadata', **instructions)
         proof['instructions'] = [{'label': '군별 신청 수·중복 신청 제한', 'phase': 'application', 'detail': instructions['quote'],
@@ -701,18 +702,65 @@ def _office_procedure_residual(text):
         r'(?:본\s*오피스텔(?:의)?\s*)?(?:최초\s*|금회\s*)?(?:분양|모집)광고일\s*(?:\(20\d{2}\.\d{1,2}\.\d{1,2}\.?\))?\s*현재\s*대한민국에\s*거주하는\s*(?:만\s*)?\d+세\s*이상인\s*자는\s*(?:청약\s*)?신청\s*가능(?:합니다|함)',
         r'(?:최초\s*|금회\s*)?(?:분양|모집)광고일\s*(?:\(20\d{2}\.\d{1,2}\.\d{1,2}\.?\))?\s*현재\s*대한민국에\s*거주하는\s*(?:만\s*)?(?:\d+)?세\s*이상인\s*자',
         r'또는\s*법인의\s*경우\s*신청\s*가능(?:합니다|함)',
-        r'신청자의\s*착오로\s*인해\s*부적격자로\s*판명되는\s*경우[^。]{0,320}?책임은\s*청약\s*신청자\s*본인에게\s*있습니다',
+        r'신청자의\s*착오로\s*인해\s*부적격자로\s*판명되는\s*경우[,\s]*계약체결이\s*불가하고\s*계약체결\s*이후에는\s*계약이\s*취소될\s*수\s*있으며\s*이에\s*대한\s*책임은\s*청약\s*신청자\s*본인에게\s*있습니다',
         r'청약신청은\s*청약Home을\s*통한\s*인터넷\s*청약접수를\s*원칙으로\s*하며\s*해당\s*신청일에\s*신청하지\s*않을\s*경우\s*청약이\s*불가합니다',
-        r'거주\s*지역\s*및\s*청약\s*통장\s*가입\s*여부와\s*무관하게\s*청약\s*신청이\s*가능합니다',
+        r'거주\s*지역\s*및\s*청약\s*통장\s*가입\s*여부와\s*무관하게\s*청약\s*신청(?:이)?\s*가능합니다',
         r'청약\s*신청은\s*\d+인\s*\d+실\s*\(건\)만\s*(?:청약이\s*)?가능합니다',
         r'\d+인당\s*군별\s*\d+실\s*\(건\)\s*청약이\s*가능하며\s*\(각\s*군별\s*\d+건씩\s*[‘\']최대\s*\d+건[’\']\)',
         r'동일인이\s*(?:동일한\s*군에\s*)?\d+실\s*\(건\)\s*이상\s*중복\s*신청하는\s*경우\s*청약\s*신청\s*(?:모두|전부)(?:를|가)?\s*무효\s*처리\s*(?:되므로\s*유의하시기\s*바랍니다|됩니다|합니다)',
-        r'청약신청은\s*인당\s*개실\s*청약\s*가능하며\s*동일인이\s*개실\s*이상\s*중복\s*신청하는\s*경우\s*청약신청\s*모두를\s*무효처리\s*합니다\s*(?:\d+\s*[,.;]*\s*){3}',
+        r'청약\s*신청은\s*(?:\d+)?인당\s*(?:\d+)?개?실\s*청약\s*가능하며[,\s]*동일인이\s*(?:\d+)?개?실\s*이상\s*중복\s*신청하는\s*경우\s*청약\s*신청\s*(?:모두|전부)(?:를|가)?\s*무효\s*처리\s*(?:합니다|되므로\s*유의하시기\s*바랍니다|됩니다)',
         r'본\s*오피스텔은\s*아파트\s*청약통장\s*순위와\s*무관하므로,?\s*청약통장이\s*필요하지\s*않으며,?\s*청약홈에서\s*인터넷\s*청약을\s*신청하여\s*당첨되더라도\s*당첨자\s*관리\s*및\s*재당첨\s*제한\s*등은\s*적용되지\s*않습니다',
+        r'청약자는\s*필히\s*본\s*공고\s*내용을\s*숙지하여\s*분양계약을\s*체결하여야\s*합니다',
+        r'청약자\s*본인의\s*주민등록증\s*제출\s*생략\s*가능',
     )
     for pattern in patterns:
         text = re.sub(pattern, ' ', text)
     return text
+
+
+def _office_mandatory_predicate(text):
+    return re.search(r'이상|이하|초과|미만|필수|필요|해야|하여야|어야|여야|아야|(?:인|하는|받으신|받은|한|있는|없는)\s*(?:자|분)(?:만)?|(?:자|분)만|(?:청약|신청).{0,20}(?:불가|가능|할\s*수\s*없|제한)|자격.{0,20}(?:충족|만족)', text)
+
+
+def _office_document_admission_gaps(pages, anchor):
+    """Audit applicant clauses outside the primary qualification section.
+
+    A document-wide review includes separately headed restrictions and direct
+    applicant predicates wherever they occur. Application, refund, paperwork
+    and contract blocks do not become applicant sections merely because they
+    mention an applicant or a condition-checking procedure.
+    """
+    missing = []
+    seen = set()
+    reviewed = _normal(anchor['section'])
+    applicant_section = False
+    for page in pages:
+        for block in re.split(r'(?=[■▣])', page['text']):
+            block = block.strip()
+            if not block:
+                continue
+            if block[0] in '■▣':
+                heading_lines = block[1:].strip().splitlines()
+                if not heading_lines:
+                    continue
+                heading = heading_lines[0]
+                applicant_section = bool(re.search(r'^(?:(?:\d+|[ⅠⅡⅢⅣIVX]+)\s*)?(?:(?:별도|추가|기타|공통|필수|일반|특별)\s*)*(?:(?:청약\s*신청|청약|신청)\s*(?:자격|조건|제한|대상)|자격\s*(?:요건|조건))', heading))
+            for clause in re.split(r'[•⦁Ÿ。;]|(?<!\d)\.(?!\d)', _normal(block)):
+                clause = clause.strip()
+                if not clause or (page['page'] == anchor['page'] and clause in reviewed):
+                    continue
+                remainder = _office_procedure_residual(clause).strip()
+                direct_applicants = list(re.finditer(r'(?:청약|신청)\s*자(?:는|가|에게는|에게)\s*|^(?:청약|신청)\s*자\s+|(?:자|분|사람)(?:만|에\s*한하여)\s*(?:청약|신청)', remainder))
+                direct_applicant = next((match for match in direct_applicants if _office_mandatory_predicate(remainder[match.start():])), None)
+                if not (applicant_section or direct_applicant) or not _office_mandatory_predicate(remainder):
+                    continue
+                if not applicant_section and direct_applicant:
+                    remainder = remainder[max(0, direct_applicant.start()-120):]
+                key = (page['page'], remainder)
+                if key not in seen:
+                    seen.add(key)
+                    missing.append(f"오피스텔 추가 신청 조건 ({page['page']}쪽): " + remainder[:180])
+    return missing
 
 
 def _summary_cells(pages, label):

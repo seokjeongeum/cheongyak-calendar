@@ -26,7 +26,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import defer
 
 from app.db import SessionLocal, init_db
-from app.models import Notice, NoticeEvent
+from app.models import CompetitionState, Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, is_open_ended_application, record_competition_result, record_source_status
 
 from .common import FeedError, get_json, integer, value, yield_to_deadlines
@@ -300,7 +300,14 @@ async def run_once(*, today: date | None = None, client: httpx.AsyncClient | Non
                 func.coalesce(NoticeEvent.end_date, NoticeEvent.start_date) >= today - timedelta(days=RESULT_LOOKBACK_DAYS),
                 NoticeEvent.start_date <= today + timedelta(days=90),
             ).exists()
-            notices = deque(session.scalars(select(Notice).options(defer(Notice.rules)).where(Notice.source == "cheongyak_home", matching_event).order_by(Notice.announcement_date.desc(), Notice.id)).all())
+            # A bounded pass must advance beyond the same newest prefix on its
+            # next run. Attempts rotate failures/unpublished results as well as
+            # successes, using the timestamp committed before each HTTP wait.
+            notices = deque(session.scalars(select(Notice).options(defer(Notice.rules))
+                .outerjoin(CompetitionState, CompetitionState.notice_id == Notice.id)
+                .where(Notice.source == "cheongyak_home", matching_event)
+                .order_by(CompetitionState.last_attempt_at.asc().nullsfirst(),
+                    Notice.announcement_date.desc(), Notice.id)).all())
             retried: set[str] = set()
             while notices:
                 try:

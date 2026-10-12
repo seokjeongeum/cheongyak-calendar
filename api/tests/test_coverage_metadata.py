@@ -55,3 +55,30 @@ def test_nonlist_coverage_scopes_are_incomplete():
     metadata = review(generic_scope())
     metadata["scopes"] = {"complete": True}
     assert not requirements_complete([{"kind": "age_min", "verification": "official"}, metadata], declared=True)
+
+
+def public_scope(**fields):
+    return generic_scope(review_version="generic-admission-2026-10-12-public-v1",
+                         completion_basis="current_document_clause_coverage",
+                         reviewed_document_hash="new-document", source_gaps=[],
+                         topics=[{"topic": "age", "required": True, "status": "verified", "rule_ids": ["adult-age"]}],
+                         branches=[{"branch_id": "adult", "required": True, "status": "verified"}], **fields)
+
+
+def test_public_clause_coverage_requires_current_hash_and_reviewed_branches():
+    condition = {"id": "adult-age", "kind": "age_min", "value": 19, "verification": "official", "document_hash": "new-document"}
+    metadata = review(public_scope())
+    assert requirements_complete([condition, metadata], declared=False)
+    assert generic_admission_coverage_complete(metadata)
+    for changed in [
+        {"completion_basis": "document_structure_reviewed_standard_branch"},
+        {"reviewed_document_hash": "other-bytes"}, {"source_gaps": ["unknown clause"]},
+        {"branches": []}, {"branches": [{"required": True, "status": "missing"}]},
+        {"branches": [{"required": 0, "status": "verified"}]},
+        {"review_version": "generic-admission-future-public"}, {"review_version": None},
+    ]:
+        invalid = review({**public_scope(), **changed})
+        assert not requirements_complete([condition, invalid], declared=True)
+        assert not generic_admission_coverage_complete(invalid)
+    assert not requirements_complete([{**condition, "id": "other"}, metadata], declared=True)
+    assert not requirements_complete([{**condition, "document_hash": "older"}, metadata], declared=True)
