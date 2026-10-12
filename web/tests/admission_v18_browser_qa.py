@@ -73,10 +73,14 @@ async def main():
             await expect(card.locator('.qualification-details')).not_to_contain_text('미확보 공고 조항')
             await expect(card).not_to_contain_text('서비스 원문 검토 부족')
             check(f'official source {i+1}: no fabricated coverage gap')
-            if i in [0, 1, 2]:
+            if any(rule.get('criterion_basis') == 'contract_date' for rule in row['rules']):
                 await expect(card.locator('.qualification-details')).to_contain_text('오늘 비교일 (한국 시간)')
                 await expect(card.locator('.qualification-details')).to_contain_text('2026-10-12')
                 check(f'official source {i+1}: contract facts compare today')
+            else:
+                await expect(card.locator('.qualification-details')).not_to_contain_text('오늘 비교일 (한국 시간)')
+                await expect(card.locator('.qualification-details')).to_contain_text(row['announcement_date'])
+                check(f'official source {i+1}: announcement facts retain their official date')
             await finish(page, card, router, f'official-{i+1}')
         row = rows[4]
         page, card, router = await create(row, facts())
