@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { NoticeCard } from './App'
 import { evaluateNotice, type NoticeEvaluation } from './evaluation'
 import type { EligibilityReason } from './eligibility'
-import { EMPTY_PROFILE, type LocalProfile, type Notice } from './types'
+import { EMPTY_PROFILE, type LocalProfile, type Notice, type NoticeRule } from './types'
 
 const profile: LocalProfile = { ...EMPTY_PROFILE, region: '경기도', regionCode: '41', district: '화성시', districtCode: '41590', movedInDate: '2020-01-01', dateOfBirth: '1990-01-01' }
 const notice: Notice = {
@@ -95,5 +95,52 @@ describe('whole notice default disclosure', () => {
     const html = render({ ...notice, title: '천안 아이파크 시티 2단지(2회차)', hogangnono_url: 'https://hogangnono.com/apt/ghL9c' })
     expect(html).toContain('https://hogangnono.com/apt/ghL9c')
     expect(html).toContain('rel="noopener noreferrer"')
+  })
+
+  it('shows one clear regional failure on a new notice while keeping the repeated branch proof inside the fold', () => {
+    const source = { verification: 'official' as const, document_hash: 'new-notice-document', criterion_date: '2026-10-06', criterion_basis: 'announcement' }
+    const regions = [{ region_code: '11', region_name: '서울특별시' }, { region_code: '28', region_name: '인천광역시' }, { region_code: '41', region_name: '경기도' }]
+    const regionalGroup: NoticeRule = { ...source, id: 'new-regional-alternatives', kind: 'any', label: '신청 가능한 거주지역', supply_type: '일반공급', conditions: regions.map((region) => ({ ...source, ...region, kind: 'residence_region' })) }
+    const item: Notice = { ...notice, id: 'new-notice', title: '새로 수집한 단지', announcement_date: '2026-10-06', rules: [
+      { ...source, id: 'new-applicant-scope', kind: 'applicant_regions', effect: 'metadata', scope_complete: true, regions }, regionalGroup,
+    ] }
+    const person: LocalProfile = { ...profile, region: '대구광역시', regionCode: '27', district: '중구', districtCode: '27110' }
+    const evaluation = evaluateNotice(item, person, '2026-10-09', Date.parse('2026-10-09T01:00:00Z'))
+    expect(evaluation.summary.status).toBe('mismatch')
+    expect(evaluation.summary.reasons.some((reason) => reason.ruleId === regionalGroup.id)).toBe(true)
+    const html = render(item, person, evaluation)
+    const preview = html.split('<details')[0]
+    expect(preview).toContain('신청 가능한 지역')
+    expect(preview).toContain('공식')
+    expect(preview).not.toContain('신청 가능한 거주지역')
+    expect(preview).not.toContain('거주지역:')
+    expect(html.slice(preview.length)).toContain('신청 가능한 거주지역')
+    expect(evaluation.summary.reasons.some((reason) => reason.ruleId === regionalGroup.id)).toBe(true)
+  })
+
+  it.each([
+    ['a different document', { document_hash: 'separate-document', evidence_url: 'https://www.applyhome.co.kr/separate-document' }],
+    ['a different criterion date', { criterion_date: '2026-10-02' }],
+  ] as [string, Partial<NoticeRule>][])('preserves an identically worded regional failure from %s before removing a matching duplicate', (_label, difference) => {
+    const source = { verification: 'official' as const, document_hash: 'shared-document', criterion_date: '2026-10-06', criterion_basis: 'announcement', evidence_url: 'https://www.applyhome.co.kr/shared-document' }
+    const regions = [{ region_code: '11', region_name: '서울특별시' }, { region_code: '28', region_name: '인천광역시' }, { region_code: '41', region_name: '경기도' }]
+    const matching: NoticeRule = { ...source, id: 'matching-regional-alternatives', kind: 'any', label: '신청 가능한 거주지역', supply_type: '일반공급', conditions: regions.map((region) => ({ ...source, ...region, kind: 'residence_region' })) }
+    const separate: NoticeRule = { ...matching, ...difference, id: 'separate-regional-alternatives', conditions: (matching.conditions as NoticeRule[]).map((child) => ({ ...child, ...difference })) }
+    const item: Notice = { ...notice, id: 'distinct-regional-proof', announcement_date: '2026-10-06', rules: [
+      { ...source, id: 'shared-applicant-scope', kind: 'applicant_regions', effect: 'metadata', scope_complete: true, regions }, separate, matching,
+    ] }
+    const person: LocalProfile = { ...profile, region: '대구광역시', regionCode: '27', district: '중구', districtCode: '27110' }
+    const evaluation = evaluateNotice(item, person, '2026-10-09', Date.parse('2026-10-09T01:00:00Z'))
+    const regionalReasons = evaluation.summary.reasons.filter((reason) => [separate.id, matching.id].includes(reason.ruleId))
+    expect(regionalReasons).toHaveLength(2)
+    expect(regionalReasons[0].detail).toBe(regionalReasons[1].detail)
+    const before = JSON.stringify(evaluation)
+    const html = render(item, person, evaluation)
+    const preview = html.split('<details')[0]
+    expect(preview).toContain('신청 가능한 지역')
+    expect(preview.match(/신청 가능한 거주지역/g)).toHaveLength(1)
+    expect(preview).toContain('거주지역:')
+    expect(html.slice(preview.length)).toContain('신청 가능한 거주지역')
+    expect(JSON.stringify(evaluation)).toBe(before)
   })
 })

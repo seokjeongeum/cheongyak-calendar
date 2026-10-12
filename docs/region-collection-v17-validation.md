@@ -121,3 +121,42 @@ network socket read. The latest predeployment iH failure was a first-page
 probes from this workspace reach both API hosts (401/400), which does not prove
 authorized collection from the GitHub runner. Incremental persistence and
 retries improve recovery but do not prove external service availability.
+
+## Production collection and regional preview follow-up
+
+Commit `998c1143a463c96ccda905ee0c8462218eb54bbf` deployed successfully to free
+Render at 2026-10-11 20:37:34 UTC. Manual collection run `38140699028`, attempt
+2, checked out that exact commit and completed successfully. The following
+scheduled run `38188611862` also completed: the recorded collection cycle ran
+from 2026-10-12 00:36:35 to 01:07:05 UTC. The three-hour workflow remains active.
+
+The latest observed coverage still reports first-request `ConnectTimeout
+(TimeoutError)` for Cheongyakhom and iH. Other sources retain committed partial
+feeds and pending document checkpoints; competition retains 111 checked
+notices with its bounded-pass message. These observations do not establish an
+authentication failure or a healthy upstream connection. Previous notices,
+prices and competition history remain available. Seonun's official attachment
+is still unavailable, with a page-download failure rather than a fabricated
+attachment or region condition.
+
+The final UI follow-up uses official applicant scope rather than the absence
+of a period rule as a reason to demand another date. An admitted undivided
+scope without any residence-duration rule now shows `신청지역 충족 · 접수일 후보`.
+Actual unknown, nested, scoped or regional-metadata durations retain their
+existing review/priority labels. No notice identities or source pages are
+special-cased.
+
+Closed unavailable cards remove a repeated pure regional OR only when it
+matches an already visible failed applicant scope's alternatives, source
+hash, criterion date and applicable supply/unit branch. Different sources,
+dates, scopes, exceptions, duration conditions and mixed groups remain visible;
+expanded evidence is unchanged. Rule identity and criterion date are preserved
+before this comparison, preventing identical text from hiding a distinct
+requirement. Two integration regressions failed before that correction and
+pass afterward.
+
+Final UI validation: all 633 tests in 54 files passed; the TypeScript and Vite
+production build passed (`index-BTSWR6yv.js`, worker
+`qualification.worker-cfwgCqy9.js`). Actual-source browser validation now also
+checks the absence of an invented period requirement and one clear collapsed
+regional explanation. Its final deployed run is recorded after deployment.

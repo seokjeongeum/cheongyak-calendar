@@ -1,6 +1,6 @@
 import type { LocalProfile, Notice, NoticeEvent } from './types'
 import { matchesRegionScope, provinceAliases, scopeIsDistrict } from './regions'
-import { applicantRegionEligibility } from './qualification'
+import { applicantRegionEligibility, regionDecision } from './qualification'
 import { residenceArea, RESIDENCE_AREA_LABEL, type CompetitionDecision } from './competition'
 import { noticeEligibilitySummary, applicationEventAvailability, evaluateRule } from './eligibility'
 import { receptionOverlaps } from './deadlines'
@@ -41,6 +41,21 @@ function hasPriorityResidenceRule(notice: Notice): boolean {
   )
 }
 
+function hasResidenceDurationRequirement(value: unknown, regionalScope = false): boolean {
+  if (Array.isArray(value)) return value.some((item) => hasResidenceDurationRequirement(item, regionalScope))
+  if (!value || typeof value !== 'object') return false
+  const rule = value as Record<string, unknown>
+  if (rule.kind === 'residence_months' || regionalScope && rule.min_months != null) return true
+  // A scoped or nested duration remains a real requirement even when the
+  // notice-wide period comparison cannot resolve it.
+  return ['conditions', 'exceptions'].some((key) => hasResidenceDurationRequirement(rule[key])) ||
+    ['regions', 'local_priority', 'other_gyeonggi'].some((key) => hasResidenceDurationRequirement(rule[key], true))
+}
+
+function admittedWithoutResidenceDuration(notice: Notice, profile: LocalProfile): boolean {
+  return regionDecision(notice, profile).status === 'not_divided' && !hasResidenceDurationRequirement(notice.rules)
+}
+
 export function eventCandidate(event: NoticeEvent, notice: Notice, profile: LocalProfile): boolean {
   if (!profile.region || !isApplicationEvent(event)) return false
   const admitted = applicantRegionEligibility(notice, profile)
@@ -71,6 +86,7 @@ export function hasResidenceCandidate(notice: Notice, profile: LocalProfile, sta
 export function candidateLabel(notice: Notice, profile: LocalProfile): string {
   const region = (notice.rules || []).find((rule) => rule.kind === 'applicant_regions' && rule.verification === 'official')
   if (region?.unrestricted === true) return '신청지역 제한 없음 · 접수일 후보'
+  if (admittedWithoutResidenceDuration(notice, profile)) return '신청지역 충족 · 접수일 후보'
   const area = residenceArea(notice, profile)
   if (area === 'other' || area === 'other_gyeonggi') return `${RESIDENCE_AREA_LABEL[area]} 접수일 후보`
   if (hasPriorityResidenceRule(notice)) {
@@ -87,6 +103,7 @@ export function candidateExplanation(notice: Notice, profile: LocalProfile): str
   const region = (notice.rules || []).find((rule) => rule.kind === 'applicant_regions' && rule.verification === 'official')
   if (region?.unrestricted === true) return '공식 공고에 신청지역·지역 우선 거주기간 제한이 없습니다. 나머지 신청 조건은 아래에서 별도로 비교합니다.'
   const location = `${profile.region} ${profile.district}`.trim()
+  if (admittedWithoutResidenceDuration(notice, profile)) return `${location}는 공고의 공식 신청 지역 범위에 포함됩니다. 해당지역·기타지역 구분과 거주기간 조건 없이 지역 요건을 충족합니다. 나머지 신청 자격은 아래에서 별도로 비교합니다.`
   const admitted = applicantRegionEligibility(notice, profile)
   const area = residenceArea(notice, profile)
   if (admitted?.status === 'pass' && (area === 'other' || area === 'other_gyeonggi')) return `${location} · ${admitted.detail} 공식 지역 배정 기준에서는 ${RESIDENCE_AREA_LABEL[area]} 접수 대상입니다.`
