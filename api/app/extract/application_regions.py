@@ -29,7 +29,7 @@ def normalize_region_text(text: str) -> str:
     for pattern, name in _normalization_patterns():
         text = pattern.sub(name, text)
     text = re.sub(r"우선공\s*급", "우선공급", text)
-    for token in ("거주", "우선", "청약", "신청", "장기복무"):
+    for token in ("거주", "우선", "청약", "신청", "장기복무", "수도권", "입주자모집공고일", "무주택세대구성원", "무주택세대주"):
         text = re.sub(r"\s*".join(map(re.escape, token)), token, text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -41,11 +41,23 @@ def _flat(text):
 def _region_names(text, cutoff, provinces):
     """Resolve only literal region names in a bounded applicant clause."""
     value = _flat(text)
+    if re.search(r"수도권[^■▌•]{0,100}제외", value):
+        # A group with an explicit exclusion is not the full capital union,
+        # nor the excluded province by itself. Keep that unsupported scope
+        # unresolved rather than silently dropping the exclusion.
+        return []
     catalog = region_catalog()
     province_rows = [{"code": code, "name": name} for name, code in provinces.items()]
     province_rows += [r for r in catalog["provinces"] if r["name"] not in provinces and r.get("validFrom", "") <= cutoff]
     found_provinces = sorted([(m.start(), r) for r in province_rows for m in re.finditer(re.escape(r["name"]), value)], key=lambda item: item[0])
     found = []
+    # 수도권 is an administrative region group even when a source omits the
+    # parenthesized province list. Bind it to the applicant geography, never
+    # to the supply address or a bank deposit table. An explicitly narrower
+    # parenthesized scope is interpreted literally instead.
+    if re.search(r"(?<!비)수도권(?:지역)?(?:에|에서)?거주", value):
+        found.extend({"region_code": provinces[name], "region_name": name}
+                     for name in ("서울특별시", "인천광역시", "경기도") if name in provinces)
     for index, row in found_provinces:
         # A qualified city is not an applicant scope covering its province.
         suffix = value[index + len(row["name"]):]

@@ -11,7 +11,7 @@ from .application_regions import explicit_applicant_regions, region_catalog
 
 ADULT_LAW_URL = "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joNo=0026&joBrNo=00&lsiSeq=286965&urlMode=lsScJoRltInfoR"
 ADULT_LAW_TEXT = "제26조제5항: 국내에 거주하는 성년자로서 다음 각 호의 요건을 모두 갖춘 사람"
-REVIEW_VERSION = "generic-admission-unranked-2026-10-11-v2"
+REVIEW_VERSION = "generic-admission-unranked-2026-10-13-v3"
 ACCOUNT_WAIVER = r"청약통장\s*(?:(?:가입여부)?\s*(?:와|에)?\s*(?:무관|관계없이)|이?\s*필요(?:없|하지\s*않))"
 
 
@@ -93,7 +93,7 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
             region["local_priority"] = dict(distinct[0])
             region["regional_priority_evidence"] = {key: priorities[0][key] for key in
                 ("evidence_page", "evidence_text", "evidence_url", "document_hash") if key in priorities[0]}
-    selection = _clause(section, r"당첨자\s+(?:및\s+)?[^■]{0,90}■\s*한국부동산원\s*입주자\s*선정\s*프로그램에\s*의해\s*주택형별\s*무작위\s*추첨으로\s*무순위\s*\(사후\)\s*당첨자\s*선정\s*및\s*동[·ㆍ]?호수\s*배정")
+    selection = _clause(section, r"당첨자\s+(?:및\s+)?[^■]{0,90}■\s*한국부동산원\s*입주자\s*선정\s*프로그램에\s*의해\s*(?:주택형별\s*)?무작위\s*추첨으로\s*무순위\s*\(사후\)\s*당첨자\s*선정\s*및\s*동[·ㆍ]?호수\s*배정")
     if (selection and not any(region.get("local_priority") or region.get("scope_complete") is False for region in regions)
             and not re.search(r"지역[^■]{0,60}(?:우선|선정)|우선공급", normal(" ".join(row["text"] for row in section)))):
         for region in regions:
@@ -198,8 +198,34 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
         for restriction, label in (("resale_restriction_active", "공급질서교란·전매위반 제한기간"), ("ineligible_restriction_active", "부적격 당첨 제한기간")):
             if not any(r.get("restriction") == restriction for r in rules):
                 rules.append(make("application_restriction", False, supply="일반공급", restriction=restriction, scope="applicant", label=label, **combined))
-    if not find(ACCOUNT_WAIVER):
+    waiver_topics = []
+    account_waiver = find(ACCOUNT_WAIVER)
+    if not account_waiver:
         missing.append("청약통장 가입 요건·면제")
+    else:
+        waiver_topics.append({"topic": "청약통장 가입 요건", "status": "not_applicable", "required": False,
+                              "rule_ids": [], "evidence_page": account_waiver["page"], "evidence_text": account_waiver["quote"]})
+    financial_waiver = find(r"금회\s*공급하는\s*주택은[^■※]{0,100}?소득[·ㆍ\s]*자산\s*요건을\s*불문(?:하며)?")
+    if financial_waiver:
+        for topic, kind_name in (("소득 기준", "monthly_income_max_krw"), ("자산 기준", "real_estate_max_krw")):
+            waiver_topics.append({"topic": topic, "status": "not_applicable", "required": False,
+                                 "rule_ids": [], "waived_rule_kind": kind_name,
+                                 "evidence_page": financial_waiver["page"], "evidence_text": financial_waiver["quote"]})
+    rewinning_waiver = find(r"계약체결\s*시에도\s*재당첨제한\s*및\s*당첨자\s*관리\s*등이\s*적용되지\s*않습니다")
+    if rewinning_waiver:
+        waiver_topics.append({"topic": "금회 당첨·계약의 재당첨 제한 관리", "status": "not_applicable", "required": False,
+                             "rule_ids": [], "evidence_page": rewinning_waiver["page"], "evidence_text": rewinning_waiver["quote"]})
+    if waiver_topics:
+        descriptions = {"account": "청약통장 가입 여부 무관", "income": "소득 기준 적용 없음", "assets": "자산 기준 적용 없음",
+                        "rewinning_restriction": "금회 당첨·계약의 재당첨 제한 관리 적용 없음"}
+        topics = ["account"] if account_waiver else []
+        if financial_waiver:
+            topics.extend(("income", "assets"))
+        if rewinning_waiver:
+            topics.append("rewinning_restriction")
+        anchor = financial_waiver or account_waiver or rewinning_waiver
+        rules.append(make("condition_exemptions", effect="metadata", topics=topics, descriptions=descriptions,
+                          **anchor))
     if not section or not bounded:
         missing.append("신청자격·대상자 문단의 전체 범위")
     section_text = normal(" ".join(row["text"] for row in section))
@@ -229,9 +255,26 @@ def parse_unranked_conditions(pages, *, method, cutoff, reviewed=None, make):
         expected |= {"prior_project_contract", "prior_project_winner"}
     if not expected <= restrictions:
         missing.append("현재 신청자의 당첨·계약 및 제한기간 조항")
+    # An otherwise standard table cannot certify an added mandatory fact
+    # elsewhere in the current document. Applicant predicates remain source
+    # gaps unless an actual extracted condition covers their source text.
+    for page in pages:
+        for match in re.finditer(r"(?:청약|공급)?신청자(?:는|가|만)[^■▌※•]{0,260}?(?:이어야|여야|하여야|해야|받아야)[^■▌※•]{0,35}", normal(page["text"])):
+            quote = match[0]
+            # Inspect the actual mandatory predicate before a later proof
+            # action. An eligibility condition cannot disappear merely
+            # because its following sentence mentions a certificate.
+            predicate = re.split(r"이어야|여야|하여야|해야|받아야", quote, maxsplit=1)[0]
+            procedure = re.search(r"(?:서류|서명|증명서|신분증|인증서|신청내용|계약금|인지세)[^■▌※•]{0,60}?(?:제출|발급|구비|서명|입력|납부)", predicate)
+            substantive = re.search(r"\d+\s*(?:년|개월|세|명)|소득|자산|주택\s*(?:소유|보유)|무주택|혼인|부양|국적|거주\s*(?:기간|지역)|장애|추천|근로|납세", predicate)
+            if procedure and not substantive:
+                continue
+            if not any(normal(quote) in normal(rule.get("evidence_text", "")) for rule in rules):
+                missing.append("현재 문서의 미처리 신청자 필수 조건: " + quote[:130])
     missing = list(dict.fromkeys(missing))
     return {"rules": rules, "offered_supply_types": ["일반공급"], "complete": not missing, "missing_topics": missing,
-            "review_version": REVIEW_VERSION, "reviewed_pages": sorted({row["page"] for row in section})}
+            "review_version": REVIEW_VERSION, "reviewed_pages": sorted({row["page"] for row in pages}),
+            "reviewed_section_pages": sorted({row["page"] for row in section}), "waiver_topics": waiver_topics}
 
 
 def _special_sections(pages, offered):

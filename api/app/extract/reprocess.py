@@ -23,7 +23,7 @@ from app.models import DocumentExtractionState, Notice, NoticeEvent
 from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice, notice_patch_changed, open_ended_application_clause, upsert_notice, record_source_status
 from .pipeline import _retain_same_hash_conditions, enrich_notice
 from .official_rules import PARSER_VERSION, parser_version_usable
-from app.qualification import public_contract_schedule, requirements_complete
+from app.qualification import public_contract_schedule, requirements_complete, retire_reviewed_document_candidates
 
 
 def _context(payload: dict) -> tuple:
@@ -66,6 +66,7 @@ def _document_patch(current: dict, enriched: dict) -> dict:
              and not (changed and (r.get("source") == "official_document_parser"
                                   or r.get("verification") in {"ai_unverified", "auto_unverified"}))]
     rules.extend(local)
+    rules = retire_reviewed_document_candidates(rules, digest=digest, parser_version=PARSER_VERSION)
     # The detail-page schedule has independent HTML provenance and no PDF
     # hash. Carry this refreshed public fact through the document-only patch.
     detail_schedules = [copy.deepcopy(r) for r in enriched.get("rules", []) if r.get("kind") == "contract_schedule"

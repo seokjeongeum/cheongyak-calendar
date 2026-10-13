@@ -16,7 +16,7 @@ from app.models import CompetitionRevision, CompetitionState, Notice, NoticeEven
 from app.schemas import CompetitionPublic, CompetitionStatePublic, EventPublic, NoticeDetail, NoticePublic, PricePublic, RevisionPublic
 from app.supply_classification import reviewed_supply_classification
 from app.ingest.detail_links import public_detail_link
-from app.qualification import coverage_scope_complete, generic_admission_coverage_complete, public_selection_methods, public_winning_scores, is_metadata, merge_poll_rules, public_application_method, public_classification, public_contract_schedule, public_offered_supplies, public_rank_applicability, requirements_complete, source_bound_superseded_kinds, source_bound_waivers
+from app.qualification import coverage_scope_complete, generic_admission_coverage_complete, public_selection_methods, public_winning_scores, is_metadata, merge_poll_rules, public_application_method, public_classification, public_contract_schedule, public_offered_supplies, public_rank_applicability, requirements_complete, retire_reviewed_document_candidates, source_bound_superseded_kinds, source_bound_waivers
 
 
 PRICE_CAP_STATUSES = {"yes", "no", "unknown", "not_applicable"}
@@ -239,6 +239,11 @@ def _normalize(payload: dict[str, Any], prior: Notice | None) -> dict[str, Any]:
     rules = _json_safe(base.get("rules") or [])
     if not isinstance(rules, list) or any(not isinstance(rule, dict) for rule in rules):
         raise ValueError("rules must be a list of objects")
+    # Ordinary polls retain derived candidates, including old AI conditions.
+    # Once the same bytes have a complete current official admission review,
+    # those conditions must not be reintroduced by the unchanged-hash merge.
+    from app.extract.official_rules import PARSER_VERSION
+    rules = retire_reviewed_document_candidates(rules, digest=base.get("document_hash"), parser_version=PARSER_VERSION)
     rules_complete = requirements_complete(rules, bool(base.get("rules_complete", False)))
 
     return {
@@ -663,6 +668,55 @@ def notice_matches_window(
                 (end is None or notice.announcement_date <= end))
 
 
+def _without_proven_price_aliases(
+    prices: list[PricePublic], rules: list[dict[str, Any]], document_hash: str | None,
+) -> list[PricePublic]:
+    """Hide a redundant candidate only when a current official table names its alias.
+
+    The area is a check on the quoted table row, never a way to infer unit
+    identity. This projection leaves every source price and revision intact.
+    """
+    if not document_hash:
+        return prices
+    area_rules = [rule for rule in rules if rule.get("kind") == "unit_exclusive_areas"
+                  and rule.get("source") == "official_document_parser" and rule.get("verification") == "official"
+                  and rule.get("document_hash") == document_hash
+                  and isinstance(rule.get("evidence_url"), str) and rule["evidence_url"].strip()
+                  and isinstance(rule.get("evidence_text"), str)
+                  and isinstance(rule.get("units"), list)
+                  and type(rule.get("evidence_page")) is int and rule["evidence_page"] > 0]
+    sale_kinds = {"sale", "sale_max", "sale_total"}
+    official = [price for price in prices if price.verification == "official" and price.price_kind in sale_kinds
+                and price.document_hash in {None, document_hash}]
+    result = []
+    for candidate in prices:
+        if (candidate.verification != "ai_unverified" or candidate.price_kind not in sale_kinds
+                or candidate.document_hash != document_hash or candidate.amount_krw is None or candidate.amount_krw <= 0):
+            result.append(candidate)
+            continue
+        alias = candidate.unit_type.strip()
+        mapped_codes = set()
+        for rule in area_rules:
+            for unit in rule.get("units", []):
+                if not isinstance(unit, dict) or not isinstance(unit.get("unit_type"), str):
+                    continue
+                code, area = unit["unit_type"].strip(), unit.get("exclusive_area_sqm")
+                if code == alias or not isinstance(area, (int, float)) or isinstance(area, bool) or area <= 0:
+                    continue
+                # The explicit table columns are code, short name, exclusive
+                # area, common area, and supply area. No short name is guessed.
+                row = re.search(r"(?<![A-Za-z0-9.])" + re.escape(code) + r"\s+" + re.escape(alias)
+                                + r"\s+(\d+\.\d+)\s+\d+\.\d+\s+\d+\.\d+(?=\s|$)", rule["evidence_text"])
+                if row and float(row[1]) == area:
+                    mapped_codes.add(code)
+        mapped_prices = [price for price in official if price.unit_type.strip() in mapped_codes]
+        matches = [price for price in official if price.amount_krw == candidate.amount_krw
+                   and price.monthly_krw == candidate.monthly_krw]
+        if (len(mapped_codes) != 1 or len(mapped_prices) != 1 or len(matches) != 1 or matches[0] != mapped_prices[0]):
+            result.append(candidate)
+    return result
+
+
 def notice_public(
     related: list[Notice], detail: bool = False, start: date | None = None, end: date | None = None
 ) -> NoticePublic | NoticeDetail:
@@ -910,8 +964,9 @@ def notice_public(
                 seen_rules.add(key)
                 rules.append(rule)
 
+    rules = retire_reviewed_document_candidates(rules, digest=canonical.document_hash, parser_version=PARSER_VERSION)
     events.sort(key=lambda event: (event.start_date, event.kind, event.label))
-    prices = list(price_by_key.values())
+    prices = _without_proven_price_aliases(list(price_by_key.values()), rules, canonical.document_hash)
     area_rules = [r for r in rules if r.get("kind") == "unit_exclusive_areas" and r.get("verification") == "official" and is_metadata(r)]
     for price in prices:
         # Existing area_sqm is often SUPLY_AR, not the dwelling's exclusive

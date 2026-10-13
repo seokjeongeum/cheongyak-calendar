@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .unranked_rules import parse_unranked_conditions
 
-PARSER_VERSION = "official-sections-2026-10-12-v18"
+PARSER_VERSION = "official-sections-2026-10-13-v19"
 COMPATIBLE_ORDINARY_PARSER_VERSION = "official-sections-2026-10-04-v3"
 SPECIAL_NAMES = ("기관추천", "다자녀가구", "신혼부부", "노부모부양", "생애최초", "신생아", "청년", "이전기관종사자", "협의양도인", "철거주택소유자", "지역균형발전", "일반(기관추천)")
 PROVINCES = {
@@ -34,7 +34,7 @@ def parser_version_usable(rule: dict, *, category: str = "", title: str = "", ru
         return True
     # Later reviewed geography/admission supplements add source-bound facts.
     # Prior valid facts remain available until their document is reparsed.
-    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13", "official-sections-2026-10-11-v15", "official-sections-2026-10-11-v16", "official-sections-2026-10-11-v17"}:
+    if rule.get("parser_version") in {"official-sections-2026-10-05-v5", "official-sections-2026-10-05-v6", "official-sections-2026-10-05-v7", "official-sections-2026-10-07-v8", "official-sections-2026-10-07-v9", "official-sections-2026-10-09-v10", "official-sections-2026-10-09-v11", "official-sections-2026-10-09-v12", "official-sections-2026-10-09-v13", "official-sections-2026-10-11-v15", "official-sections-2026-10-11-v16", "official-sections-2026-10-11-v17", "official-sections-2026-10-12-v18"}:
         return True
     # Retain compatible ordinary rank/ownership/office facts during reprocessing,
     # while retiring the old early-return interpretation for affected offers.
@@ -105,14 +105,26 @@ def document_cutoff(pages: list[dict], *, method: str = "unknown") -> tuple[str 
     """Only an explicit statement of the qualification announcement cutoff."""
     if method in {"unranked_after", "optional_supply", "cancelled_resupply"}:
         method_name = r"무순위\s*\(?사후\)?" if method == "unranked_after" else r"임의\s*공급" if method == "optional_supply" else r"(?:불법행위\s*재공급|계약\s*취소(?:\s*주택)?\s*재공급)"
-        current = re.compile(r"(?:본\s*(?:주택의\s*)?)?" + method_name + r"\s*입주자\s*모집공고일[은는]\s*(?:\([^)]{0,3}\)\s*)?(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})")
-        for page in pages:
-            match = current.search(normal(page["text"]))
-            if match:
-                try:
-                    return date(*(int(v) for v in match.groups())).isoformat(), {"page": page["page"], "text": match.group(0)}
-                except ValueError:
-                    pass
+        # Public nonranked announcements can label this offer as '금회'
+        # while mentioning the first announcement in the same sentence.
+        # Only the current label can establish this route's cutoff.
+        current_patterns = (
+            r"(?:본\s*(?:주택의\s*)?)?" + method_name + r"\s*(?:주택\s*)?입주자\s*모집공고일[은는]\s*(?:\([^)]{0,3}\)\s*)?(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})",
+            r"(?:본\s*(?:아파트|주택)의\s*)?금회\s*입주자\s*모집공고일[은는]\s*(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})",
+        )
+        dated = {}
+        for pattern in current_patterns:
+            for page in pages:
+                for match in re.finditer(pattern, normal(page["text"])):
+                    try:
+                        value = date(*(int(v) for v in match.groups())).isoformat()
+                        dated.setdefault(value, {"page": page["page"], "text": match.group(0)})
+                    except ValueError:
+                        pass
+        if dated:
+            # Two differently labelled current dates need source review;
+            # picking the first statement must not certify either branch.
+            return next(iter(dated.items())) if len(dated) == 1 else (None, None)
         # The schedule table may put the labels before the dates, with PDF
         # extraction moving weekday labels ahead of the date columns.
         for page in pages:
@@ -167,6 +179,27 @@ def document_cutoff(pages: list[dict], *, method: str = "unknown") -> tuple[str 
                 except ValueError:
                     pass
     return None, None
+
+
+def _nonranked_correction_evidence(pages: list[dict], *, publication_date: str, cutoff: str) -> dict | None:
+    """A correction's new publication date cannot silently change its cutoff.
+
+    Both dates must be stated together in the current source. A carried
+    context, title prefix or undated correction mention is not evidence.
+    """
+    date_pattern = r"(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})"
+    pattern = (r"정정\s*(?:입주자\s*모집|모집)?공고일(?:은|는|\s*[:：])\s*" + date_pattern
+               + r"[^■▌•]{0,160}?청약\s*자격(?:\s*조건)?\s*(?:판단)?\s*기준일(?:은|는|\s*[:：])\s*" + date_pattern)
+    for page in pages:
+        for match in re.finditer(pattern, normal(page["text"])):
+            try:
+                publication = date(*(int(value) for value in match.groups()[:3])).isoformat()
+                criterion = date(*(int(value) for value in match.groups()[3:])).isoformat()
+            except ValueError:
+                continue
+            if publication == str(publication_date)[:10] and criterion == cutoff:
+                return {"page": page["page"], "text": match[0]}
+    return None
 
 
 def _section_heading(line: str, shinhee: bool) -> str | None:
@@ -365,8 +398,13 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
     original = next((r.get("value", {}).get("original_announcement_date") for r in payload.get("rules", []) if r.get("kind") == "qualification_context"), None)
     nonrank_apt = method in {"unranked_after", "optional_supply", "cancelled_resupply"}
     previous_application = next((r.get("value", {}).get("application_criterion_date") for r in payload.get("rules", []) if r.get("kind") == "qualification_context"), None)
-    expected_cutoff = previous_application or payload.get("announcement_date") if nonrank_apt else original or payload.get("announcement_date")
-    context_conflict = bool(expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff)
+    # A fresh current offer must be checked against the current feed date.
+    # Retained same-hash facts cannot mask a changed announcement date.
+    expected_cutoff = ((payload.get("announcement_date") or previous_application) if nonrank_apt
+                       else (original or payload.get("announcement_date")))
+    correction_evidence = (_nonranked_correction_evidence(pages, publication_date=expected_cutoff, cutoff=cutoff)
+                           if nonrank_apt and expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff else None)
+    context_conflict = bool(expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff and not correction_evidence)
     manage_no = (parse_qs(urlparse(str(payload.get("official_url", ""))).query).get("houseManageNo") or [None])[0]
     # An exact current attachment URL carries the notice identifier even
     # when the PDF does not print it. Qualification date is checked separately.
@@ -378,7 +416,7 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             context_conflict = True
     official_kind = next((r.get("housing_kind") for r in payload.get("rules", []) if r.get("kind") == "housing_classification" and r.get("verification") == "official"), None)
     private = bool(re.search(r"민영주택으로|민영주택입주자모집공고", flat)) or bool(re.search(r"주택유형[^■]{0,100}민영|주택구분[^■]{0,300}민영", flat))
-    national = bool(re.search(r"「주택법」에의한국민주택|주택유형국민|국민주택입주자모집공고", flat))
+    national = bool(re.search(r"「주택법」에의한국민주택|주택유형국민|국민주택입주자모집공고|공공분양주택무순위\(?사후\)?입주자모집공고", flat))
     kind = "private" if private and not national else "national" if national and not private else official_kind if official_kind in ("private", "national") else "unknown"
     office = payload.get("category") in {"officetel", "living_accommodation"} or bool(re.search(r"오피스텔(?:분양광고|분양공고)", flat)) or ("오피스텔" in str(payload.get("title", "")) and "오피스텔" in flat)
     outside_apt = office and (bool(re.search(r"본오피스텔|본생활숙박시설", flat)) or "오피스텔" in flat)
@@ -437,7 +475,7 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
         reason = "오피스텔 · 청약통장 불필요 · 아파트 1·2순위 적용 없음" if outside_apt and no_account else "선착순 계약 · 아파트 1·2순위 적용 없음" if first_come else "계약취소 후 재공급 · 아파트 1·2순위 적용 없음" if method == "cancelled_resupply" else "무순위·임의공급 · 아파트 1·2순위 적용 없음"
         rules.append(make("rank_applicability", effect="metadata", status="not_applicable", account_required=False if no_account else None, reason=reason, quote=normal(anchor["text"])[:850], page=anchor["page"]))
         if kind != "unknown":
-            class_source = next((p for p in pages if re.search(r"민영주택|주택유형.{0,150}민영|주택구분.{0,150}민영|국민주택|오피스텔(?:\s*분양광고|\s*분양공고)", normal(p["text"]))), None)
+            class_source = next((p for p in pages if re.search(r"민영주택|주택유형.{0,150}민영|주택구분.{0,150}민영|국민주택|공공분양주택\s*무순위\s*\(?사후\)?\s*입주자모집공고|오피스텔(?:\s*분양광고|\s*분양공고)", normal(p["text"]))), None)
             if class_source:
                 rules.append(make("housing_classification", effect="metadata", quote=normal(class_source["text"])[:700], page=class_source["page"]))
         prices = []
@@ -454,7 +492,11 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             original_cutoff, original_evidence = document_cutoff(pages)
             old_context = next((r.get("value", {}) for r in payload.get("rules", []) if r.get("kind") == "qualification_context" and r.get("verification") == "official"), {})
             context = {**old_context, "original_announcement_date": original_cutoff, "application_announcement_date": cutoff, "application_criterion_date": cutoff}
-            rules.append(make("qualification_context", context, effect="metadata", quote=cutoff_evidence["text"] + (" / " + original_evidence["text"] if original_evidence else ""), page=cutoff_evidence["page"]))
+            if correction_evidence:
+                context["correction_publication_date"] = str(expected_cutoff)[:10]
+            rules.append(make("qualification_context", context, effect="metadata", quote=cutoff_evidence["text"] + (" / " + original_evidence["text"] if original_evidence else "")
+                              + (" / " + correction_evidence["text"] if correction_evidence else ""), page=cutoff_evidence["page"],
+                              **({"correction_evidence_page": correction_evidence["page"]} if correction_evidence else {})))
             parsed = parse_unranked_conditions(pages, method=method, cutoff=cutoff, reviewed=None, make=make)
             rules.extend(parsed["rules"])
             offered = parsed["offered_supply_types"]
@@ -501,7 +543,9 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
             scopes.append({"supply_type": supply, "complete": complete,
                            "verified_rule_count": sum(r.get("effect") != "metadata" and (not r.get("supply_type") or r.get("supply_type") == supply) for r in rules),
                            "missing_topics": source_missing,
-                           **({"review_version": review["review_version"], "reviewed_pages": review_pages, "completion_basis": "document_structure_reviewed_standard_branch"} if review and review.get("review_version") else {})})
+                           **({"review_version": review["review_version"], "reviewed_pages": review_pages, "completion_basis": "document_structure_reviewed_standard_branch"} if review and review.get("review_version") else {}),
+                           **({"reviewed_document_hash": digest, "reviewed_section_pages": review["reviewed_section_pages"],
+                               "topics": review["waiver_topics"]} if review and review.get("waiver_topics") else {})})
         full = bool(scopes and all(scope["complete"] for scope in scopes))
         rules.append(make("condition_coverage", effect="metadata", status="complete" if full else "partial", offered_supply_types=offered,
                           scopes=scopes, quote=normal(anchor["text"])[:850], page=anchor["page"], completion_basis="document_structure_reviewed_standard_branch" if full else None))

@@ -171,6 +171,37 @@ def generic_admission_coverage_complete(rule: dict[str, Any]) -> bool:
     return set(offered) == {scope["supply_type"] for scope in scopes}
 
 
+def retire_reviewed_document_candidates(rules: list[dict[str, Any]], *, digest: str,
+                                        parser_version: str) -> list[dict[str, Any]]:
+    """A whole-source review supersedes uncertain interpretations of those bytes.
+
+    This retires only derived condition candidates. Source metadata and every
+    candidate from another or unidentified document remain available, as do
+    partial reviews. Prices and source history are outside this rule operation.
+    """
+    if not isinstance(digest, str) or not digest.strip() or not parser_version:
+        return rules
+    def superseded_candidate(rule):
+        return (rule.get("verification") in {"ai_unverified", "auto_unverified"}
+                and rule.get("document_hash") == digest and not is_metadata(rule))
+    if not any(superseded_candidate(rule) for rule in rules):
+        return rules
+    reviewed = [rule for rule in rules if rule.get("source") == "official_document_parser"
+                and rule.get("verification") == "official" and rule.get("document_hash") == digest
+                and rule.get("parser_version") == parser_version]
+    has_admission = any(not is_metadata(rule) and rule.get("kind") != "unparsed"
+                        and rule.get("effect") not in {"priority", "procedure", "instruction"}
+                        and rule.get("purpose") not in {"first_rank", "second_rank", "selection"}
+                        for rule in reviewed)
+    complete_review = any(generic_admission_coverage_complete(rule)
+                         and all(scope.get("reviewed_document_hash") == digest for scope in rule["scopes"])
+                         for rule in reviewed)
+    if (not has_admission or not complete_review
+            or not requirements_complete(reviewed, False)):
+        return rules
+    return [rule for rule in rules if not superseded_candidate(rule)]
+
+
 def source_bound_waivers(rule: dict[str, Any], *, digest: str, parser_version: str) -> list[tuple[str, dict[str, Any]]]:
     """Explicit source exemptions can replace one fact in an otherwise partial review."""
     if (rule.get("kind") != "condition_coverage" or rule.get("source") != "official_document_parser"

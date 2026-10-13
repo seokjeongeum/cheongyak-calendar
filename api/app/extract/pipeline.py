@@ -36,7 +36,7 @@ from .official_rules import PARSER_VERSION, parse_official_rules, parser_version
 from .contract_schedule import parse_lh_detail_contract_schedule
 
 MODEL = "gemini-3.5-flash-lite"
-DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-12-v16"
+DOCUMENT_PIPELINE_VERSION = "official-downloads-2026-10-13-v17"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 MAX_DOCUMENT_LINKS = 3
 MAX_DOWNLOAD_ATTEMPTS = 3
@@ -421,7 +421,7 @@ class _DocumentLinkParser(HTMLParser):
         super().__init__()
         self.base_url = base_url
         self.links: list[str] = []
-        self.priorities: dict[str, tuple[int, tuple[int, int, int]]] = {}
+        self.priorities: dict[str, tuple[int, tuple[int, int, int], int]] = {}
         self._href: str | None = None
         self._text: list[str] = []
         self._attributes: dict[str, str | None] = {}
@@ -469,7 +469,12 @@ class _DocumentLinkParser(HTMLParser):
             corrected = bool(re.search(r"정정|수정|변경|최신|현재", label))
             dates = re.findall(r"(20\d{2})[.년/-]\s*(\d{1,2})[.월/-]\s*(\d{1,2})", label)
             publication = max((tuple(map(int, date)) for date in dates), default=(0, 0, 0))
-            self.priorities[target] = (2 if corrected else 1 if lh_file and ".pdf" in label else 0, publication)
+            # Prefer the readable PDF representation only within the same
+            # correction/date priority. A newer HWP correction must still
+            # precede an older PDF; published corrections never lose priority
+            # because the local converter is unavailable.
+            pdf = urlparse(target).path.lower().endswith(".pdf") or ".pdf" in label
+            self.priorities[target] = (2 if corrected else 0, publication, int(pdf))
             self.links.append(target)
         self._href = None
         self._attributes = {}
@@ -606,11 +611,12 @@ def _hwp_as_pdf(data: bytes) -> bytes | None:
 
 def _document_part(url: str, data: bytes, content_type: str) -> dict:
     lower = urlparse(url).path.lower()
-    if lower.endswith(".hwpx") or data[:2] == b"PK":
+    is_pdf = data.startswith(b"%PDF")
+    if not is_pdf and (lower.endswith(".hwpx") or data[:2] == b"PK"):
         return {"text": _hwpx_text(data)[:600_000]}
     # HWP 5 files use the OLE compound-file signature. Official download links
     # often have no filename extension (for example, /fileDownload?id=...).
-    if lower.endswith(".hwp") or data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+    if not is_pdf and (lower.endswith(".hwp") or data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
         converted = _hwp_as_pdf(data)
         if converted is None:
             raise ValueError("HWP converter is unavailable or could not read the file")
@@ -623,7 +629,8 @@ def _document_part(url: str, data: bytes, content_type: str) -> dict:
 def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
     """Read text locally without a model key, with stable source page/section ids."""
     lower = urlparse(url).path.lower()
-    if lower.endswith(".hwpx") or data[:2] == b"PK":
+    is_pdf = data.startswith(b"%PDF")
+    if not is_pdf and (lower.endswith(".hwpx") or data[:2] == b"PK"):
         sections = []
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             names = sorted((name for name in archive.namelist() if re.match(r"Contents/section\d+\.xml$", name)), key=lambda name: int(re.search(r"section(\d+)\.xml$", name).group(1)))
@@ -638,7 +645,7 @@ def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
                 text = "\n".join("".join(p.itertext()) for p in leaves)
                 sections.append({"page": index + 1, "text": text or " ".join(root.itertext()), "source_format": "hwpx_section"})
         return sections
-    if lower.endswith(".hwp") or data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+    if not is_pdf and (lower.endswith(".hwp") or data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
         converted = _hwp_as_pdf(data)
         if converted is None:
             raise ValueError("HWP converter is unavailable or could not read the file")
@@ -1031,6 +1038,8 @@ async def enrich_notice(
                 elif not any((p.get("unit_type"), p.get("price_kind")) == identity for p in existing_prices):
                     existing_prices.append(price)
         existing_rules.extend(r for r in ai_candidates["rules"] if r.get("document_hash") == digest)
+        from app.qualification import retire_reviewed_document_candidates
+        existing_rules = retire_reviewed_document_candidates(existing_rules, digest=digest, parser_version=PARSER_VERSION)
         enriched.update(prices=existing_prices, rules=existing_rules, document_hash=digest)
         cap = next((r.get("value") for r in best.get("rules", []) if r.get("kind") == "price_cap" and r.get("verification") == "official"), None)
         if cap in {"yes", "no", "not_applicable"}:

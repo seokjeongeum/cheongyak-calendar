@@ -79,7 +79,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             joined = _heading(" ".join(lines[index:index + 2]))
             if re.match(r"[■•※▌]|(?:본|금회)(?:주택|공급)|당첨자|신청자", joined):
                 continue
-            if re.search(r"(?:잔여(?:세대|주택)|공가세대|자격완화|선착순)[^■]{0,140}(?:입주자모집\s*공고|일반매각\s*공고|모집\s*공고|일반매각[^■]{0,60}공고)|(?:입주자모집|일반매각)[^■]{0,50}공고[^■]{0,40}선착순", joined):
+            if re.search(r"(?:잔여(?:세대|주택)|공가세대|자격완화|선착순)[^■]{0,140}(?:입주자모집\s*공고|일반매각\s*공고|모집\s*공고|일반매각[^■]{0,60}공고)|(?:입주자모집|일반매각)[^■]{0,50}공고[^■]{0,40}선착순|잔여세대[^■]{0,160}선착순동[·ㆍ∙.]?호지정[^■]{0,60}공고", joined):
                 heading_parts.append(joined)
     head = _flat(" ".join(heading_parts))
     # Ordinary initial shinhee applications (including A17) use the complete
@@ -94,6 +94,11 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         r"[^■•。.]{0,150}?선착순\s*동[·ㆍ∙.]?\s*호(?:\s*지정)?"
         r"[^■•。.]{0,100}?(?:현장\s*계약|계약(?:체결)?)(?:만)?\s*(?:가능|진행|합니다|방식)") or _match(pages,
         r"본\s*공고는\s*선착순\s*상시계약\s*공고")
+    if not firstcome_clause and re.search(r"잔여세대.*선착순동[·ㆍ∙.]?호지정", head):
+        # Some residual officetel cover titles contain outlined repetitions.
+        # The current offer's direct contract declaration supplies the method,
+        # independently of the unreadable project-name glyphs in that title.
+        firstcome_clause = _match(pages, r"선착순으로\s*동[·ㆍ∙.]?\s*호를\s*선택하여\s*수의계약\s*할\s*수\s*있으며")
     firstcome = bool(firstcome_clause or re.search(r"선착순.{0,25}(?:동.?호|일반매각|계약)|일반매각.{0,15}선착순", head))
     residual = bool(re.search(r"잔여|공가세대", head)) and ("일반매각" in head or "입주자모집" in head)
     relaxed = "자격완화" in head
@@ -106,14 +111,15 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     if not exemption:
         return None
     shinhee = "신혼희망타운" in head
-    office = "오피스텔" in head
+    office_admission = _match(pages, r"금회\s*공급되는\s*오피스텔은\s*입주자\s*모집공고일\s*\([^)]*\)\s*현재[^■•]{0,500}?\([^)]*주택소유여부[^)]*(?:불문|관계없이)[^)]*\)")
+    office = "오피스텔" in head or bool(office_admission)
     kind = "not_applicable" if office else "national" if re.search(r"(?:의한|해당하는|따른)\s*국민주택", body) else "unknown"
     method = "first_come" if firstcome else "unranked_after" if "무순위" in head else "optional_supply"
     criterion = _match(pages, r"(?:\(자격요건\)\s*)?(?:주택공급|분양)?계약\s*체결일\s*(?:기준|현재)[^■]{0,230}?(?:성년자|만\s*\d{1,2}\s*세)")
     basis = "contract_date" if criterion else "announcement"
     cutoff, cutoff_source = None, None
     if not criterion:
-        cutoff_source = _match(pages, r"(?:이\s*주택의\s*|금회\s*공급하는\s*주택의\s*)?(?:입주자\s*모집공고일|매각공고일)(?:은|\s*[\[(])\s*(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})", limit=None)
+        cutoff_source = _match(pages, r"(?:이\s*주택의\s*|금회\s*공급하는\s*주택의\s*)?(?:입주자\s*모집공고일|매각공고일|금회\s*모집공고일)(?:은|\s*[\[(])\s*(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})", limit=None)
         if cutoff_source:
             numbers = re.search(r"(20\d{2})[.년\-/]\s*(\d{1,2})[.월\-/]\s*(\d{1,2})", cutoff_source["text"])
             try:
@@ -172,9 +178,9 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     total = _match(pages, r"공급대상[^■❚]{0,160}?잔여(?:세대)?\s*([\d,]+)\s*세대")
     # The current residual count can follow the complex total; a bare '총' is
     # never enough to identify this offer's inventory, especially group PDFs.
-    compound_total = _match(pages, r"공급대상[^■]{0,100}?([\d,]+)\s*세대\s*중\s*잔여\s*([\d,]+)\s*세대")
+    compound_total = _match(pages, r"공급대상[^■]{0,100}?([\d,]+)\s*(?:세대|실)\s*중\s*잔여(?:세대)?\s*([\d,]+)\s*(?:세대|실)")
     if compound_total:
-        numbers = re.search(r"([\d,]+)\s*세대\s*중\s*잔여\s*([\d,]+)\s*세대", compound_total["text"])
+        numbers = re.search(r"([\d,]+)\s*(?:세대|실)\s*중\s*잔여(?:세대)?\s*([\d,]+)\s*(?:세대|실)", compound_total["text"])
         rules.append(make("supply_inventory_summary", effect="metadata", evidence=compound_total,
             total_households=int(numbers[1].replace(",", "")), current_supply_count=int(numbers[2].replace(",", "")),
             official_supply_url=payload.get("official_url")))
@@ -228,6 +234,8 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             return make(name, evidence={"text": quote, "page": page}, **fields)
         rules.extend(explicit_applicant_regions(pages, cutoff=cutoff or expected_cutoff, make=region_make, provinces=provinces))
     employee = _employee_clause(pages)
+    resident_foreign_inclusion = office_admission and re.search(
+        r"국내에\s*거주하고\s*있는\s*재외동포[^\]]{0,160}?외국인\s*포함", office_admission["text"])
     topic_rules = {}
     for supply in supplies:
         facts = []
@@ -256,6 +264,15 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             facts.append(("age", r))
         if domestic:
             facts.append(("domestic_residence", make("domestic_residence", True, supply=supply, evidence=domestic)))
+        elif resident_foreign_inclusion:
+            # The current personal offer admits all adults and specifically
+            # includes domestically resident foreign nationals. Preserve that
+            # alternative rather than imposing foreign-residence evidence on
+            # a Korean applicant or losing the foreign applicant's condition.
+            facts.append(("domestic_residence", make("any", supply=supply, evidence=office_admission,
+                label="대한민국 국적 또는 공고가 포함한 국내 거주 외국인", conditions=[
+                    make("citizenship", allowed_values=["korean"], evidence=office_admission),
+                    make("domestic_residence", True, evidence=office_admission)])))
         if foreign_bar:
             facts.append(("citizenship", make("citizenship", supply=supply, allowed_values=["korean"], evidence=foreign_bar)))
         if home:
@@ -366,11 +383,17 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         ("토지거래허가 사전협의·서류 제출", "contract", r"(?:금회\s*공급되는\s*주택은)[^■•]{0,700}?협의\s*결과에\s*따라\s*계약이\s*가능합니다\.?\s*\([^)]*허가대상\)"),
         ("토지거래허가 후 이용 의무", "post_contract", r"토지거래허가\s*협의가\s*성립되면[^■•]{0,650}?불이익\s*조치가\s*있을\s*수\s*있습니다"),
         ("기존 공사 임대주택의 반환", "occupancy", r"(?:우리\s*공사|우리공사)\s*임대주택에\s*거주[^■•]{0,300}?명도\s*\(반환\)\s*하여야\s*합니다"),
+        ("공고일부터 입주까지 신청자격 유지", "eligibility_maintenance", r"신청자격은\s*공고일부터\s*입주\s*시까지\s*유지하여야\s*합니다"),
     ):
         evidence = _match(pages, pattern)
         if evidence:
+            maintenance = {"start_basis": "announcement", "start_date": cutoff or expected_cutoff or None,
+                           "end_basis": "occupancy", "maintained_rule_ids": sorted({rule["id"]
+                               for facts in topic_rules.values() for topic, rule in facts
+                               if topic in {"age", "domestic_residence"}})} if phase == "eligibility_maintenance" else {}
             instructions.append({"label": label, "phase": phase, "detail": evidence["text"],
-                "evidence_page": evidence["page"], "evidence_text": evidence["text"], "evidence_url": url, "document_hash": digest})
+                "evidence_page": evidence["page"], "evidence_text": evidence["text"], "evidence_url": url, "document_hash": digest,
+                **maintenance})
     if instructions:
         rules.append(make("application_instructions", effect="metadata", evidence=duplicate or one_home or post or
                           {"page": instructions[0]["evidence_page"], "text": instructions[0]["evidence_text"]}, instructions=instructions))
@@ -385,7 +408,14 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     applicant_section = _match(pages, r"(?:\d+\.\s*)?신청\s*자격[^■]{0,350}|기본\s*신청자격[^■]{0,350}|자격요건[^■]{0,350}")
     for supply, facts in topic_rules.items():
         kinds = {topic for topic, _ in facts}
-        required = ["age", "domestic_residence"] + (["home_ownership", "family"] if shinhee else [])
+        # A public residual officetel can explicitly admit all adults without
+        # restricting Korean applicants to domestic residence. A bracket that
+        # includes domestically resident foreigners is not a universal gate.
+        # Only this complete personal admission declaration and region waiver
+        # permit that supported branch to omit a domestic-residence question.
+        open_office_admission = bool(office_admission and unrestricted and
+            re.search(r"법인\s*또는\s*만\s*\d{1,2}\s*세\s*이상인\s*자", office_admission["text"]))
+        required = ["age"] + (["domestic_residence"] if domestic or resident_foreign_inclusion or not open_office_admission else []) + (["home_ownership", "family"] if shinhee else [])
         for topic, phrase in (("overseas_residence", "국외에계속하여"), ("original_contract_ownership", "당첨이후계약")):
             if phrase in flat and topic not in required:
                 required.append(topic)
@@ -424,7 +454,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         if employee:
             branches.append({"branch_id": "provider_employee", "label": "공급기관 임직원·공고가 정한 이해관계자", "status": "verified", "required": True,
                              "rule_ids": [r["id"] for topic, r in facts if topic == "provider_employee"], "evidence_page": employee["page"], "evidence_text": employee["text"]})
-        if re.search(r"법인(?:에게|\s*(?:계약\s*)?가능)", flat):
+        if re.search(r"법인(?:에게|\s*(?:계약\s*)?가능)", flat) or office_admission and re.search(r"법인\s*또는", office_admission["text"]):
             branches.append({"branch_id": "corporate", "label": "법인 계약의 대표·위임 서류", "status": "not_applicable", "required": False,
                              "phase": "application", "reason": "개인 프로필 신청자격 비교 범위 밖의 법인 계약 절차"})
         scopes.append({"supply_type": supply, "complete": complete, "verified_rule_count": len(facts),
@@ -510,6 +540,8 @@ def _modeled_numeric_requirement(required, sentence, facts):
             specifications = []
             if kind == "age_min":
                 specifications.append((r"(?:만\s*)?(\d+)\s*세\s*이상(?:의)?\s*(?:성년자|인\s*(?:분|자)|무주택세대구성원)", rule.get("value"), 1))
+                specifications.append((r"성년자\s*\(\s*만\s*(\d+)\s*세\s*이상", rule.get("value"), 1))
+                specifications.append((r"만\s*(\d+)\s*세\s*이상이면\s*누구나\s*신청가능", rule.get("value"), 1))
             elif kind == "marriage_months_max":
                 specifications.append((r"혼인기간(?:이)?\s*(\d+)\s*년\s*이내", rule.get("value"), 12))
                 specifications.append((r"혼인기간(?:이)?\s*(\d+)\s*개월\s*이내", rule.get("value"), 1))

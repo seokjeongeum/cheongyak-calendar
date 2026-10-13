@@ -29,9 +29,9 @@ def test_document_links_accept_only_official_https_documents():
     )
     assert find_document_links(html, "https://apply.lh.or.kr/notice") == [
         "https://apply.lh.or.kr/files/notice.pdf",
+        "https://apply.lh.or.kr/files/nested.pdf",
         "https://apply.lh.or.kr/download?id=1",
         "https://apply.lh.or.kr/atchFileDownload.do?id=2",
-        "https://apply.lh.or.kr/files/nested.pdf",
     ]
     assert not _trusted_url("http://apply.lh.or.kr/file.pdf")
     assert not _trusted_url("https://apply.lh.or.kr.evil.example/file.pdf")
