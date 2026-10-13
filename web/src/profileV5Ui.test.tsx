@@ -30,8 +30,9 @@ describe('v5 profile questions', () => {
   })
   it('removes uncertain recognition and old bank observation-date prompts', () => {
     const html = renderDialog('accountType')
-    expect(html).toContain('민영주택 순위기산일')
-    expect(html).toContain('국민주택 순위기산일')
+    expect(html).toContain('순위기산일 (민영·국민주택 공통)')
+    expect(html).not.toContain('>민영주택 순위기산일<')
+    expect(html).not.toContain('>국민주택 순위기산일<')
     for (const old of ['확인하지 못한 부분이 있나요?', '위 예치금이 충족되어 있던 기준일', '위 납입인정 내역의 기준일', '법정 확인 대상 세대원이 청약에 당첨된 이력이 있나요?']) expect(html).not.toContain(old)
   })
   it('provides one common history question for multiple notices and no repeated project confirmations', () => {

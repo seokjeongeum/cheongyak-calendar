@@ -1,4 +1,5 @@
 import { MoneyInput } from './MoneyInput'
+import { DateInput } from './DateInput'
 import { deriveHousehold } from './household'
 import { provinceOptions } from './regions'
 import { getProfileQuestionModel } from './profileQuestionModel'
@@ -38,7 +39,7 @@ export function OwnershipFields({ profile, onChange, today, notices = NO_NOTICES
     <h4>소유한 주택·권리의 사실</h4><p className="field-help">예외 인정 여부는 앱이 공고별로 비교합니다. 현재 보유하거나 공고 기준일 전후에 처분한 주택·권리를 각각 추가하세요. 같은 주택의 공유지분은 한 항목으로 입력합니다.</p>
     {household.members.filter((member) => member.included !== false && (member.ownsHome === true || profile.ownershipPropertyCounts?.[member.id] !== undefined)).map((member) => <label key={member.id} data-profile-field="ownershipPropertyCounts">현재 {member.label}의 주택·분양권·입주권 수 (호)<input type="number" inputMode="numeric" min="0" step="1" value={profile.ownershipPropertyCounts?.[member.id] || ''} onChange={(event) => onChange({ ...profile, ownershipPropertyCounts: { ...profile.ownershipPropertyCounts, [member.id]: event.target.value } })} /><span className="field-help">오피스텔은 제외합니다. 같은 주택의 공유지분은 1호이며, 처분한 주택은 현재 수에 포함하지 않습니다. 입력한 수와 연결된 취득·처분 항목을 함께 비교합니다.</span></label>)}
     {profile.ownershipFacts.map((item, index) => {
-      const date = (key: keyof OwnershipFact, label: string) => <label>{label}<input type="date" max={today} value={item[key] as string} onChange={(event) => patch(item.id, { [key]: event.target.value })} /></label>
+      const date = (key: keyof OwnershipFact, label: string) => <DateInput label={label} max={today} value={item[key] as string} onChange={(value) => patch(item.id, { [key]: value })} />
       const fact = (key: keyof OwnershipFact, label: string) => <Fact label={label} value={item[key] as boolean | null} onChange={(value) => patch(item.id, { [key]: value })} />
       const money = (key: keyof OwnershipFact, label: string) => <MoneyInput label={label} value={item[key] as string} onChange={(value) => patch(item.id, { [key]: value })} />
       const rights = ['presale_right', 'occupancy_right'].includes(item.propertyKind)

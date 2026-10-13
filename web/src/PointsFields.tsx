@@ -1,6 +1,7 @@
 import { emptyPointsFamilyFact, type LocalProfile, type PointsFamilyFact } from './types'
 import { FactChangeFields } from './FactChangeFields'
 import { POINTS_SOURCE } from './points'
+import { DateInput } from './DateInput'
 
 export function PointsFields({ profile, onChange, today, historyNeeded = false, pointsComparison = true, firstHomeChildIds = [] }: { profile: LocalProfile; onChange: (value: LocalProfile) => void; today: string; historyNeeded?: boolean; pointsComparison?: boolean; firstHomeChildIds?: string[] }) {
   const patch = (part: Partial<LocalProfile>) => onChange({ ...profile, ...part })
@@ -8,7 +9,7 @@ export function PointsFields({ profile, onChange, today, historyNeeded = false, 
   const pointsMembers = profile.householdMembers.filter((m) => !['separate', 'unknown'].includes(m.register) && !['sibling', 'unrelated', 'descendant_spouse', 'unknown'].includes(m.relation))
   const members = profile.householdMembers.filter((m) => pointsComparison && pointsMembers.some((member) => member.id === m.id) || firstHomeChildIds.includes(m.id))
   return <details className="additional-questions" data-profile-field="pointsFamily"><summary>{pointsComparison ? '일반공급 내 가점 비교' : '생애최초 자녀 혼인 조건'}</summary><p className="field-help">{pointsComparison ? '무주택기간 32점 · 부양가족 35점 · 통장 17점. 세대·주택과 은행 인정 가입일을 재사용합니다. 공고 기준일에 따라 계산하며 미입력 항목은 총점으로 확정하지 않습니다.' : '가족 목록의 관계·생년월일·등본 위치를 재사용합니다. 이 공고에서 아직 비교하지 못한 자녀의 미혼 여부만 입력합니다.'}</p>
-    {pointsComparison && <><label data-profile-field="pointsHomelessSince">본인·배우자가 마지막으로 무주택이 된 날 (기존 처분 이력으로 확인되지 않을 때)<input type="date" max={today} value={profile.pointsHomelessSince} onChange={(event) => patch({ pointsHomelessSince: event.target.value })} /></label><p className="field-help">주택을 소유한 적이 없으면 입력하지 않아도 됩니다. 배우자의 혼인 전 처분 이력은 제외합니다.</p></>}
+    {pointsComparison && <><DateInput field="pointsHomelessSince" label="본인·배우자가 마지막으로 무주택이 된 날 (기존 처분 이력으로 확인되지 않을 때)" max={today} value={profile.pointsHomelessSince} onChange={(value) => patch({ pointsHomelessSince: value })} /><p className="field-help">주택을 소유한 적이 없으면 입력하지 않아도 됩니다. 배우자의 혼인 전 처분 이력은 제외합니다.</p></>}
     {members.map((member, i) => {
       const ancestor = /parent$/.test(member.relation), value = profile.pointsFamily[member.id] || emptyPointsFamilyFact()
       const update = (part: Partial<PointsFamilyFact>) => patch({ pointsFamily: { ...profile.pointsFamily, [member.id]: { ...value, ...part } } })

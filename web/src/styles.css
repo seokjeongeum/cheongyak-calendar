@@ -367,6 +367,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .additional-questions label{margin-bottom:14px}
 .child-fact{padding-bottom:14px;border-bottom:1px solid #e4eaf2;display:flex;flex-direction:column;gap:13px}
 .add-fact,.text-button{border:1px solid #ceddf2;background:#fff;color:#2464c8;border-radius:7px;padding:8px 12px;font-size:12px;align-self:start}
+.date-field{display:grid;gap:8px;min-width:0}
+.date-input-row{display:flex;gap:8px;align-items:center;min-width:0}
+.date-input-row input{flex:1;min-width:0}
+.date-input-row .text-button{flex:none;align-self:stretch}
+.date-input-row button:disabled{opacity:.45;cursor:default}
+.rank-date-separate{display:flex!important;flex-direction:row!important;align-items:center;gap:8px}
+.rank-date-separate input[type="checkbox"]{width:16px;height:16px;min-height:16px;flex:none;margin:0;padding:0}
 .input-error{font-size:11px;color:#b33c3c;line-height:1.5}
 .step-fields input[aria-invalid=true]{border-color:#cd6666;background:#fff6f6}
 .step-fields select:disabled,.inline-field select:disabled{color:#929eb1;background:#f5f7fa}

@@ -327,6 +327,7 @@ export interface LocalProfile {
   currentAccountFactsAsOfDate: string
   privateRankBaseDate: string
   nationalRankBaseDate: string
+  rankBaseDatesSeparate?: boolean
   privateDepositKrw: string
   privateDepositAsOfDate: string
   privateDepositMaintained: boolean | null
@@ -399,7 +400,7 @@ export const EMPTY_PROFILE: LocalProfile = {
   isHouseholdHead: null, hasSpouse: null, spouseSameRegister: null, familyOnRegister: null,
   householdScopeKnown: null, applicantOwnsHome: null, spouseOwnsHome: null, familyOwnsHome: null,
   ownershipException: null, ownershipFactsKnown: null, ownershipFacts: [], ownershipPropertyCounts: {}, applicantPreviouslyOwnedHome: null, spousePreviouslyOwnedHome: null, spousePremarriageOwnershipDisposed: null,
-  familyPreviouslyOwnedHome: null, accountType: 'unknown', currentAccountUsedForWinning: null, currentAccountFirstWinningDate: '', currentAccountFactsAsOfDate: '', privateRankBaseDate: '', nationalRankBaseDate: '',
+  familyPreviouslyOwnedHome: null, accountType: 'unknown', currentAccountUsedForWinning: null, currentAccountFirstWinningDate: '', currentAccountFactsAsOfDate: '', privateRankBaseDate: '', nationalRankBaseDate: '', rankBaseDatesSeparate: false,
   privateDepositKrw: '', privateDepositAsOfDate: '', privateDepositMaintained: null, nationalRecognizedPayments: '', nationalRecognizedAmountKrw: '', nationalPaymentsAsOfDate: '',
   accountConversionUnclear: null, previousWinning: null, previousWinningDate: '',
   restrictedFromApplying: null, projectApplicationHistory: {}, citizenship: 'unknown', overseasContinuousDays: '', overseasFactsAsOfDate: '', overseasOnlyApplicantForLivelihood: null, overseasFactsHistoryConfirmations: [], ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, applicationRestrictionFacts: {}, applicationRestrictionsAsOfDate: '', applicationRestrictionsHistoryConfirmations: [], specialWinning: null,
