@@ -109,9 +109,9 @@ def test_procedural_or_contents_mentions_do_not_create_a_family_route():
     assert extract(pages) is None
 
 
-def test_unmodeled_planned_household_and_assessment_timing_remain_explicit():
+def test_planned_household_is_modeled_and_unresolved_assessment_timing_remains_explicit():
     result = extract(new_pages())
-    assert of(result, "unparsed")[0]["label"] == "혼인으로 구성할 세대의 주택 소유"
+    assert of(result, "planned_household_homeless")
     assert all(any("평가시점" in gap for gap in gaps) for gaps in result["missing_topics"].values())
     pages = new_pages()
     for page in pages:
@@ -141,3 +141,19 @@ def test_income_and_asset_child_policies_are_not_borrowed_from_each_other():
     assert of(result, "shinhee_income")[0]["child_relaxation_since"] is None
     assert of(result, "shinhee_assets")[0]["one_child_bonus_percent"] == 10
     assert of(result, "shinhee_assets")[0]["child_relaxation_since"] == "2023-03-28"
+def test_actual_residual_a2_reviews_three_paths_with_current_waivers():
+    from app.extract.official_rules import parse_official_rules
+
+    fixture = json.loads((Path(__file__).parent / "fixtures" / "public-family-a2-20261030.json").read_text())
+    result = parse_official_rules(fixture["pages"], url=fixture["document_url"],
+                                  digest=fixture["document_hash"], payload=fixture["payload"])
+    assert result["status"] == "complete"
+    routes = {rule["supply_type"]: rule["value"] for rule in of(result, "family_route")}
+    assert routes == {"신혼부부(신혼희망타운)": "newlywed", "예비신혼부부(신혼희망타운)": "engaged",
+                      "한부모가족(신혼희망타운)": "single_parent"}
+    assert of(result, "rank_applicability")[0]["account_required"] is False
+    assert of(result, "qualification_context")[0]["value"]["original_announcement_date"] == "2024-01-03"
+    assert of(result, "qualification_context")[0]["value"]["application_criterion_date"] == "2026-10-30"
+    assert all(scope["complete"] and scope["reviewed_document_hash"] == fixture["document_hash"]
+               for scope in of(result, "condition_coverage")[0]["scopes"])
+    assert not (of(result, "shinhee_income") or of(result, "shinhee_assets") or of(result, "recognized_payments_min"))

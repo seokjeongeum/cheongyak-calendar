@@ -9,11 +9,32 @@ export interface NoticeEvent {
   audience?: string | null
 }
 
+export interface NoticeCost {
+  kind: string
+  label: string
+  amount_krw: number
+  unit?: 'KRW'
+  site_name?: string | null
+  dwelling_identity?: string | null
+  exclusive_area_sqm?: number | null
+  verification?: Verification | null
+  evidence_url?: string | null
+  evidence_text?: string | null
+  evidence_page?: number | null
+  document_hash?: string | null
+}
+
 export interface NoticePrice {
   unit_type: string
   source?: string | null
   area_sqm?: number | null
   exclusive_area_sqm?: number | null
+  supply_area_sqm?: number | null
+  dwelling_identity?: string | null
+  unit_type_code?: string | null
+  building?: string | null
+  room?: string | null
+  payment_components?: NoticeCost[]
   area_basis?: 'exclusive' | 'supply' | 'unknown' | string
   price_kind: string
   amount_krw?: number | null
@@ -22,6 +43,8 @@ export interface NoticePrice {
   verification?: Verification | null
   evidence_url?: string | null
   evidence_text?: string | null
+  evidence_page?: number | null
+  document_hash?: string | null
   application_fee_krw?: number | null
 }
 
@@ -143,6 +166,7 @@ export interface Notice {
   price_cap_status: PriceCapStatus
   events: NoticeEvent[]
   prices: NoticePrice[]
+  additional_costs?: NoticeCost[]
   rules: NoticeRule[]
   rules_complete?: boolean
   updated_at: string | null
@@ -356,6 +380,10 @@ export interface LocalProfile {
   monthlyIncomeKrw: string
   officialNetAssetsKrw?: string
   plannedMarriage?: boolean | null
+  plannedHouseholdHomelessConfirmed?: boolean | null
+  plannedPartnerIsFormerSpouse?: boolean | null
+  sameSpouseRemarriage?: boolean | null
+  priorSameSpouseMarriageMonths?: string
   raisesChildWithoutSpouse?: boolean | null
   hasDeFactoPartner?: boolean | null
   realEstateKrw: string
@@ -404,7 +432,7 @@ export const EMPTY_PROFILE: LocalProfile = {
   privateDepositKrw: '', privateDepositAsOfDate: '', privateDepositMaintained: null, nationalRecognizedPayments: '', nationalRecognizedAmountKrw: '', nationalPaymentsAsOfDate: '',
   accountConversionUnclear: null, previousWinning: null, previousWinningDate: '',
   restrictedFromApplying: null, projectApplicationHistory: {}, citizenship: 'unknown', overseasContinuousDays: '', overseasFactsAsOfDate: '', overseasOnlyApplicantForLivelihood: null, overseasFactsHistoryConfirmations: [], ineligibleRestrictionActive: null, resaleRestrictionActive: null, rewinningRestrictionActive: null, applicationRestrictionFacts: {}, applicationRestrictionsAsOfDate: '', applicationRestrictionsHistoryConfirmations: [], specialWinning: null,
-  annualIncomeKrw: '', assetsKrw: '', monthlyIncomeKrw: '', officialNetAssetsKrw: '', plannedMarriage: null, raisesChildWithoutSpouse: null, hasDeFactoPartner: null, realEstateKrw: '', vehicleKrw: '',
+  annualIncomeKrw: '', assetsKrw: '', monthlyIncomeKrw: '', officialNetAssetsKrw: '', plannedMarriage: null, plannedHouseholdHomelessConfirmed: null, plannedPartnerIsFormerSpouse: null, sameSpouseRemarriage: null, priorSameSpouseMarriageMonths: '', raisesChildWithoutSpouse: null, hasDeFactoPartner: null, realEstateKrw: '', vehicleKrw: '',
   dualIncome: null, maritalStatus: 'unknown', marriageDate: '', hasChildren: null, children: [], pregnant: null,
   expectedChildren: '', taxYears: '', employed: null, incomeTaxPaidWithinPastYear: null, incomeTaxFactsAsOfDate: '', incomeTaxFactsHistoryConfirmations: [], parentDateOfBirth: '', parentSupportMemberId: '', parentSupportSince: '',
   parentSameRegister: null, parentOwnsHome: null, parentSpouseOwnsHome: null, recommendationReason: '', recommendationStatus: 'unknown',

@@ -50,6 +50,97 @@ def _find(lines, pattern):
     return {"page": page, "quote": match[0].strip()}
 
 
+def operative_family_routes(pages, *, make):
+    """Read only each route's operative section, independently of finances.
+
+    Residual offers share these family predicates with ordinary shinhee
+    offers, but can explicitly waive the account and financial requirements.
+    Keeping this layer separate prevents an A17 table from becoming an A2
+    requirement and prevents a table-of-contents mention creating a route.
+    """
+    sections = _sections(pages)
+    counts = {family: sum(section["family"] == family for section in sections) for family in FAMILIES}
+    result = {}
+    for section in sections:
+        family = section["family"]
+        if family in result:
+            continue
+        target = section["lines"]
+        body = _normal(" ".join(line["text"] for line in target))
+        anchor = {"page": target[0]["page"], "quote": body[:900]}
+        route = {"신혼부부": "newlywed", "예비신혼부부": "engaged", "한부모가족": "single_parent"}[family]
+        row = {"family_route": route, "anchor": anchor, "rules": [], "home_rule": None, "missing": []}
+        result[family] = row
+        if counts[family] != 1:
+            row["missing"].append("동일 가족 유형의 신청자격 문단이 중복되어 적용 분기를 확인해야 합니다.")
+            continue
+        child_anchor = _find(target, r"(?:만\s*\d+\s*세\s*미만|\d+\s*세\s*이하).{0,120}?자녀.{0,150}?(?:무주택세대구성원|를\s*둔\s*한부모가족)")
+        child = None
+        if child_anchor:
+            exclusive = re.search(r"만\s*(\d+)\s*세\s*미만", child_anchor["quote"])
+            inclusive = re.search(r"(\d+)\s*세\s*이하", child_anchor["quote"])
+            child = make("children_min", 1, child_age_max=int((exclusive or inclusive)[1]),
+                child_age_inclusive=not bool(exclusive), include_pregnancy=bool(re.search(r"태아", child_anchor["quote"])),
+                include_adoption=bool(re.search(r"입양", child_anchor["quote"])), operator=">=", **child_anchor)
+        homeless = _find(target, r"무주택세대구성원|혼인으로\s*구성할\s*세대원\s*전원이\s*무주택")
+        if family == "예비신혼부부":
+            planned = _find(target, r"혼인을\s*(?:준비|계획)\s*중.{0,250}?입주\s*전(?:까지|에)?\s*혼인사실을\s*증명할\s*수")
+            if planned:
+                row["rules"].append(make("planned_marriage", True, must_prove_before="occupancy", **planned))
+            else:
+                row["missing"].append("예정 혼인 관계·입주 전 혼인사실 증명 시점")
+            if homeless:
+                row["home_rule"] = make("planned_household_homeless", True, household_basis="planned_household", **homeless)
+            else:
+                row["missing"].append("혼인으로 구성할 세대의 무주택 조건")
+            former = _find(target, r"전배우자와\s*재혼한\s*사실.{0,200}?(?:계약\s*취소|계약취소)")
+            if former:
+                row["rules"].append(make("planned_marriage_not_former_spouse", True, **former))
+        else:
+            if homeless:
+                row["home_rule"] = make("homeless", True, **homeless)
+            else:
+                row["missing"].append("신청 세대의 무주택 조건")
+            if family == "신혼부부":
+                marriage = _find(target, r"혼인\s*중인.{0,180}?혼인기간이\s*\d+\s*(?:년|개월)\s*이내")
+                if marriage:
+                    duration = re.search(r"혼인기간이\s*(\d+)\s*(년|개월)", marriage["quote"])
+                    fields = {"sum_same_spouse_remarriage": True} if re.search(r"동일\s*배우자.{0,100}?혼인기간.{0,100}?합산", body) else {}
+                    period = make("marriage_months_max", int(duration[1]) * (12 if duration[2] == "년" else 1),
+                                  operator="<=", anniversary_limit=True, **fields, **marriage)
+                    row["rules"].append(make("all", label="혼인·자녀 요건", conditions=[
+                        make("marital_status", allowed_values=["married"], **marriage),
+                        make("any", conditions=[period, child] if child and "또는" in body else [period], **marriage)], **marriage))
+                else:
+                    row["missing"].append("혼인기간·자녀의 대체 신청자격")
+            else:
+                parent = _find(target, r"한부모가족.{0,180}?부\s*또는\s*모")
+                if parent and child:
+                    row["rules"].append(make("all", label="한부모가족·자녀 요건", conditions=[
+                        make("single_parent_family", True, **parent), child], **parent))
+                else:
+                    row["missing"].append("한부모가족 관계·자녀 인정 연령")
+    return result
+
+
+def family_scope_pages(pages, family):
+    """Keep shared clauses and this family's section when auditing gaps."""
+    output, active = [], None
+    for page in pages:
+        lines = []
+        for line in page["text"].splitlines():
+            clean = _normal(line)
+            heading = re.match(r"^\d+(?:[.-]\d+)*[.)]?\s*(신혼부부|예비신혼부부|한부모가족)\s*신청자격\s*$", clean)
+            if heading:
+                active = heading[1]
+            elif re.match(r"^\d+(?:[.-]\d+)*[.)]?\s+[가-힣]", clean):
+                active = None
+            if active is None or active == family:
+                lines.append(line)
+        output.append({**page, "text": "\n".join(lines)})
+    return output
+
+
 def _table_sections(pages, title):
     """Printed table headings, not prose references to those tables."""
     tables, current = [], None
@@ -176,6 +267,7 @@ def generic_family_admission(pages, *, digest, make):
     sections = _sections(pages)
     if not sections:
         return None
+    family_routes = operative_family_routes(pages, make=make)
     lines = [{"page": page["page"], "text": line} for page in pages for line in page["text"].splitlines()]
     tables, min_size, table_evidence = _income_tables(pages)
     assets = _asset_tables(pages)
@@ -214,50 +306,12 @@ def generic_family_admission(pages, *, digest, make):
                            make("recognized_payments_min", int(payments[1]), supply=supply, operator=">=", require_as_of_date=True, value_basis="announcement_balance", **bank)])
         elif re.search(r"입주자저축|청약통장", body):
             missing[supply].append("이 신청자격의 통장 가입기간·납입인정 횟수")
-        homeless = _find(target, r"무주택세대구성원|혼인으로\s*구성할\s*세대원\s*전원이\s*무주택")
-        if family == "예비신혼부부":
-            planned = _find(target, r"혼인을\s*준비\s*중인.{0,250}?입주\s*전까지\s*혼인사실을\s*증명할\s*수")
-            if planned:
-                output.append(make("planned_marriage", True, supply=supply, must_prove_before="occupancy", **planned))
-            else:
-                missing[supply].append("예정 혼인 관계·혼인사실 확인 시점")
-            if homeless:
-                output.append(make("unparsed", supply=supply, label="혼인으로 구성할 세대의 주택 소유",
-                                   text="예정 배우자와 혼인으로 구성할 세대의 보유 사실을 현재 등본 가족과 구분하여 대조해야 합니다.", **homeless))
-            if re.search(r"전배우자와\s*재혼", body):
-                missing[supply].append("예정 배우자와의 과거 혼인·재혼 제한")
-        elif homeless:
-            output.append(make("homeless", True, supply=supply, **homeless))
-        else:
-            missing[supply].append("신청 세대의 무주택 요건")
-
-        child_anchor = _find(target, r"(?:만\s*\d+\s*세\s*미만|\d+\s*세\s*이하).{0,120}?자녀.{0,150}?(?:무주택세대구성원|를\s*둔\s*한부모가족)")
-        child = None
-        if child_anchor:
-            exclusive = re.search(r"만\s*(\d+)\s*세\s*미만", child_anchor["quote"])
-            inclusive = re.search(r"(\d+)\s*세\s*이하", child_anchor["quote"])
-            age = int(exclusive[1]) if exclusive else int(inclusive[1])
-            child = make("children_min", 1, child_age_max=age, child_age_inclusive=not bool(exclusive),
-                         include_pregnancy=bool(re.search(r"태아", child_anchor["quote"])),
-                         include_adoption=bool(re.search(r"입양", child_anchor["quote"])), operator=">=", **child_anchor)
-        if family == "신혼부부":
-            marriage = _find(target, r"혼인\s*중인.{0,180}?혼인기간이\s*\d+\s*(?:년|개월)\s*이내")
-            if marriage:
-                duration = re.search(r"혼인기간이\s*(\d+)\s*(년|개월)", marriage["quote"])
-                months = int(duration[1]) * (12 if duration[2] == "년" else 1)
-                period = make("marriage_months_max", months, operator="<=", anniversary_limit=True, **marriage)
-                alternatives = [period, child] if child and re.search(r"또는", body) else [period]
-                output.append(make("all", supply=supply, label="혼인·자녀 요건", conditions=[make("marital_status", allowed_values=["married"], **marriage), make("any", conditions=alternatives, **marriage)], **marriage))
-                if re.search(r"동일\s*배우자.{0,100}?혼인기간.{0,100}?합산", body):
-                    conditional[supply].append({"topic": "동일 배우자와 재혼한 경우 전체 혼인기간 합산", "status": "partial", "required": False, "phase": "conditional_admission", "rule_ids": []})
-            else:
-                missing[supply].append("혼인기간·자녀의 대체 신청자격")
-        elif family == "한부모가족":
-            parent = _find(target, r"한부모가족.{0,180}?부\s*또는\s*모")
-            if parent and child:
-                output.append(make("all", supply=supply, label="한부모가족·자녀 요건", conditions=[make("single_parent_family", True, **parent), child], **parent))
-            else:
-                missing[supply].append("한부모가족 관계·자녀 연령")
+        route = family_routes[family]
+        output.append(make("family_route", route["family_route"], supply=supply, effect="metadata", family_route=route["family_route"], **route["anchor"]))
+        for rule in [route["home_rule"], *route["rules"]]:
+            if rule is not None:
+                output.append({**rule, "supply_type": supply, "family_route": route["family_route"]})
+        missing[supply].extend(route["missing"])
 
         income = _find(target, r"월평균소득이.{0,340}?\d+\s*%.{0,180}?이하인\s*분")
         normal_percent = re.search(r"(\d+)\s*%", income["quote"]) if income else None

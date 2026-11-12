@@ -161,7 +161,7 @@ describe('grouped eligibility evidence renderer', () => {
     expect(html).not.toContain('기관추천')
     expect(html).not.toContain('59A')
   })
-  it('preserves different supply outcomes after their only actionable evidence becomes shared', () => {
+  it('preserves a conclusive supply after shared evidence without creating another empty review section', () => {
     const item = notice([
       rule('private_rank_months', 6, { purpose: 'first_rank', rank_rules_complete: true }),
       rule('deposit_min_krw', 3000000, { purpose: 'first_rank' }),
@@ -174,11 +174,10 @@ describe('grouped eligibility evidence renderer', () => {
     expect(eligibilityCombinations(item, facts).map((combo) => combo.result.status)).toEqual(['review', 'possible'])
     const html = renderToStaticMarkup(<EligibilityDetails notice={item} profile={facts} onProfile={() => {}} />)
     expect(html.match(/충족 · 계산된 주택 보유 확인 가족 수/g)).toHaveLength(1)
-    const general = html.split('<h5>일반공급<small>')[1].split('</section>')[0]
     const special = html.split('<h5>신혼부부 특별공급<small>')[1].split('</section>')[0]
-    expect(general).toContain('추가 확인 필요')
     expect(special).toContain('조건상 가능성 있음')
-    expect(general).not.toContain('qualification-reasons')
+    expect(html).not.toContain('<h5>일반공급<small>')
+    expect(html).toContain('1순위')
   })
   it('does not create repetitive empty supply sections when all shared comparisons remain incomplete', () => {
     const item = notice([rule('household_min', 2, { supply_type: '일반공급' }), rule('household_min', 2, { supply_type: '신혼부부 특별공급' })], { rules_complete: false })

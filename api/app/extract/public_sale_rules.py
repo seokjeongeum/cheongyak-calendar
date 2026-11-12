@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .application_regions import explicit_applicant_regions, region_catalog
 from .residual_inventory import residual_document_inventory
+from .generic_family_admission import family_scope_pages, operative_family_routes
 
 TOPIC_LABELS = {
     "age": "성년·미성년 세대주 신청 조건", "domestic_residence": "신청 기준일의 국내 거주 조건",
@@ -166,6 +167,15 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         rules.append(make("housing_classification", effect="metadata"))
     old_context = next((r.get("value", {}) for r in payload.get("rules", []) if r.get("kind") == "qualification_context"), {})
     context = {**old_context, "application_criterion_date": cutoff, "application_criterion_basis": basis}
+    original_dates = set()
+    for page in pages:
+        for original_match in re.finditer(r"최초\s*입주자\s*모집공고\s*\(\s*(20\d{2})[.년/-]\s*(\d{1,2})[.월/-]\s*(\d{1,2})", _normal(page["text"])):
+            try:
+                original_dates.add(date(*map(int, original_match.groups())).isoformat())
+            except ValueError:
+                continue
+    if len(original_dates) == 1:
+        context["original_announcement_date"] = next(iter(original_dates))
     if cutoff:
         context["application_announcement_date"] = cutoff
     rules.append(make("qualification_context", context, effect="metadata"))
@@ -236,7 +246,13 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
     employee = _employee_clause(pages)
     resident_foreign_inclusion = office_admission and re.search(
         r"국내에\s*거주하고\s*있는\s*재외동포[^\]]{0,160}?외국인\s*포함", office_admission["text"])
+    def family_make(name, value=None, *, quote="", page=None, **fields):
+        return make(name, value, evidence={"text": quote, "page": page}, **fields)
+    family_routes = operative_family_routes(pages, make=family_make) if shinhee else {}
+    all_family_facts = [("family", rule) for route in family_routes.values()
+                        for rule in [route["home_rule"], *route["rules"]] if rule is not None]
     topic_rules = {}
+    route_missing = {}
     for supply in supplies:
         facts = []
         if age:
@@ -275,7 +291,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
                     make("domestic_residence", True, evidence=office_admission)])))
         if foreign_bar:
             facts.append(("citizenship", make("citizenship", supply=supply, allowed_values=["korean"], evidence=foreign_bar)))
-        if home:
+        if home and not (shinhee and supply.startswith("예비")):
             facts.append(("home_ownership", make("homeless", True, supply=supply, evidence=home)))
         if employee:
             # Clauses that say "may be restricted" require a documented review
@@ -298,29 +314,23 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
                 fields.update(criterion_basis="contract_date", criterion_date=None)
             facts.append(("provider_employee", make("provider_employee_restriction", False, supply=supply, evidence=employee, **fields)))
         if shinhee:
-            child_evidence = _match(pages, r"(\d+)세\s*이하[^■]{0,90}?(?:자녀|태아)")
-            child_limit = int(re.search(r"(\d+)세", child_evidence["text"])[1]) if child_evidence else None
-            child = make("children_min", 1, child_age_max=child_limit + 1 if child_limit is not None else None,
-                child_age_inclusive=False, include_pregnancy="태아" in flat, include_adoption="입양" in flat, operator=">=", evidence=child_evidence or home)
-            if child_evidence is None:
-                child = make("unparsed", label="자녀·태아 인정 연령과 범위", evidence=home,
-                    text="해당 가족 분기의 자녀 연령 및 태아·입양 인정 범위를 원문에서 확보하지 못했습니다.")
-            if supply.startswith("신혼부부"):
-                marriage = _match(pages, r"혼인기간(?:이)?\s*(\d+)년\s*이내[^■]{0,140}?자녀")
-                if marriage:
-                    family = make("all", supply=supply, evidence=marriage, label="혼인·자녀 요건", conditions=[
-                        make("marital_status", allowed_values=["married"], evidence=marriage),
-                        make("any", evidence=marriage, conditions=[make("marriage_months_max",int(re.search(r"(\d+)년", marriage["text"])[1])*12,operator="<=",anniversary_limit=True,evidence=marriage),child])])
-                    facts.append(("family", family))
-            elif supply.startswith("예비"):
-                family = _match(pages, r"예비신혼부부\s*:[^■]{0,270}?혼인사실[^■]{0,100}")
-                if family:
-                    facts.append(("family", make("planned_marriage", True, supply=supply, evidence=family, must_prove_before="occupancy")))
+            family_name = supply.split("(", 1)[0]
+            route = family_routes.get(family_name)
+            if route:
+                rules.append(make("family_route", route["family_route"], supply=supply, effect="metadata",
+                                  family_route=route["family_route"], evidence={"text": route["anchor"]["quote"], "page": route["anchor"]["page"]}))
+                # Planned spouses are assessed against the household they will
+                # form; the current registered family cannot substitute for it.
+                if family_name == "예비신혼부부" and route["home_rule"]:
+                    facts.append(("home_ownership", {**route["home_rule"], "supply_type": supply, "family_route": route["family_route"]}))
+                if route["rules"]:
+                    anchor = {"text": route["anchor"]["quote"], "page": route["anchor"]["page"]}
+                    facts.append(("family", make("all", supply=supply, evidence=anchor,
+                        family_route=route["family_route"], label={"newlywed":"신혼부부의 혼인·자녀 요건", "engaged":"예비신혼부부의 예정 혼인 관계", "single_parent":"한부모가족·자녀 요건"}[route["family_route"]],
+                        conditions=route["rules"])))
+                route_missing[supply] = route["missing"]
             else:
-                family = _match(pages, r"한부모가족\s*:[^■]{0,300}?(?:부\s*또는\s*모|한부모가족)")
-                if family:
-                    facts.append(("family", make("all", supply=supply, label="한부모가족·자녀 요건", evidence=family,
-                        conditions=[make("single_parent_family", True, evidence=family), child])))
+                route_missing[supply] = ["현재 가족 유형의 신청자격 문단과 적용 범위"]
         # Existing project winners/contracts are an explicit present restriction
         # only where the qualification clause prohibits them (e.g. Suwon A3).
         barred = _match(pages, r"기당첨자\s*및\s*계약자\s*\(본인\s*및\s*세대원\)[^■]{0,100}?청약불가")
@@ -384,6 +394,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         ("토지거래허가 후 이용 의무", "post_contract", r"토지거래허가\s*협의가\s*성립되면[^■•]{0,650}?불이익\s*조치가\s*있을\s*수\s*있습니다"),
         ("기존 공사 임대주택의 반환", "occupancy", r"(?:우리\s*공사|우리공사)\s*임대주택에\s*거주[^■•]{0,300}?명도\s*\(반환\)\s*하여야\s*합니다"),
         ("공고일부터 입주까지 신청자격 유지", "eligibility_maintenance", r"신청자격은\s*공고일부터\s*입주\s*시까지\s*유지하여야\s*합니다"),
+        ("신혼희망타운 모기지 가입·입주 시 증빙", "post_selection", r"\[모기지\s*의무가입\s*세대\][^■•]{0,500}?공급계약이\s*취소됩니다"),
     ):
         evidence = _match(pages, pattern)
         if evidence:
@@ -432,7 +443,10 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
             source_gaps.append({"item": "현재 신청자격 문단의 시작과 범위", "stage": "section_discovery"})
         if not contiguous:
             source_gaps.append({"item": "신청 자격 검토 중 누락된 원문 페이지", "stage": "document_text"})
-        source_gaps.extend(_unmodeled_admission(pages, facts, exempt_topics))
+        family_name = supply.split("(", 1)[0] if shinhee else None
+        source_gaps.extend({"item": item, "stage": "family_clause_extraction"} for item in route_missing.get(supply, []))
+        source_gaps.extend(_unmodeled_admission(family_scope_pages(pages, family_name) if shinhee else pages,
+            facts, exempt_topics, family_overview_facts=all_family_facts))
         def unread_clauses(rule):
             if rule.get("kind") == "unparsed":
                 yield rule
@@ -457,7 +471,7 @@ def parse_public_sale_rules(pages, *, url, digest, payload, parser_version):
         if re.search(r"법인(?:에게|\s*(?:계약\s*)?가능)", flat) or office_admission and re.search(r"법인\s*또는", office_admission["text"]):
             branches.append({"branch_id": "corporate", "label": "법인 계약의 대표·위임 서류", "status": "not_applicable", "required": False,
                              "phase": "application", "reason": "개인 프로필 신청자격 비교 범위 밖의 법인 계약 절차"})
-        scopes.append({"supply_type": supply, "complete": complete, "verified_rule_count": len(facts),
+        scopes.append({"supply_type": supply, **({"family_route": family_routes[family_name]["family_route"]} if shinhee and family_name in family_routes else {}), "complete": complete, "verified_rule_count": len(facts),
             "missing_topics": list(dict.fromkeys(gap["item"] for gap in source_gaps)),
             "topics": [{"topic": topic, "status": "verified", "required": True,
                         "rule_ids": [r["id"] for t, r in facts if t == topic]} for topic in sorted(kinds)]
@@ -571,10 +585,14 @@ def _modeled_numeric_requirement(required, sentence, facts):
     return False
 
 
-def _unmodeled_admission(pages, facts, exempt_topics):
+def _unmodeled_admission(pages, facts, exempt_topics, *, family_overview_facts=()):
     """Report recognized unmodeled gates with their current source text."""
     gaps = []
     modeled = {r["kind"] for _, r in facts}
+    if "planned_household_homeless" in modeled:
+        # The source explicitly defines this family's 무주택세대구성원 as
+        # the household formed by the planned marriage, not today's register.
+        modeled.add("homeless")
     restrictions = {r.get("restriction") for _, r in facts if r["kind"] == "application_restriction"}
     numeric_requirement = re.compile(r"(?:\d[\d,.]*|[일이삼사오육칠팔구십백천만억]+)\s*(?:세|년|개월|일|명|가구|세대|점|천만원|만원|억원|원|%|㎡)\s*(?:이상|이하|초과|미만|이내)")
     for page in pages:
@@ -617,7 +635,8 @@ def _unmodeled_admission(pages, facts, exempt_topics):
                     if not re.search(r"(?:신청|청약)(?:신청)?\s*(?:이|할\s*수)?\s*(?:가능|불가|불가능|없)|신청자격|자격요건", sentence):
                         continue
                     for required in numeric_requirement.finditer(sentence):
-                        if _modeled_numeric_requirement(required, sentence, facts):
+                        compared_facts = [*facts, *family_overview_facts] if "신청자격별" in flat and "예비신혼부부" in flat and "한부모가족" in flat else facts
+                        if _modeled_numeric_requirement(required, sentence, compared_facts):
                             continue
                         topic = "비정형 신청 제한·요건"
                         clause = sentence
@@ -634,14 +653,15 @@ def _unmodeled_admission(pages, facts, exempt_topics):
 def _applicant_procedure_residual(text):
     """Remove closed procedure predicates, preserving other gates beside them."""
     for pattern in (
-        r"(?:공급)?신청자는공고일당시세대주및세대구성원의주민등록표등본제출",
+        r"(?:공급)?신청자는(?:적격심사를위해)?공고일당시세대주및세대구(?:세대원)?성원의주민등록표(?:등본|초본)제출",
+        r"신청자가청약시직접입력",
         r"(?:해당순번의)?신청자는지체없이동[·ㆍ‧.]?호를지정(?:하여야|해야)(?:하며|합니다)",
         r"(?:청약자|신청자)는반드시(?:세대개방일|주택개방일)에주택을방문하여세대내부를확인하시기바라며",
         r"신청자는반드시본인이주택개방일에현장\(기타단지여건,세대내부상태,마감재등\)을확인후계약하여야하며",
         r"신청자는기타단지여건,세대내부상태,마감재등은반드시본인이사전주택개방일에현장을확인후계약하여야하며",
         r"서류를반드시사전에발급받아지참한신청자만계약체결이가능하며",
         r"주택공급신청자가주택공급신청시알아야할사항",
-        r"청약자는청약시[‘'「]?개인정보제공및활용[’'」]?과[‘'「]?정보의제3자제공[’'」]?에동의해야합니다",
+        r"청약자는청약시[‘'「]?개인정보제공및활용[’'」]?과[‘'「]?정보의제3자제공[’'」]?에동의해야(?:합니다|하며)",
     ):
         text = re.sub(pattern, " ", text)
     return text

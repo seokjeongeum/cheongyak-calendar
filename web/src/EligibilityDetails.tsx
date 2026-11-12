@@ -94,6 +94,7 @@ function ReasonIcon({ reason }: { reason: EligibilityReason }) {
   return <span className={`qualification-icon qualification-icon-${reason.status}`} aria-hidden="true">{reason.status === 'pass' ? <Check size={12} /> : reason.status === 'fail' ? <X size={12} /> : <Info size={12} />}</span>
 }
 export function ReasonList({ reasons, demoMode = false, onProfile }: { reasons: EligibilityReason[]; demoMode?: boolean; onProfile?: ProfileAction }) {
+  if (!reasons.length) return null
   return <ul className="qualification-reasons">{uniqueReasons(reasons).map((reason) => {
     const link = demoMode ? undefined : safeHref(reason.evidenceUrl)
     const legalLink = demoMode ? undefined : safeHref(reason.legalEvidenceUrl)
@@ -167,12 +168,13 @@ export function EligibilityBrief({ result, notice, profile, decision, onProfile,
   const rankConfirmed = (rankResult?.reasons || []).filter((reason) => reason.status === 'pass')
   const rankConfirmedKeys = new Set(rankConfirmed.map(reasonKey))
   const rankComparisons = snapshot?.rankComparisons || (notice && profile ? rankUnitComparisons(notice, profile) : [])
-  const rankPending = rankResult ? rankPendingReasons(rankResult, rankComparisons) : []
+  const rankPending = rankResult ? rankPendingReasons(rankResult, rankComparisons)
+    .filter((reason) => !sourceDetailsOpen || reason.category !== 'source_gap') : []
   const rankedUnits = snapshot?.rankedUnits || (notice && profile ? rankGroups(notice, profile) : [])
   const showUnitRanks = rankedUnits.length > 1 || rankedUnits.some((group) => group.result.rank === 'first' && rankResult?.rank !== 'first')
   const source = notice ? sourceForComparedSupplies(notice, profile, supplies) : { diagnostics: [], topics: [] }
-  const officialInventory = notice ? officialOfferedSupplies(notice) : []
-  const visibleSupplies = supplies.filter((supply) => supply.result.status === 'mismatch' || actionableReasons(supply.result.reasons).length > 0 || officialInventory.some((item) => item.supply_type === supply.supplyType))
+  const offeredTypes = new Set(notice ? officialOfferedSupplies(notice).map((item) => item.supply_type) : [])
+  const visibleSupplies = supplies.filter((supply) => offeredTypes.has(supply.supplyType) || ['possible', 'mismatch'].includes(supply.result.status) || actionableReasons(supply.result.reasons).length > 0)
   const sharedReasons = (snapshot?.sharedReasons || uniqueReasons(supplies.flatMap((supply) => actionableReasons(supply.result.reasons))).filter((reason) => supplies.filter((supply) => actionableReasons(supply.result.reasons).some((item) => reasonKey(item) === reasonKey(reason))).length > 1))
     .filter((reason) => supplies.some((supply) => supply.result.status !== 'mismatch' && actionableReasons(supply.result.reasons).some((item) => reasonKey(item) === reasonKey(reason))))
   const sharedKeys = new Set(sharedReasons.map(reasonKey))
@@ -235,18 +237,18 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
     !(reason.label === '미확보 공고 조항' && source.topics.length > 0) &&
     !source.topics.some((topic) => topic.label === reason.label))
   const inventory = officialOfferedSupplies(notice)
-  const scopedReasons = new Map<string, { reason: EligibilityReason; scopes: Set<string>; expanded: boolean }>()
+  const scopedReasons = new Map<string, { reason: EligibilityReason; scopes: Set<string>; types: Set<string>; expanded: boolean }>()
   for (const combo of combinations) {
     const scope = combo.unitType === '전체 주택형' ? combo.supplyType : `${combo.supplyType} · ${combo.unitType}`
     for (const reason of actionableReasons(combo.result.reasons)) {
       const key = reasonKey(reason)
       if (commonKeys.has(key)) continue
       const shared = scopedReasons.get(key)
-      if (shared) { shared.scopes.add(scope); shared.expanded ||= combo.result.status !== 'mismatch' }
-      else scopedReasons.set(key, { reason, scopes: new Set([scope]), expanded: combo.result.status !== 'mismatch' })
+      if (shared) { shared.scopes.add(scope); shared.types.add(combo.supplyType); shared.expanded ||= combo.result.status !== 'mismatch' }
+      else scopedReasons.set(key, { reason, scopes: new Set([scope]), types: new Set([combo.supplyType]), expanded: combo.result.status !== 'mismatch' })
     }
   }
-  const sharedKeys = new Set([...scopedReasons.entries()].filter(([, value]) => value.expanded && value.scopes.size > 1).map(([key]) => key))
+  const sharedKeys = new Set([...scopedReasons.entries()].filter(([, value]) => value.expanded && value.types.size > 1).map(([key]) => key))
   const sharedGroups = new Map<string, { scopes: string[]; reasons: EligibilityReason[] }>()
   for (const key of sharedKeys) {
     const shared = scopedReasons.get(key)!
@@ -255,14 +257,12 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
     if (group) group.reasons.push(shared.reason)
     else sharedGroups.set(signature, { scopes, reasons: [shared.reason] })
   }
-  const hasConclusiveSupply = combinations.some((combo) => ['possible', 'mismatch'].includes(combo.result.status))
   const grouped = new Map<string, { label: string; result: EligibilityResult; reasons: EligibilityReason[]; units: string[] }>()
   for (const combo of combinations) {
     const reasons = actionableReasons(combo.result.reasons).filter((reason) => !commonKeys.has(reasonKey(reason)) && !sharedKeys.has(reasonKey(reason)))
-    // Moving evidence to the common section must not erase a supply's actual
-    // outcome. Keep known outcomes and their review alternatives visible;
-    // uniformly incomplete groups need only the single source-gap notice.
-    if (!reasons.length && !hasConclusiveSupply) continue
+    // Common/shared evidence may carry a conclusive result, but another
+    // supply's result must not create empty review headings for this one.
+    if (!reasons.length && !['possible', 'mismatch'].includes(combo.result.status)) continue
     const signature = JSON.stringify([combo.supplyType, combo.result.status, reasons.map(reasonKey)])
     const existing = grouped.get(signature)
     if (existing) existing.units.push(combo.unitType)

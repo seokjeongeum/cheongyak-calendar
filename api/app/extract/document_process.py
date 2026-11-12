@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import sys
 
 from .pipeline import document_exception_type
@@ -41,6 +42,34 @@ def main():
         result = parse_official_rules(pages, url=request['url'], digest=request['digest'], payload=payload)
     except Exception as exc:
         return {'has_text': True, 'error_stage': 'interpretation', 'exception_type': document_exception_type(exc)}
+    if result.get('identity_status') != 'mismatch':
+        rules = result.get('rules', [])
+        national_rank = any(rule.get('kind') == 'application_method' and rule.get('value') == 'apt_ranked'
+                            and rule.get('housing_kind') == 'national' for rule in rules)
+        if national_rank and not any(rule.get('kind') == 'rank_requirements' and rule.get('complete') for rule in rules):
+            from pdfminer.pdfexceptions import PDFException
+            from .rank_tables import rank_pdf_pages
+            try:
+                rank_pages = rank_pdf_pages(data, pages)
+                if rank_pages != pages:
+                    result = parse_official_rules(pages, url=request['url'], digest=request['digest'], payload=payload,
+                                                  rank_pages=rank_pages)
+            except (PDFException, ValueError, TypeError, MemoryError):
+                # Coordinate recovery is supplementary to readable source facts.
+                pass
+        from .price_tables import parse_price_tables
+        prices = parse_price_tables(pages, url=request['url'], digest=request['digest'],
+                                    payload={**payload, 'rules': [*payload.get('rules', []), *result.get('rules', [])]})
+        if prices['price_identity_confirmed']:
+            result['prices'] = [*result.get('prices', []), *prices['prices']]
+            result['rules'] = [*result.get('rules', []), *prices['rules']]
+            result['price_identity_confirmed'] = True
+        for page in pages:
+            flat = " ".join(page["text"].split())
+            reference = re.search(r"[^■]{0,210}(?:최초|기존|당초)\s*(?:입주자\s*)?모집공고문?(?:을|를)\s*준용[^■.]{0,65}", flat)
+            if reference:
+                result["original_notice_reference"] = {"evidence_page": page["page"], "evidence_text": reference[0].strip()}
+                break
     return {'has_text': True, 'result': result}
 
 

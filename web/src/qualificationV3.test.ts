@@ -26,6 +26,17 @@ describe('v3 official rank coverage',()=>{
     expect(deriveRank(notice({rank_applicability:{status:'not_applicable',account_required:false,verification:'ai_unverified'}}),EMPTY_PROFILE).rank).toBe('unknown')
     expect(deriveRank(notice({rules:rankRules.filter(r=>r.kind!=='account_type')}),facts).rank).toBe('unknown')
   })
+  it('reports only the missing source clause alongside verified rank items', () => {
+    const rules = rankRules.map((entry) => entry.kind === 'rank_requirements' ? {
+      ...entry, complete: false, required_kinds: ['private_rank_months', 'deposit_min_krw', 'account_type', 'previous_winning'],
+    } : entry)
+    const result = deriveRank(notice({ rules }), facts)
+    expect(result.rank).toBe('unknown')
+    expect(result.reasons.filter((reason) => reason.status === 'pass')).toHaveLength(3)
+    expect(result.reasons.filter((reason) => reason.category === 'source_gap')).toMatchObject([
+      { detail: '미확보 조항 · 세대의 이전 당첨 이력 제한', evidenceUrl: source },
+    ])
+  })
   it('comparesamountasof officialcutoff without treatingnewbalanceashistoricalbalance',()=>{
     const rules=rankRules.map(r=>r.kind==='deposit_min_krw'?{...r,require_as_of_date:true}:r)
     expect(deriveRank(notice({rules}),{...facts,factChanges:{}}).reasons.find(r=>r.profileField==='privateDepositAsOfDate')).toBeTruthy()

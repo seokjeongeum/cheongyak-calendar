@@ -102,7 +102,8 @@ async def test_enrichment_exhausted_fallback_exposes_actual_host_statuses_withou
     entries = rule["diagnostics"]
     assert next(entry for entry in entries if entry["stage"] == "discovery" and entry["status"] == "error")["evidence_url"] == requested[0]
     failures = [entry for entry in entries if entry["stage"] == "download" and entry["status"] == "error"]
-    assert requested[1:] == [*([STATIC] * pipeline.MAX_DOWNLOAD_ATTEMPTS), *([WWW] * pipeline.MAX_DOWNLOAD_ATTEMPTS)]
+    assert requested[:2] == [page, page.replace("Detail.do", "DetailView.do")]
+    assert requested[2:] == [*([STATIC] * pipeline.MAX_DOWNLOAD_ATTEMPTS), *([WWW] * pipeline.MAX_DOWNLOAD_ATTEMPTS)]
     assert Counter((entry["evidence_url"], entry["http_status"]) for entry in failures) == {
         (STATIC, 500): pipeline.MAX_DOWNLOAD_ATTEMPTS,
         (WWW, 503): pipeline.MAX_DOWNLOAD_ATTEMPTS,

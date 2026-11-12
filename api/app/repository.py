@@ -153,13 +153,15 @@ def _normalize(payload: dict[str, Any], prior: Notice | None) -> dict[str, Any]:
         for key in ("prices", "rules"):
             if key not in payload or (payload[key] == [] and not payload.get(f"replace_{key}")):
                 base[key] = [item for item in base[key] if item.get("verification") not in {"ai_unverified", "auto_unverified"}]
+        from app.prices import current_price_rule
         base["rules"] = [rule for rule in base["rules"] if rule.get("source") != "official_document_parser"
-                         or (payload.get("document_hash") and rule.get("document_hash") == payload["document_hash"])]
+                         or (payload.get("document_hash") and
+                             (rule.get("document_hash") == payload["document_hash"] or current_price_rule(rule, base)))]
     elif prior:
         # A normal source poll can update official values without erasing
         # document-derived candidates from the unchanged document.
         for key in ("prices", "rules"):
-            if payload.get(key):
+            if payload.get(key) and not (key == "prices" and payload.get("replace_prices")):
                 old_ai = [item for item in _existing_payload(prior)[key] if item.get("verification") in {"ai_unverified", "auto_unverified"}]
                 merged = list(base[key])
                 for candidate in old_ai:
@@ -244,6 +246,13 @@ def _normalize(payload: dict[str, Any], prior: Notice | None) -> dict[str, Any]:
     # those conditions must not be reintroduced by the unchanged-hash merge.
     from app.extract.official_rules import PARSER_VERSION
     rules = retire_reviewed_document_candidates(rules, digest=base.get("document_hash"), parser_version=PARSER_VERSION)
+    from app.extract.price_tables import PRICE_PARSER_VERSION, UNVERIFIED
+    from app.prices import current_price_rule
+    repaired = {rule["document_hash"] for rule in rules if rule.get("kind") == "price_extraction"
+                and rule.get("price_parser_version") == PRICE_PARSER_VERSION
+                and rule.get("identity_confirmed") is True and rule.get("verification") == "official"
+                and rule.get("source") == "official_document_parser" and current_price_rule(rule, {**base, "rules": rules})}
+    prices = [price for price in prices if not (price["verification"] in UNVERIFIED and price["document_hash"] in repaired)]
     rules_complete = requirements_complete(rules, bool(base.get("rules_complete", False)))
 
     return {
@@ -884,7 +893,9 @@ def notice_public(
         if not parser_version_usable(rule, category=notice.category, title=notice.title, rules=notice.rules):
             return False
         if rule.get("source") == "official_document_parser" and notice.document_hash and rule.get("document_hash") != notice.document_hash:
-            return False
+            from app.prices import current_price_rule
+            if not current_price_rule(rule, notice):
+                return False
         if (rule.get("kind") == "document_diagnostics" and rule.get("source") == "official_document_parser"
                 and rule.get("document_hash") in current_diagnostics
                 and rule != current_diagnostics[rule["document_hash"]][1]):
@@ -946,7 +957,13 @@ def notice_public(
                 seen_events.add(key)
                 events.append(EventPublic.model_validate(event))
         for price in notice.prices:
-            key = (price.unit_type, price.area_sqm, price.price_kind, price.amount_krw, price.monthly_krw, price.basis_label)
+            if (price.verification in {"ai_unverified", "auto_unverified"} and notice.document_hash
+                    and price.document_hash and price.document_hash != notice.document_hash):
+                # A prior or rejected attachment cannot supply a current model
+                # price merely because its old source row was retained.
+                continue
+            key = (price.unit_type, price.area_sqm, price.price_kind, price.amount_krw, price.monthly_krw, price.basis_label,
+                   price.document_hash if price.price_kind == "sale_total" and price.basis_label == "동·호별 총분양가" else None)
             current = price_by_key.get(key)
             if current is None or (current.verification != "official" and price.verification == "official"):
                 price_by_key[key] = PricePublic(
@@ -967,6 +984,8 @@ def notice_public(
     rules = retire_reviewed_document_candidates(rules, digest=canonical.document_hash, parser_version=PARSER_VERSION)
     events.sort(key=lambda event: (event.start_date, event.kind, event.label))
     prices = _without_proven_price_aliases(list(price_by_key.values()), rules, canonical.document_hash)
+    from app.prices import project_prices
+    prices, additional_costs = project_prices(prices, rules, canonical.document_hash)
     area_rules = [r for r in rules if r.get("kind") == "unit_exclusive_areas" and r.get("verification") == "official" and is_metadata(r)]
     for price in prices:
         # Existing area_sqm is often SUPLY_AR, not the dwelling's exclusive
@@ -1037,6 +1056,7 @@ def notice_public(
         "price_cap_status": "not_applicable" if reviewed_supply and reviewed_supply["category"] == "public_rental" else next((item.price_cap_status for item in related if item.price_cap_status in {"yes", "no"}), canonical.price_cap_status),
         "events": events,
         "prices": prices,
+        "additional_costs": additional_costs,
         "competitions": competition_rows,
         "competition": competition_state,
         "rules": rules,

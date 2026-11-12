@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,6 +18,21 @@ class EventPublic(BaseModel):
     audience: str | None = None
 
 
+class CostPublic(BaseModel):
+    kind: str
+    label: str
+    amount_krw: int
+    unit: Literal["KRW"] = "KRW"
+    site_name: str | None = None
+    dwelling_identity: str | None = None
+    exclusive_area_sqm: float | None = None
+    verification: str = "unknown"
+    evidence_url: str | None = None
+    evidence_text: str | None = None
+    evidence_page: int | None = None
+    document_hash: str | None = None
+
+
 class PricePublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,6 +40,12 @@ class PricePublic(BaseModel):
     unit_type: str
     area_sqm: float | None = None
     exclusive_area_sqm: float | None = None
+    supply_area_sqm: float | None = None
+    dwelling_identity: str | None = None
+    unit_type_code: str | None = None
+    building: str | None = None
+    room: str | None = None
+    payment_components: list[CostPublic] = Field(default_factory=list)
     area_basis: str | None = None
     price_kind: str
     amount_krw: int | None = None
@@ -33,6 +54,7 @@ class PricePublic(BaseModel):
     verification: str
     evidence_url: str | None = None
     evidence_text: str | None = None
+    evidence_page: int | None = None
     document_hash: str | None = None
 
 
@@ -98,6 +120,7 @@ class QualificationContextPublic(BaseModel):
     capital_region: bool | None = None
     rule_effective_date: date | None = None
     original_announcement_date: date | None = None
+    correction_publication_date: date | None = None
     application_announcement_date: date | None = None
     application_criterion_date: date | None = None
     application_criterion_basis: str | None = None
@@ -160,6 +183,7 @@ class NoticePublic(BaseModel):
     price_cap_status: str
     events: list[EventPublic] = Field(default_factory=list)
     prices: list[PricePublic] = Field(default_factory=list)
+    additional_costs: list[CostPublic] = Field(default_factory=list)
     competitions: list[CompetitionPublic] = Field(default_factory=list)
     competition: CompetitionStatePublic = Field(default_factory=CompetitionStatePublic)
     rules: list[dict[str, Any]] = Field(default_factory=list)

@@ -24,6 +24,8 @@ from app.repository import NON_APPLICATION_KINDS, _existing_payload, lock_notice
 from .pipeline import _retain_same_hash_conditions, enrich_notice
 from .official_rules import PARSER_VERSION, parser_version_usable
 from app.qualification import public_contract_schedule, requirements_complete, retire_reviewed_document_candidates
+from app.prices import current_price_rule
+from .price_tables import rebuild_document_prices, PRICE_PARSER_VERSION
 
 
 def _context(payload: dict) -> tuple:
@@ -40,7 +42,7 @@ def _document_patch(current: dict, enriched: dict) -> dict:
     digest = enriched.get("document_hash") or current.get("document_hash")
     changed = bool(digest and current.get("document_hash") and digest != current["document_hash"])
     local = [copy.deepcopy(r) for r in enriched.get("rules", [])
-             if r.get("source") == "official_document_parser" and (r.get("document_hash") == digest or r.get("kind") == "document_diagnostics")
+             if r.get("source") == "official_document_parser" and (r.get("document_hash") == digest or r.get("kind") == "document_diagnostics" or current_price_rule(r, enriched))
              and r.get("parser_version") == PARSER_VERSION]
     local = list({json.dumps(r, sort_keys=True, ensure_ascii=False): r for r in local}.values())
     # API metadata can change during the download. A parser context carries only
@@ -52,7 +54,7 @@ def _document_patch(current: dict, enriched: dict) -> dict:
     for rule in local:
         if rule.get("kind") == "qualification_context":
             document_context = {k: v for k, v in rule.get("value", {}).items()
-                                if k in {"original_announcement_date", "application_announcement_date", "application_criterion_date", "application_criterion_basis"} or (k == "public_housing" and v is True)}
+                                if k in {"original_announcement_date", "correction_publication_date", "application_announcement_date", "application_criterion_date", "application_criterion_basis"} or (k == "public_housing" and v is True)}
             rule["value"] = {**current_context, **document_context}
     parsed_document = any(r.get("kind") != "document_diagnostics" for r in local)
     if parsed_document and digest and digest == current.get("document_hash"):
@@ -87,10 +89,15 @@ def _document_patch(current: dict, enriched: dict) -> dict:
     if changed:
         patch["prices"] = [p for p in current.get("prices", []) if p.get("verification") not in {"ai_unverified", "auto_unverified"}]
         patch["replace_prices"] = True
-    verified_prices = [copy.deepcopy(p) for p in enriched.get("prices", []) if p.get("verification") == "official" and p.get("document_hash") == digest]
-    if verified_prices:
-        units = {p["unit_type"] for p in verified_prices}
-        patch["prices"] = [p for p in current.get("prices", []) if p["unit_type"] not in units] + verified_prices
+    price_hashes = {digest, *(r.get("document_hash") for r in local if r.get("kind") == "price_details" and current_price_rule(r, enriched))}
+    verified_prices = [copy.deepcopy(p) for p in enriched.get("prices", []) if p.get("verification") == "official" and p.get("document_hash") in price_hashes]
+    repair_hashes = {r.get("document_hash") for r in local if r.get("kind") == "price_extraction"
+                     and r.get("price_parser_version") == PRICE_PARSER_VERSION and r.get("identity_confirmed") is True}
+    if verified_prices or repair_hashes:
+        refreshed = patch.get("prices", current.get("prices", []))
+        for price_hash in repair_hashes or {digest}:
+            refreshed = rebuild_document_prices(refreshed, [], local, price_hash)
+        patch["prices"] = rebuild_document_prices(refreshed, verified_prices, local, digest)
         patch["replace_prices"] = True
     return patch
 

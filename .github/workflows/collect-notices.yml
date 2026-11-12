@@ -5,6 +5,9 @@ on:
   # GitHub schedules only workflows present on the default branch.
   schedule:
     - cron: '17 */3 * * *'
+  push:
+    branches: [work]
+    paths: ['ops/document-reprocess/*.json']
   workflow_dispatch:
     inputs:
       operation:
@@ -13,7 +16,7 @@ on:
         options: [collect, reprocess]
         default: collect
       notice_ids:
-        description: Comma-separated saved notice UUIDs for reprocessing; empty selects up to 50 active notices
+        description: Comma-separated saved notice UUIDs; empty selects all active non-rental notices
         type: string
         required: false
 
@@ -27,7 +30,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${{ (github.event_name == 'push' || inputs.operation == 'reprocess') && 90 || 60 }}
     steps:
       - name: Verify database connection is configured
         env:
@@ -41,7 +44,8 @@ jobs:
       - name: Check out the deployed application branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: work
+          ref: ${{ github.event_name == 'push' && github.sha || 'work' }}
+          fetch-depth: ${{ github.event_name == 'push' && 2 || 1 }}
           persist-credentials: false
 
       - name: Set up Python
@@ -58,7 +62,7 @@ jobs:
         run: python -m pip install ./api
 
       - name: Collect official notices once
-        if: github.event.inputs.operation != 'reprocess'
+        if: github.event_name != 'push' && inputs.operation != 'reprocess'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           # Service keys are read from this database, never Actions variables.
@@ -66,35 +70,18 @@ jobs:
         run: python -m app.ingest.worker --once
 
       - name: Reprocess saved official documents
-        if: github.event.inputs.operation == 'reprocess'
+        if: github.event_name == 'push' || inputs.operation == 'reprocess'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NOTICE_IDS: ${{ inputs.notice_ids }}
+          NOTICE_IDS: ${{ inputs.notice_ids || '' }}
           LOG_LEVEL: WARNING
-        run: |
-          python - <<'PY'
-          import os
-          import subprocess
-          import sys
-          import uuid
-
-          ids = [value.strip() for value in os.environ.get("NOTICE_IDS", "").split(",") if value.strip()]
-          if len(ids) > 50:
-              raise SystemExit("At most 50 saved notices can be selected.")
-          args = [sys.executable, "-m", "app.extract.reprocess", "--limit", "50", "--report", "/tmp/document-review.json"]
-          if ids:
-              for value in dict.fromkeys(ids):
-                  args.extend(["--notice-id", str(uuid.UUID(value))])
-          else:
-              args.append("--active")
-          subprocess.run(args, check=True)
-          PY
+        run: python ops/reprocess_documents.py --report "$RUNNER_TEMP/document-review.json"
 
       - name: Save public document review report
-        if: always() && github.event.inputs.operation == 'reprocess'
+        if: always() && (github.event_name == 'push' || inputs.operation == 'reprocess')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: public-document-review
-          path: /tmp/document-review.json
+          path: ${{ runner.temp }}/document-review.json
           if-no-files-found: ignore
           retention-days: 7

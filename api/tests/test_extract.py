@@ -18,6 +18,17 @@ from app.extract.pipeline import (
 )
 
 
+def readable_model_source(monkeypatch):
+    # These tests exercise model quota/price merging, not the PDF decoder. A
+    # selected source must now have successful local identity evidence first.
+    from app.extract import pipeline
+    async def interpret(operation, **kwargs):
+        return {"has_text": True, "result": {"status": "partial", "rules": [
+            {"kind": "age_min", "value": 19, "verification": "official",
+             "source": "official_document_parser", "document_hash": kwargs["digest"]}]}}
+    monkeypatch.setattr(pipeline, "_isolated_document_operation", interpret)
+
+
 def test_document_links_accept_only_official_https_documents():
     html = (
         '<a href="/files/notice.pdf">PDF</a>'
@@ -70,6 +81,7 @@ def test_invalid_or_unproven_prices_are_dropped():
 
 @pytest.mark.asyncio
 async def test_extract_document_preserves_evidence_and_defers_on_quota(monkeypatch):
+    readable_model_source(monkeypatch)
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_UNBILLED_PROJECT_CONFIRMED", "1")
     calls = []
@@ -147,6 +159,7 @@ async def test_key_alone_cannot_make_a_paid_request(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_extensionless_official_document_is_extracted(monkeypatch):
+    readable_model_source(monkeypatch)
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_UNBILLED_PROJECT_CONFIRMED", "1")
     seen = []
@@ -165,6 +178,7 @@ async def test_extensionless_official_document_is_extracted(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_unverified_rental_price_replaces_empty_type_placeholder(monkeypatch):
+    readable_model_source(monkeypatch)
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_UNBILLED_PROJECT_CONFIRMED", "1")
 

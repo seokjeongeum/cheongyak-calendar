@@ -186,6 +186,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .price-evidence a:hover{text-decoration:underline}
 .price-evidence small.evidence-text{display:block;width:100%;font-size:9px;color:#7a8799;line-height:1.45;overflow-wrap:anywhere}
 .price-empty{display:flex;gap:7px;align-items:center;background:#fff;border:1px dashed #dce3eb;border-radius:8px;padding:13px;color:#8c97a6;font-size:11px}
+.payment-component{overflow-wrap:anywhere}
+.additional-costs{border-top:1px solid #edf0f3;margin-top:10px;padding:9px 0 2px;color:#526983;font-size:11px}
+.additional-costs ul{padding:0;margin:5px 0;list-style:none}
+.additional-costs li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:3px 0;overflow-wrap:anywhere}
+.additional-costs small{color:#6b7f94}
+.additional-costs a{display:inline-flex;gap:3px;align-items:center;color:#447bc9}
 .notice-foot{justify-content:space-between;gap:12px;min-height:56px;flex-wrap:wrap}
 .eligibility-summary{gap:6px;font-size:11px;color:#677a92;font-weight:700}
 .eligibility-summary svg{color:#447aca}
@@ -461,7 +467,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 @media print{.notice-card{content-visibility:visible;contain-intrinsic-size:none}}
 
 
-.dialog-backdrop[aria-hidden="true"]{visibility:hidden;pointer-events:none}
+/* Keep visibility changes on the dialog layer, including when all five forms are mounted. */
+.dialog-backdrop{contain:layout paint style;will-change:opacity}
+.dialog-backdrop[aria-hidden="true"]{opacity:0;pointer-events:none}
 .dialog-body{position:relative;padding:0;overflow:hidden}
 .dialog-body>.step-fields{position:absolute;inset:0;padding:28px 32px;overflow-y:auto;overscroll-behavior:contain;will-change:opacity}
 /* Opacity does not propagate through every form control like visibility.

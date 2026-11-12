@@ -41,7 +41,7 @@ def test_explicit_official_table_alias_is_hidden_in_list_and_detail_without_chan
 
 
 @pytest.mark.parametrize("change", [
-    "different_amount", "different_monthly", "candidate_old_hash", "official_old_hash", "proof_old_hash",
+        "different_amount", "different_monthly", "official_old_hash", "proof_old_hash",
     "unverified_proof", "api_only_proof", "no_alias_pair", "area_only", "wrong_quoted_area", "missing_page",
     "other_price_kind", "unknown_candidate", "two_official_amounts", "two_identical_official_prices",
     "ambiguous_alias", "unknown_mapping",
@@ -54,8 +54,6 @@ def test_unproven_or_ambiguous_price_alias_remains_visible(db, change):
         candidate["amount_krw"] += 1
     elif change == "different_monthly":
         candidate["monthly_krw"] = 1
-    elif change == "candidate_old_hash":
-        candidate["document_hash"] = "old-bytes"
     elif change == "official_old_hash":
         official["document_hash"] = "old-bytes"
     elif change == "proof_old_hash":
@@ -90,6 +88,16 @@ def test_unproven_or_ambiguous_price_alias_remains_visible(db, change):
     for detail in (False, True):
         public = notice_public([notice], detail=detail)
         assert any(price.unit_type == "84A" for price in public.prices)
+
+
+def test_old_model_price_stays_in_source_but_is_excluded_from_public_projection(db):
+    raw = payload()
+    raw["prices"][1]["document_hash"] = "old-bytes"
+    notice = upsert_notice(db, raw)
+    db.commit()
+    assert len(notice.prices) == 2
+    for detail in (False, True):
+        assert all(price.unit_type != "84A" for price in notice_public([notice], detail=detail).prices)
     assert any(price.unit_type == "84A" for price in notice.prices)
 
 

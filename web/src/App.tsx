@@ -122,7 +122,7 @@ function safeHref(url: string | null | undefined): string | undefined {
 }
 
 function isRent(price: NoticePrice): boolean {
-  return price.monthly_krw != null || /rent|rental|deposit|임대|보증/i.test(price.price_kind)
+  return /^(?:rent|deposit|deposit_monthly)$/.test(price.price_kind)
 }
 
 function verificationLabel(verification: string | null | undefined): string {
@@ -713,6 +713,8 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
 
   const sources = [...new Set(notice.sources?.length ? notice.sources : [notice.source])].map((source) => sourceName(source)).join(' · ')
   const unitCount = new Set(notice.prices.map((price) => price.unit_type)).size
+  const dwellingPrices = notice.prices.some((price) => !!price.dwelling_identity)
+  const priceHeading = dwellingPrices ? '동·호별 가격' : '주택형별 가격'
 
   return <article className={`notice-card${isLocal ? ' local-notice' : ''}${resultsMode ? ' result-card' : ''}${unavailable ? ' notice-unavailable' : ''}`} data-unavailable={unavailable || undefined} data-evaluation-ready={!!evaluation || undefined} data-content-expanded={!unavailable || cardOpen}>
     <div className="notice-head"><div className="notice-tags">{!resultsMode && activeApplicationEvents(notice, today).length > 0 && <span className="ongoing-badge">현재 접수 중</span>}{unavailable && <span className="unavailable-badge">내 조건으로 신청 불가</span>}{methodLabel && <span className="application-method-tag">{methodLabel}</span>}<span className={`type-tag type-${categoryGroup(notice.category)}`}>{categoryLabel}</span>{notice.housing_kind !== 'not_applicable' && <span className="unknown-tag">{notice.housing_kind === 'private' ? '민영주택' : notice.housing_kind === 'national' ? '국민주택' : '주택 종류 확인 중'}</span>}{notice.rank_applicability?.status === 'not_applicable' && <span className="unknown-tag">아파트 1·2순위 적용 없음</span>}{notice.rank_applicability?.account_required === false && <span className="local-tag">청약통장 불필요</span>}{isLocal && <span className="local-tag"><MapPin size={12} /> {evaluation?.candidateLabel}</span>}{notice.price_cap_status === 'yes' && <span className="cap-tag"><Sparkles size={13} /> 분양가상한제 적용</span>}{notice.price_cap_status === 'unknown' && <span className="unknown-tag">상한제 확인 필요</span>}{resultsMode && <span className="result-status-tag">{(notice.application_end_date || '') >= today ? '접수 중 결과' : '접수 종료'}</span>}</div><div className="notice-provider"><span>{notice.provider ? `${notice.provider} · ` : ''}출처 {sources}</span>{(notice.correction_of_id || notice.correction_of_external_id) && <span className="revision-tag">정정 공고</span>}{notice.version > 1 && <span className="revision-tag">자료 갱신 {notice.version}판</span>}</div></div>
@@ -736,8 +738,9 @@ export const NoticeCard = memo(function NoticeCard({ notice, profile, demoMode, 
     {!resultsMode && evaluation?.contractNote && <p className="contract-comparison-note">{evaluation.contractNote}{safeHref(notice.contract_schedule?.evidence_url) && <a href={safeHref(notice.contract_schedule?.evidence_url)} target="_blank" rel="noopener noreferrer">계약 일정 원문 <ExternalLink size={12} /></a>}</p>}
 
 
-    <div className="prices-section"><div className="prices-heading"><div><Wallet size={16} /><strong>주택형별 가격</strong><span className="price-count">{unitCount}개 주택형</span></div>{notice.price_cap_status === 'no' && <span className="cap-no">분양가상한제 미적용</span>}{notice.price_cap_status === 'not_applicable' && <span className="cap-na">분양가상한제 해당 없음</span>}</div>
+    <div className="prices-section"><div className="prices-heading"><div><Wallet size={16} /><strong>{priceHeading}</strong><span className="price-count">{unitCount}{dwellingPrices ? '건' : '개 주택형'}</span></div>{notice.price_cap_status === 'no' && <span className="cap-no">분양가상한제 미적용</span>}{notice.price_cap_status === 'not_applicable' && <span className="cap-na">분양가상한제 해당 없음</span>}</div>
       {notice.prices.length ? <div className="price-table" role="table" aria-label={`${notice.title} 주택형별 가격`}><div className="price-table-header" role="row"><span role="columnheader">주택형</span><span role="columnheader">금액</span><span role="columnheader">기준 · 출처</span></div>{notice.prices.map((price, index) => <PriceRow key={`${price.unit_type}-${price.price_kind}-${index}`} price={price} source={notice.source} officialUrl={notice.official_url} demoMode={demoMode} unavailable={evaluation?.priceUnavailable[index] || false} closed={decision.closedUnits.some((unit) => competitionUnitKey(unit) === competitionUnitKey(price.unit_type)) || resultsMode && (notice.competitions || []).some((row) => row.verification === 'official' && row.result_status === 'local_first_closed' && competitionUnitKey(row.unit_type) === competitionUnitKey(price.unit_type))} closedLabel={decision.closedUnits.length ? '기타지역 배정 기회 종료' : '해당지역 1순위 마감'} applicationFeeKrw={applicationFee(notice, price.unit_type)} />)}</div> : <div className="price-empty"><CircleAlert size={16} /> 주택형별 가격 미공개 · 공식 공고문을 확인해 주세요.</div>}
+      {!!notice.additional_costs?.length && <section className="additional-costs" aria-label="분양가 외 비용"><strong>분양가 외 비용</strong><ul>{notice.additional_costs.map((cost, index) => <li key={`${cost.kind}-${cost.site_name}-${index}`}><span>{cost.site_name && `${cost.site_name} · `}{cost.label} {cost.amount_krw.toLocaleString('ko-KR')}원</span><small>{verificationLabel(cost.verification)}</small>{!demoMode && safeHref(cost.evidence_url) && <a href={safeHref(cost.evidence_url)} target="_blank" rel="noopener noreferrer">원문{cost.evidence_page && ` ${cost.evidence_page}쪽`} <ExternalLink size={12} /></a>}</li>)}</ul></section>}
     </div>
 
     <CompetitionSection notice={notice} profile={profile} decision={decision} override={override} onOverride={changeOverride} now={now} demoMode={demoMode} resultsMode={resultsMode} evaluation={evaluation} />
@@ -774,7 +777,25 @@ function PriceRow({ price, source, officialUrl, demoMode, unavailable = false, c
   const basis = price.basis_label || (!rental && price.price_kind === 'sale_max' ? '주택형별 최고 분양금액' : rental ? '임대보증금' : '가격 기준 미공개')
   const link = demoMode ? undefined : safeHref(price.evidence_url || officialUrl)
   const origin = demoMode ? '화면 예시' : price.source ? sourceName(price.source) : sourceName(source, price.evidence_url)
-  return <div className="price-row" role="row"><div className={`unit-name${unavailable ? ' unit-unavailable' : ''}`} role="cell"><strong>{price.unit_type || '주택형 미공개'}</strong>{price.exclusive_area_sqm != null && <small>전용 {price.exclusive_area_sqm.toLocaleString('ko-KR')}㎡</small>}{price.area_sqm != null && price.area_sqm !== price.exclusive_area_sqm && <small>{price.area_basis === 'supply' ? '공급 ' : price.area_basis === 'exclusive' ? '전용 ' : '면적 '}{price.area_sqm.toLocaleString('ko-KR')}㎡</small>}{unavailable && <span className="unavailable-badge">내 조건으로 신청 불가</span>}{closed && <span className="competition-closed-badge">{closedLabel}</span>}</div><div className="price-main" role="cell">{rental ? <><strong>{amount == null ? '보증금 미공개' : `보증금 ${formatWon(amount)}`}</strong><span>{price.monthly_krw == null ? '월 임대료 미공개' : `월 ${formatWon(price.monthly_krw)}`}</span></> : <strong className={amount == null ? 'missing-price' : ''}>{formatWon(amount)}</strong>}{applicationFeeKrw != null && <span>청약신청금 {formatWon(applicationFeeKrw)}</span>}</div><div className="price-evidence" role="cell"><span>{basis}</span><span className="price-origin">출처 {origin}</span><span className={`verification ${price.verification === 'official' ? 'verified' : price.verification === 'ai_unverified' || price.verification === 'auto_unverified' ? 'unverified' : 'unknown'}`}>{verificationLabel(price.verification)}</span>{link && <a href={link} target="_blank" rel="noopener noreferrer" aria-label={`${price.unit_type} 가격 원문 근거`}>원문 <ExternalLink size={12} /></a>}{price.evidence_text && <small className="evidence-text">원문 근거: {price.evidence_text}</small>}</div></div>
+  const supplyArea = price.supply_area_sqm ?? (price.area_basis === 'supply' ? price.area_sqm : null)
+  const otherArea = !supplyArea && price.area_sqm != null && price.area_sqm !== price.exclusive_area_sqm ? price.area_sqm : null
+  return <div className="price-row" role="row">
+    <div className={`unit-name${unavailable ? ' unit-unavailable' : ''}`} role="cell">
+      <strong>{price.unit_type || '주택형 미공개'}</strong>
+      {price.exclusive_area_sqm != null && <small>전용 {price.exclusive_area_sqm.toLocaleString('ko-KR')}㎡</small>}
+      {supplyArea != null && <small>공급 {supplyArea.toLocaleString('ko-KR')}㎡</small>}
+      {otherArea != null && <small>{price.area_basis === 'exclusive' ? '전용' : '면적 기준 확인'} {otherArea.toLocaleString('ko-KR')}㎡</small>}
+      {unavailable && <span className="unavailable-badge">내 조건으로 신청 불가</span>}
+      {closed && <span className="competition-closed-badge">{closedLabel}</span>}
+    </div>
+    <div className="price-main" role="cell">
+      {rental ? <><strong>{amount == null ? '보증금 미공개' : `보증금 ${formatWon(amount)}`}</strong><span>{price.monthly_krw == null ? '월 임대료 미공개' : `월 ${formatWon(price.monthly_krw)}`}</span></>
+        : <strong className={amount == null ? 'missing-price' : ''} title={amount == null ? undefined : `${amount.toLocaleString('ko-KR')}원`}>{formatWon(amount)}</strong>}
+      {!rental && price.payment_components?.map((component, index) => <span className="payment-component" key={`${component.kind}-${index}`} title={component.evidence_text || undefined}>{component.label} {component.amount_krw.toLocaleString('ko-KR')}원</span>)}
+      {applicationFeeKrw != null && <span>청약신청금 {formatWon(applicationFeeKrw)}</span>}
+    </div>
+    <div className="price-evidence" role="cell"><span>{basis}</span><span className="price-origin">출처 {origin}</span><span className={`verification ${price.verification === 'official' ? 'verified' : price.verification === 'ai_unverified' || price.verification === 'auto_unverified' ? 'unverified' : 'unknown'}`}>{verificationLabel(price.verification)}</span>{link && <a href={link} target="_blank" rel="noopener noreferrer" aria-label={`${price.unit_type} 가격 원문 근거`}>원문{price.evidence_page ? ` ${price.evidence_page}쪽` : ''} <ExternalLink size={12} /></a>}{price.evidence_text && <small className="evidence-text">원문 근거: {price.evidence_text}</small>}</div>
+  </div>
 }
 
 function CompetitionSection({ notice, decision, override, onOverride, now, demoMode, evaluation, resultsMode = false }: { notice: Notice; profile: LocalProfile; decision: CompetitionDecision; override?: ResidenceArea; onOverride: (area: ResidenceArea | 'automatic') => void; now: number; demoMode: boolean; evaluation?: NoticeEvaluation; resultsMode?: boolean }) {

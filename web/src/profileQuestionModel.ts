@@ -28,6 +28,10 @@ export interface ProfileQuestionModel {
   needsMonthly: boolean
   needsNetAssets: boolean
   needsPlannedMarriage: boolean
+  needsPlannedHousehold: boolean
+  needsPlannedPartnerHistory: boolean
+  needsSameSpouseMarriage: boolean
+  sameSpouseMarriageRules: ProfileRuleContext[]
   needsSingleParent: boolean
   needsProperty: boolean
   needsAccountWinningUsage: boolean
@@ -89,6 +93,9 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
   }
   const providerRules = scopedRules.filter(({ rule }) => rule.kind === 'provider_employee_restriction')
   const parentScopes = notices.flatMap(elderParentScopes)
+  const containsMarriageHistory = (rule: NoticeRule): boolean => rule.kind === 'marriage_months_max' && rule.sum_same_spouse_remarriage === true ||
+    Array.isArray(rule.conditions) && rule.conditions.some((child) => !!child && typeof child === 'object' && typeof child.kind === 'string' && containsMarriageHistory(child))
+  const sameSpouseMarriageRules = notices.flatMap((notice) => notice.rules.filter((rule) => rule.verification === 'official' && rule.effect !== 'metadata' && containsMarriageHistory(rule)).map((rule) => ({ rule, notice, date: criterionDate(rule, notice) })))
   const offeringText = notices.flatMap((notice) => [...notice.rules.map((rule) => `${rule.supply_type || ''} ${rule.kind === 'special_eligibility' ? rule.value || '' : ''}`), ...notice.events.map((event) => event.label), ...(notice.competitions || []).map((row) => row.supply_type_label || '')]).join(' ')
   const model: ProfileQuestionModel = {
     scopedRules,
@@ -104,7 +111,7 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
     parentFactsShared: scopedRules.some(sharedParentFact),
     institution: /기관추천|추천|장애인|국가유공자|중소기업/.test(offeringText), relocation: /이전기관|이전공공기관/.test(offeringText),
     needsMonthly: kinds.has('shinhee_income') || kinds.has('monthly_income_max_krw') || scopedRules.some(({ rule }) => rule.kind === 'income_max_krw' && rule.period !== 'annual'),
-    needsNetAssets: kinds.has('shinhee_assets'), needsPlannedMarriage: kinds.has('planned_marriage'), needsSingleParent: kinds.has('single_parent_family'),
+    needsNetAssets: kinds.has('shinhee_assets'), needsPlannedMarriage: kinds.has('planned_marriage'), needsPlannedHousehold: kinds.has('planned_household_homeless'), needsPlannedPartnerHistory: kinds.has('planned_marriage_not_former_spouse'), needsSameSpouseMarriage: sameSpouseMarriageRules.length > 0, sameSpouseMarriageRules, needsSingleParent: kinds.has('single_parent_family'),
     needsProperty: scopedRules.some(({ rule }) => /real_estate|vehicle|자동차|부동산/.test(String(rule.asset_basis || rule.kind))),
     needsAccountWinningUsage: kinds.has('account_unused_after_winning'),
   }
@@ -112,6 +119,15 @@ export function getProfileQuestionModel(notices: Notice[], today: string): Profi
   return model
 }
 export function warmProfileQuestionModel(notices: Notice[], today: string): void { getProfileQuestionModel(notices, today) }
+
+/** A met child alternative makes marriage-duration history unnecessary. */
+export function needsSameSpouseMarriageFacts(profile: LocalProfile, model: ProfileQuestionModel): boolean {
+  if (profile.maritalStatus !== 'married' || !model.needsSameSpouseMarriage) return false
+  return model.sameSpouseMarriageRules.some(({ rule, notice }) => {
+    const compared = evaluateRule(rule, profile, notice, rule.unit_type || undefined)
+    return compared.status === 'review' && ['sameSpouseRemarriage', 'priorSameSpouseMarriageMonths'].includes(String(compared.profileField))
+  })
+}
 
 /** Stop this route only when every offered scope has an unavoidable, official age mismatch. */
 export function getElderParentQuestionState(profile: LocalProfile, model: ProfileQuestionModel): ElderParentQuestionState {

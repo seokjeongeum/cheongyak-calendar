@@ -92,9 +92,10 @@ def test_address_and_old_first_announcement_are_not_applicant_regions():
 
 
 @pytest.mark.parametrize("path", ["APT", "APTRemndr", "PRMO"])
-def test_public_detail_view_keeps_exact_notice_number_when_fixing_obsolete_path(path):
+def test_public_detail_keeps_published_endpoint_and_offers_same_notice_alias(path):
     url = f"https://www.applyhome.co.kr/ai/aia/select{path}LttotPblancDetail.do?houseManageNo=2026950087&pblancNo=2026950087&houseSecd=02"
-    assert pipeline.announcement_page_url(url) == url.replace("Detail.do", "DetailView.do")
+    assert pipeline.announcement_page_url(url) == url
+    assert pipeline.announcement_page_candidates(url) == [url, url.replace("Detail.do", "DetailView.do")]
     assert pipeline.announcement_page_url(url.replace("www.applyhome.co.kr", "example.com")) == url.replace("www.applyhome.co.kr", "example.com")
 
 

@@ -130,7 +130,8 @@ def test_list_and_detail_project_official_classification_and_nullable_context(db
         assert item["housing_kind_evidence"]["evidence_url"].startswith("https://www.data.go.kr")
         assert item["qualification_context"] == {"public_housing": None, "speculation_zone": False,
                    "subscription_overheated": True, "weakened_area": None, "capital_region": True, "rule_effective_date": None, "original_announcement_date": None,
-                   "application_announcement_date": None, "application_criterion_date": None, "application_criterion_basis": None}
+                   "application_announcement_date": None, "application_criterion_date": None, "application_criterion_basis": None,
+                   "correction_publication_date": None}
         assert item["rules_complete"] is False
 
 

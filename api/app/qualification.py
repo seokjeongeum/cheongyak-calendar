@@ -13,7 +13,7 @@ from app.schemas import ApplicationMethodEvidencePublic, ContractSchedulePublic,
 
 
 CONTEXT_FLAGS = ("public_housing", "speculation_zone", "subscription_overheated", "weakened_area", "capital_region")
-METADATA_KINDS = {"housing_classification", "qualification_context", "rank_applicability", "rank_requirements", "application_method", "contract_schedule", "selection_method", "winning_scores", "applicant_regions", "regional_allocation", "supply_financial_terms", "unit_exclusive_areas", "offered_supplies", "condition_coverage", "document_diagnostics"}
+METADATA_KINDS = {"housing_classification", "qualification_context", "rank_applicability", "rank_requirements", "application_method", "contract_schedule", "selection_method", "winning_scores", "applicant_regions", "regional_allocation", "supply_financial_terms", "unit_exclusive_areas", "offered_supplies", "condition_coverage", "document_diagnostics", "family_route", "document_bundle", "price_details", "additional_costs", "price_extraction"}
 APPLICATION_METHODS = {"apt_ranked", "unranked_after", "optional_supply", "cancelled_resupply", "first_come", "officetel"}
 
 
@@ -314,7 +314,7 @@ def merge_poll_rules(previous: list[dict[str, Any]], incoming: list[dict[str, An
                 # fact, not a copied snapshot of obsolete API flags. The
                 # caller already retires parser data on URL/hash replacement.
                 protected = {key: value for key, value in (rule.get("value") or {}).items()
-                             if key in {"original_announcement_date", "application_announcement_date", "application_criterion_date", "application_criterion_basis", "rule_effective_date"}
+                             if key in {"original_announcement_date", "correction_publication_date", "application_announcement_date", "application_criterion_date", "application_criterion_basis", "rule_effective_date"}
                              or (key == "public_housing" and value is True)}
                 retained = {**rule, "value": protected}
             previous_metadata.append(retained)
@@ -378,7 +378,7 @@ def public_classification(rules: list[dict[str, Any]]) -> tuple[str, HousingKind
             except ValueError:
                 pass
     merged["original_announcement_date"] = min(original_dates) if original_dates else None
-    for field in ("application_announcement_date", "application_criterion_date"):
+    for field in ("application_announcement_date", "application_criterion_date", "correction_publication_date"):
         values = set()
         for context in contexts:
             raw = context.get(field)
