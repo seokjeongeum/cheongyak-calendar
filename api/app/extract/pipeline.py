@@ -487,7 +487,7 @@ class _DocumentLinkParser(HTMLParser):
             # precede an older PDF; published corrections never lose priority
             # because the local converter is unavailable.
             pdf = urlparse(target).path.lower().endswith(".pdf") or ".pdf" in label
-            role = ("price_table" if re.search(r"(?:공급|분양|매각)\s*(?:금액|가격)표|(?:동.?호|세대)별.{0,15}(?:가격|금액)|공급대상\s*목록", label)
+            role = ("price_table" if re.search(r"(?:공급|분양|매각)\s*(?:금액|가격)표|(?:동.?호|세대)별.{0,15}(?:가격|금액)|공급대상\s*(?:목록|및\s*공급가격)", label)
                     else "correction" if corrected
                     else "referenced" if re.search(r"(?:최초|과거|기존|당초).{0,8}공고|준용", label) else "primary")
             self.roles[target] = role
@@ -1027,9 +1027,8 @@ async def enrich_notice(
         best_link = None
         best_role = None
         best_score = -1
-        local_documents = []
         ai_candidates = {"rules": [], "prices": []}
-        for link in links[:MAX_DOCUMENT_LINKS]:
+        for link in selected_primary:
             role = candidates.get(link, {}).get("role", "primary")
             if best_link and best_score >= 100 and role != "price_table":
                 label = candidates.get(link, {}).get("label", "")
@@ -1043,14 +1042,7 @@ async def enrich_notice(
             try:
                 local = await extract_local_document(link, client, payload=payload)
                 entries = [{**entry, "document_role": role} for entry in local["diagnostics"]]
-                if role == "price_table" and local.get("price_identity_confirmed") and local.get("prices"):
-                    for entry in entries:
-                        if entry.get("code") == "context_not_supported":
-                            entry.update(status="resolved", resolved_document_hash=local.get("document_hash"),
-                                         resolution_message="공급가격표에서 동·호별 금액과 납부 항목을 확인했습니다.")
-                            entry.pop("missing_items", None)
                 diagnostics.extend(entries)
-                local_documents.append({"url": link, "role": role, "local": local})
                 conditions = sum(r.get("effect") != "metadata" for r in local.get("rules", [])) + int(_has_reviewed_geography(local.get("rules", [])))
                 readable = any(d["code"] == "document_read" and d.get("status") == "ok" for d in local["diagnostics"])
                 score = -1 if local.get("identity_status") == "mismatch" else 100 + conditions if conditions else 10 if readable else 0
@@ -1162,18 +1154,38 @@ async def enrich_notice(
                                        if r.get("kind") == "qualification_context"), None)
                     if prior_date == original_date and prior.get("document_hash") and prior.get("identity_status") != "mismatch":
                         original.update(url=prior.get("document_url") or link, document_hash=prior["document_hash"])
+            if not original.get("url"):
+                from .reviewed_sources import REVIEWED_ORIGINAL_NOTICES
+                reviewed = REVIEWED_ORIGINAL_NOTICES.get((digest, original_date))
+                if reviewed:
+                    original.update(reviewed)
             bundle.append(original)
-        for document in local_documents:
-            if not bundle:
-                break
-            supplement = document["local"]
-            if (document["role"] != "price_table" or supplement.get("identity_status") == "mismatch"
+        for link in price_links[:3] if bundle else []:
+            appendix_reference = best.get("price_appendix_reference")
+            try:
+                supplement = await extract_local_document(link, client, payload={
+                    **payload,
+                    **({"price_appendix_reference": {**appendix_reference, "url": link, "selected_document_hash": digest}}
+                       if appendix_reference and re.search(r"공급대상\s*및\s*공급가격", candidates[link]["label"]) else {}),
+                })
+            except (httpx.HTTPError, ValueError) as exc:
+                diagnostics.extend({**entry, "document_role": "price_table"} for entry in _download_failures(exc, link))
+                continue
+            supplement_diagnostics = [{**entry, "document_role": "price_table"} for entry in supplement["diagnostics"]]
+            diagnostics.extend(supplement_diagnostics)
+            if (supplement.get("identity_status") == "mismatch"
                     or supplement.get("price_identity_confirmed") is not True or not supplement.get("document_hash")
                     or supplement.get("status") in {"unreadable", "error"}):
                 continue
             supplement_hash = supplement["document_hash"]
-            bundle.append({"role": "price_table", "url": supplement.get("document_url") or document["url"],
-                           "document_hash": supplement_hash, "selected_document_hash": digest})
+            for entry in supplement_diagnostics:
+                if entry.get("code") == "context_not_supported":
+                    entry.update(status="resolved", resolved_document_hash=supplement_hash,
+                                 resolution_message="공급가격표에서 동·호별 금액과 납부 항목을 확인했습니다.")
+                    entry.pop("missing_items", None)
+            bundle.append({"role": "price_table", "url": supplement.get("document_url") or link,
+                           "document_hash": supplement_hash, "selected_document_hash": digest,
+                           **({"evidence_url": best_url, **appendix_reference} if appendix_reference else {})})
             for rule in supplement.get("rules", []):
                 if rule.get("kind") in {"price_details", "additional_costs", "price_extraction", "unit_exclusive_areas"} and rule.get("document_hash") == supplement_hash:
                     existing_rules.append({**rule, "selected_document_hash": digest, "source_document_role": "price_table"})

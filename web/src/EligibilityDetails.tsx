@@ -139,6 +139,19 @@ function ApplicationInstructions({ notice, demoMode = false, brief = false }: { 
     return <li key={`${item.label}-${item.detail}`}><strong>{item.label}</strong><p>{item.detail}</p>{!brief && link && <a href={link} target="_blank" rel="noopener noreferrer">신청 조건 원문{item.evidencePage ? ` ${item.evidencePage}쪽` : ''} <ExternalLink size={12} /></a>}</li>
   })}</ul></section>
 }
+function ReferencedNotice({ notice, demoMode }: { notice: Notice; demoMode: boolean }) {
+  const bundle = notice.rules.find((rule) => rule.kind === 'document_bundle' && rule.verification === 'official'
+    && rule.document_hash === notice.document_hash)
+  const reference = Array.isArray(bundle?.documents) ? bundle.documents.find((item) => item?.role === 'referenced'
+    && item.selected_document_hash === notice.document_hash && typeof item.document_hash === 'string') : undefined
+  const href = demoMode ? undefined : safeHref(reference?.url)
+  if (!href) return null
+  return <section className="qualification-section"><h5>준용하는 최초 모집공고</h5>
+    <p>{reference.original_announcement_date} 모집공고</p>
+    <blockquote className="qualification-evidence">{reference.evidence_text}</blockquote>
+    <a href={href} target="_blank" rel="noopener noreferrer">최초 모집공고 원문 <ExternalLink size={12} /></a>
+  </section>
+}
 function MissingSourceTopics({ topics, demoMode = false }: { topics: ReturnType<typeof conditionSourceStatus>['topics']; demoMode?: boolean }) {
   return <ul className="qualification-remaining-topics">{topics.map((item) => {
     const link = demoMode ? undefined : safeHref(item.evidenceUrl)
@@ -282,6 +295,7 @@ export function EligibilityDetails({ notice, profile, decision, demoMode = false
       return <section className={className} key={key}>{heading}{!!group.reasons.length && <ReasonList reasons={group.reasons} demoMode={demoMode} onProfile={onProfile} />}</section>
     })}
     <ApplicationInstructions notice={notice} demoMode={demoMode} />
+    <ReferencedNotice notice={notice} demoMode={demoMode} />
     {(additionalSourceGaps.length > 0 || source.diagnostics.length > 0 || source.topics.length > 0 || !coverage.verifiedCount && !grouped.size) && <section className="qualification-source-gap" aria-label="서비스 원문 검토 부족"><strong>서비스 원문 검토 부족 · 미확보 조항과 처리 단계</strong><p>{commonReasons.length || sharedGroups.size || grouped.size || rankReasons.length || areaComparisons.length ? '확인한 조건은 위에서 비교했습니다. 아래 공식 조항은 서비스의 원문 검토가 더 필요합니다.' : '현재 확보한 자료로 신청 조건을 비교할 수 없습니다. 개인 정보 미입력이나 신청 자격 불일치로 판단하지 않습니다.'}</p>
       {!!source.diagnostics.length && <ul className="qualification-source-diagnostics">{source.diagnostics.map((item, index) => <li key={`${item.stage}-${item.code}-${index}`}><strong>{SOURCE_STAGE_LABEL[item.stage] || '공고 자료 확인'}</strong><span>{item.message}</span>{!!item.missingItems?.length && <small>미확보 항목: {item.missingItems.join(' · ')}</small>}{!demoMode && safeHref(item.evidenceUrl) && <a href={safeHref(item.evidenceUrl)} target="_blank" rel="noopener noreferrer">관련 원문 <ExternalLink size={12} /></a>}</li>)}</ul>}
       {!!source.topics.length && <MissingSourceTopics topics={source.topics} demoMode={demoMode} />}

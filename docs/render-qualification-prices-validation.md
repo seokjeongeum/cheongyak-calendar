@@ -6,12 +6,12 @@
 
 | 공고 | 확인한 내용 |
 | --- | --- |
-| [인천가정2 A-2](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69224266) | 신혼·예비신혼·한부모 세 경로, 금회 2026-10-30 기준, 최초 2024-01-03 공고, 통장·소득·자산 면제, 모기지와 입주 증빙 |
+| [인천가정2 A-2](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69224266) | 신혼·예비신혼·한부모 세 경로, 금회 2026-10-30 기준, [최초 2024-01-03 공고](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=55799296), 통장·소득·자산 면제, 모기지와 입주 증빙 |
 | [수원 광교 정정](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69315656) | 4호, 4016동 2603호 총액 939,000,000원 · 계약금 93,900,000원 · 잔금 845,100,000원 |
 | [아산 엘크루](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69142995) | 101동 101호 총액 121,750,000원, 전용 84.6814㎡ · 공급 109.6254㎡ |
 | [안성 동인힐타운](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69290744) | 14호, A동 102호 총액 110,000,000원, 전용 59.71㎡ · 공급 73.02㎡ |
 | [빛가람 LH3](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=68963717) | 141호, 301동 204호 총액 186,300,000원 |
-| [창원](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=67196474) | 관리비예치금 238,000원·236,000원, 단지별 별도 비용 |
+| [창원](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=67196474) | [공급가격표](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=67196489) 두 호의 총액 331,000,000원·88,000,000원, 관리비예치금 238,000원·236,000원 |
 | [중동 경남아너스빌](https://apply.lh.or.kr/lhapply/lhFile.do?fileid=69298075) | 8호, 323,000,000원인 1104·1204·1604호 각각 표시 |
 
 청약홈 2026000523의 원래 상세 주소에서 공식 첨부를 확보했다. 광교 국민주택 공고 두 건은 표의 24개월·24회와 세대주·무주택·당첨 이력 제한을 읽었다. 중앙하이츠 민영주택은 24개월, 네 전용면적 구간의 예치금, 규제지역 세대 조건을 읽었으며 10월 29일 기준일과 10월 30일 정정일을 구분했다.

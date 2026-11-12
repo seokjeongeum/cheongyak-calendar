@@ -28,6 +28,12 @@ ROOM_ROW = re.compile(
     r"(?P<exclusive>\d{1,3}\.\d{1,6})\s+(?P<common>\d{1,3}\.\d{1,6})"
     r"(?P<areas>[\d.\s]{0,100}?)\s+" + AMOUNTS
 )
+APPENDIX_ROW = re.compile(
+    r"(?m)^\s*\d+\s+(?P<site>[가-힣A-Za-z0-9 ·-]+?)\s+(?P<building>[1-9]\d{1,4})\s+"
+    r"(?P<room>" + ROOMS + r")\s+(?P<supply>\d{1,3}\.\d{1,6})\s+"
+    r"(?P<exclusive>\d{1,3}\.\d{1,6})\s+(?P<common>\d{1,3}\.\d{1,6})"
+    r"(?P<areas>[\d. \t]{0,100}?)\s+" + AMOUNTS
+)
 
 
 def _compact(value: str) -> str:
@@ -68,7 +74,7 @@ def _supply_area(match: re.Match) -> float | None:
     expected = Decimal(match["exclusive"]) + Decimal(match["common"])
     # Some PDFs join two adjacent values. Do not turn that joined token into
     # a huge area, and never present a computed subtotal as a printed value.
-    for token in match["areas"].split():
+    for token in (match["supply"],) if "supply" in match.groupdict() else match["areas"].split():
         value = re.fullmatch(r"\d{1,3}\.\d{2,6}", token)
         if value:
             parsed = Decimal(token)
@@ -125,7 +131,14 @@ def parse_price_tables(pages: list[dict], *, url: str, digest: str, payload: dic
     # to their existing deposit/monthly parser.
     if not sale:
         return {"prices": [], "rules": [], "complete": False, "price_identity_confirmed": False}
-    bound = _identity(payload, whole, url=url, digest=digest)
+    appendix_reference = (payload or {}).get("price_appendix_reference") or {}
+    cutoff = str((payload or {}).get("announcement_date") or "")[:10]
+    reference_date = re.search(r"(?:20)?(\d{2})[.]\s*(\d{1,2})[.]\s*(\d{1,2})[.]?\s*기준", whole[:280])
+    appendix = bool(appendix_reference.get("url") == url and appendix_reference.get("selected_document_hash")
+                    and reference_date and cutoff == f"20{reference_date[1]}-{int(reference_date[2]):02}-{int(reference_date[3]):02}"
+                    and re.search(r"^공급대상\s*및\s*공급가격", whole)
+                    and "면적단위" in whole[:280] and "금액단위: 원" in whole[:280])
+    bound = appendix or _identity(payload, whole, url=url, digest=digest)
     if not bound:
         return {"prices": [], "rules": [], "complete": False, "price_identity_confirmed": False}
     fallback = str((payload or {}).get("title") or "")
@@ -150,7 +163,7 @@ def parse_price_tables(pages: list[dict], *, url: str, digest: str, payload: dic
         if not headed:
             continue
         any_table = True
-        matches = list(ROW.finditer(text))
+        matches = list((APPENDIX_ROW if appendix else ROW).finditer(text))
         vertical = bool(re.search(r"(?:^|\n)동\s*\n호\s*\n", text))
         buildings = []
         if vertical:
@@ -178,7 +191,7 @@ def parse_price_tables(pages: list[dict], *, url: str, digest: str, payload: dic
                 rejected += 1
                 continue
             named = site_by_area.get(match["exclusive"], set())
-            site = next(iter(named)) if len(named) == 1 else _site(text, match.start(), fallback)
+            site = match["site"] if appendix else next(iter(named)) if len(named) == 1 else _site(text, match.start(), fallback)
             if vertical:
                 previous = [m for m in buildings if m.start() <= match.start()]
                 if not previous:

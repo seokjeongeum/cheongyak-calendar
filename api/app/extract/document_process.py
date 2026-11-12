@@ -70,6 +70,11 @@ def main():
             if reference:
                 result["original_notice_reference"] = {"evidence_page": page["page"], "evidence_text": reference[0].strip()}
                 break
+        for page in pages:
+            appendix = re.search(r"붙임\s*\d+\s*[.:]?\s*공급대상\s*및\s*공급가격[^\n]{0,100}?참고", page["text"])
+            if appendix:
+                result["price_appendix_reference"] = {"evidence_page": page["page"], "evidence_text": appendix[0]}
+                break
     return {'has_text': True, 'result': result}
 
 

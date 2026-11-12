@@ -20,6 +20,15 @@ UNRANKED_RESTRICTIONS = [
      "pattern": r"공급질서교란자로서\s*그\s*제한기간\s*중에\s*있는\s*분"},
 ]
 
+# Separate from current admission. The current document explicitly adopts
+# omitted terms, and the original is pinned to the reviewed current bytes.
+REVIEWED_ORIGINAL_NOTICES = {
+    ("78375699d415f49509c53643e947d39b071a2c64a8363b4130fe50f65d80bca6", "2024-01-03"): {
+        "url": "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=55799296",
+        "document_hash": "378f91cbc57ca9f16a6511eba0da30efa3bc50ca55af7d702dc4672982257e43",
+    },
+}
+
 REVIEWED_SOURCES = {
     "2026910249": {
         "title": "세종 우미 린 센터파크 무순위(사후)", "announcement_date": "2026-10-01", "housing_kind": "private",

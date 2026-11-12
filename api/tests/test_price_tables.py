@@ -92,3 +92,23 @@ def test_grouped_rooms_and_interim_payment_without_converting_rental_amounts():
     assert [c.kind for c in prices[0].payment_components] == ["down_payment", "interim_payment", "balance"]
     rental = [{"page": 1, "text": "테스트단지 임대 모집공고일 2026.11.12. 전용면적 임대보증금 계약금 잔금 월임대료"}]
     assert not parse_price_tables(rental, url="https://apply.lh.or.kr/current.pdf", digest="a" * 64, payload=payload)["rules"]
+
+
+def test_changwon_price_appendix_requires_selected_primary_and_its_printed_date():
+    url = "https://apply.lh.or.kr/lhapply/lhFile.do?fileid=67196489"
+    digest = "3cbef63cfd6e3b73909d22f1bb8ddbdeb13ff5a54303c3ddf8b1b17e35eb37ee"
+    pages = [{"page": 1, "text": """공급대상 및 공급가격 - '26.06.10. 기준
+(면적단위: ㎡, 금액단위: 원)
+순번 동 호 계약면적단지 분양가격(원)공급면적 공용면적
+계 전용 주거공용 기타공용 지하주차장 총 주택가격 계약금(10%) 잔금
+1 우림필유 114 301 112.4600 84.9900 27.4700 2.6600 32.7300 148.9100 331,000,000 33,100,000 297,900,000
+2 청안해오름 103 1501 112.9928 84.9170 28.0758 0.0000 18.1210 131.1138 88,000,000 8,800,000 79,200,000"""}]
+    payload = FIXTURES["67196474"]["payload"]
+    assert not parse_price_tables(pages, url=url, digest=digest, payload=payload)["prices"]
+    linked = {**payload, "price_appendix_reference": {"url": url, "selected_document_hash": FIXTURES["67196474"]["document_hash"]}}
+    parsed = parse_price_tables(pages, url=url, digest=digest, payload=linked)
+    prices, _ = project_prices([], parsed["rules"])
+    assert {(p.building, p.room, p.amount_krw, p.supply_area_sqm) for p in prices} == {
+        ("114", "301", 331_000_000, 112.46), ("103", "1501", 88_000_000, 112.9928),
+    }
+    assert not parse_price_tables(pages, url=url, digest=digest, payload={**linked, "announcement_date": "2026-06-11"})["prices"]
