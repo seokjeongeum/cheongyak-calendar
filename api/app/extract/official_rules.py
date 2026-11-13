@@ -427,7 +427,14 @@ def _parse_official_rules(pages: list[dict], *, url: str, digest: str, payload: 
                            if nonrank_apt and expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff else None)
     ranked_correction = _ranked_correction_evidence(pages, cutoff) if cutoff and not nonrank_apt else None
     corrected_feed_date = bool(ranked_correction and str(expected_cutoff)[:10] == ranked_correction["date"])
-    context_conflict = bool(expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff and not correction_evidence and not corrected_feed_date)
+    # The provider's correction page and reviewed attachment explicitly keep
+    # the original eligibility date. A later feed date is not a new cutoff.
+    from .reviewed_sources import reviewed_lh_correction_cutoff
+    reviewed_cutoff = reviewed_lh_correction_cutoff(
+        str(payload.get("official_url") or ""), payload.get("announcement_date"), url, digest,
+    ) if cutoff and not nonrank_apt else None
+    context_conflict = bool(expected_cutoff and cutoff and str(expected_cutoff)[:10] != cutoff
+                            and not correction_evidence and not corrected_feed_date and reviewed_cutoff != cutoff)
     manage_no = (parse_qs(urlparse(str(payload.get("official_url", ""))).query).get("houseManageNo") or [None])[0]
     # An exact current attachment URL carries the notice identifier even
     # when the PDF does not print it. Qualification date is checked separately.

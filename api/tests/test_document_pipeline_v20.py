@@ -59,6 +59,52 @@ async def test_original_endpoint_precedes_alias_and_success_resolves_discovery(m
 
 
 @pytest.mark.asyncio
+async def test_successful_detail_with_no_attachment_reports_the_attachment_gap():
+    def handler(request):
+        return httpx.Response(200, text='<p>Official details without an attachment</p>') if str(request.url) == PAGE else httpx.Response(404)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await pipeline.enrich_notice({'official_url': PAGE}, client, allow_gemini=False)
+    assert [(e['code'], e['status']) for e in entries(result)] == [
+        ('announcement_download_failed', 'resolved'), ('attachment_not_found', 'error'),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_gdco_same_host_file_fallback_and_restricted_path(monkeypatch):
+    url = 'https://www.gdco.co.kr/lib/fileDown3.php?filename=/file_upload/NOTI/1782979318_0.pdf&intIdx=10555'
+    fallback = 'https://www.gdco.co.kr/file_upload/NOTI/1782979318_0.pdf'
+    assert pipeline.gdco_attachment_fallback_url(url) == fallback
+    assert pipeline.gdco_attachment_fallback_url(url.replace('NOTI/', 'NOTI/../')) is None
+    calls = []
+
+    def handler(request):
+        calls.append(str(request.url))
+        return httpx.Response(200, content=b'%PDF-current' if str(request.url) == fallback else b'<script>error</script>')
+
+    async def process(*args, **kwargs):
+        return {'has_text': True, 'result': local_document(fallback, kwargs['digest'])}
+
+    monkeypatch.setattr(pipeline, '_isolated_document_operation', process)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await pipeline.extract_local_document(url, client)
+    assert calls == [url, fallback]
+    assert result['document_url'] == fallback
+    assert any(e['code'] == 'direct_attachment_succeeded' for e in result['diagnostics'])
+
+
+@pytest.mark.asyncio
+async def test_changed_reviewed_mirror_bytes_are_rejected_before_document_processing(monkeypatch):
+    async def process(*args, **kwargs):
+        pytest.fail('Changed mirror bytes must be rejected before local parsing')
+
+    monkeypatch.setattr(pipeline, '_isolated_document_operation', process)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, content=b'%PDF-changed'))) as client:
+        result = await pipeline.extract_local_document(PDF, client, expected_digest='a' * 64)
+    assert result['identity_status'] == 'mismatch'
+    assert result['document_hash'] is None and result['prices'] == [] and result['rules'] == []
+
+
+@pytest.mark.asyncio
 async def test_transient_network_failure_is_retried_without_raw_exception(monkeypatch):
     monkeypatch.setattr(pipeline, 'DOWNLOAD_RETRY_DELAY_SECONDS', 0)
     attempts = []

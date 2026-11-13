@@ -5,6 +5,7 @@ types. A changed file is reparsed, never supplied old conditions by URL alone.
 The hashes/validation pages are recorded for reproducible source comparison.
 """
 
+from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 from .current_regional_sources import CURRENT_REGIONAL_SOURCES
@@ -28,6 +29,50 @@ REVIEWED_ORIGINAL_NOTICES = {
         "document_hash": "378f91cbc57ca9f16a6511eba0da30efa3bc50ca55af7d702dc4672982257e43",
     },
 }
+
+# LH's copies print the same Applyhome management number and qualification
+# cutoff. Both S-1 and B-1 use the reviewed corrected PDF, not the superseded
+# initial attachment. Their own publication identities remain unchanged.
+_REVIEWED_APPLYHOME_MIRRORS = {
+    "2026000531": ("2026-10-23", "69171330", "15d6fd9f5e015606f16367616f66062a1132294867a6d12544ba630887d19fb9"),
+    "2026000533": ("2026-10-30", "69296327", "68487187e9eaff6d78b9b0e1ce3568c0806151c84ca5d51418b832ff6c5baa42"),
+    "2026820015": ("2026-11-06", "69314535", "5a884b31e9c6d12be15f8d0c40d4f10c1781cfc70c48bc7199dce053079abd5e"),
+    "2026820013": ("2026-10-30", "69223600", "a8f9f4511ae2db83267f03ea5a1201789f33153e1aa8984db534fd410baa0553"),
+}
+_LH_FILE_URL = "https://apply.lh.or.kr/lhapply/lhFile.do?fileid="
+
+
+def reviewed_applyhome_mirror(official_url: str, announcement_date: str | date | None) -> tuple[str, str] | None:
+    """Resolve a reviewed official LH copy by exact Applyhome IDs and date."""
+    parsed = urlparse(official_url)
+    if (parsed.scheme != "https" or parsed.netloc not in {"www.applyhome.co.kr", "applyhome.co.kr"}
+            or parsed.path not in {"/ai/aia/selectAPTLttotPblancDetail.do", "/ai/aia/selectAPTLttotPblancDetailView.do"}
+            or parsed.fragment or parsed.params):
+        return None
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    numbers = params.get("houseManageNo", [])
+    if len(numbers) != 1 or params.get("pblancNo") != numbers:
+        return None
+    mirror = _REVIEWED_APPLYHOME_MIRRORS.get(numbers[0])
+    if mirror is None or mirror[0] != str(announcement_date or "")[:10]:
+        return None
+    return _LH_FILE_URL + mirror[1], mirror[2]
+
+
+def reviewed_lh_correction_cutoff(official_url: str, announcement_date: str | date | None,
+                                 document_url: str, digest: str) -> str | None:
+    """The S-1 correction retains October 23 despite its later feed date."""
+    parsed = urlparse(official_url)
+    cutoff, file_id, reviewed_digest = _REVIEWED_APPLYHOME_MIRRORS["2026000531"]
+    if (parsed.scheme == "https" and parsed.netloc == "apply.lh.or.kr"
+            and parsed.path == "/lhapply/apply/wt/wrtanc/selectWrtancInfo.do"
+            and not parsed.fragment and not parsed.params
+            and parse_qs(parsed.query, keep_blank_values=True).get("panId") == ["0000061195"]
+            and str(announcement_date or "")[:10] == "2026-10-27"
+            and (document_url, digest) == (_LH_FILE_URL + file_id, reviewed_digest)):
+        return cutoff
+    return None
+
 
 REVIEWED_SOURCES = {
     "2026910249": {

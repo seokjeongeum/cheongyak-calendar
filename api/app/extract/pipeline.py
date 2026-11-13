@@ -87,6 +87,7 @@ def document_diagnostic(stage: str, code: str, url: str, *, status: str = "error
         "attachment_not_found": "공식 공고 페이지에서 모집공고문 첨부를 찾지 못했습니다.",
         "attachment_found": "공식 모집공고문 첨부를 찾았습니다.",
         "attachment_fallback_succeeded": "동일한 공식 첨부의 청약홈 www 경로에서 원문을 확보했습니다.",
+        "direct_attachment_succeeded": "공식 게시판이 지정한 파일 경로에서 원문을 확보했습니다.",
         "document_download_failed": "공식 모집공고문 파일을 내려받지 못했습니다.",
         "document_downloaded": "공식 모집공고문 파일을 내려받았습니다.",
         "download_retry_succeeded": "일시적인 서버 오류 뒤 같은 공식 주소에서 파일을 내려받았습니다.",
@@ -247,6 +248,16 @@ def applyhome_attachment_fallback_url(url: str) -> str | None:
             or not all(re.fullmatch(r"\d+", (query.get(key) or [""])[0]) for key in ("atchmnflSeqNo", "atchmnflSn"))):
         return None
     return parsed._replace(netloc="www.applyhome.co.kr").geturl()
+
+
+def gdco_attachment_fallback_url(url: str) -> str | None:
+    parsed = urlparse(url)
+    paths = parse_qs(parsed.query).get("filename", [])
+    if (parsed.scheme == "https" and parsed.hostname == "www.gdco.co.kr"
+            and parsed.path == "/lib/fileDown3.php" and len(paths) == 1
+            and re.fullmatch(r"/file_upload/NOTI/\d+_\d+\.(?:pdf|hwp|hwpx)", paths[0], re.I)):
+        return parsed._replace(path=paths[0], query="").geturl()
+    return None
 
 
 def _retain_same_hash_regions(previous: list[dict], incoming: list[dict], digest: str) -> list[dict]:
@@ -712,9 +723,14 @@ def document_pages(url: str, data: bytes, content_type: str) -> list[dict]:
     return pages
 
 
-async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload: dict | None = None) -> dict:
+async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload: dict | None = None,
+                                 expected_digest: str | None = None) -> dict:
     diagnostics = []
     fallback = applyhome_attachment_fallback_url(url)
+    succeeded_code = "attachment_fallback_succeeded"
+    if fallback is None:
+        fallback = gdco_attachment_fallback_url(url)
+        succeeded_code = "direct_attachment_succeeded"
     try:
         data, content_type = await _download(url, client, diagnostics=diagnostics)
     except (httpx.HTTPError, ValueError) as exc:
@@ -731,7 +747,7 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
             raise DocumentDownloadFailed([*_download_failures(exc, url), document_diagnostic("decode", "unexpected_response", fallback)]) from exc
         previous_failures = _download_failures(exc, url)
         previous_url = previous_failures[-1].get("evidence_url", url) if previous_failures else url
-        diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
+        diagnostics.append({**document_diagnostic("download", succeeded_code, fallback, status="ok"),
             "previous_url": previous_url,
             **({"original_url": url} if previous_url != url else {}),
             "previous_attempt_count": len(previous_failures),
@@ -745,12 +761,17 @@ async def extract_local_document(url: str, client: httpx.AsyncClient, *, payload
             diagnostics.extend(_download_failures(exc, fallback))
         else:
             if alternative.startswith((b"%PDF", b"PK", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")):
-                diagnostics.append({**document_diagnostic("download", "attachment_fallback_succeeded", fallback, status="ok"),
+                diagnostics.append({**document_diagnostic("download", succeeded_code, fallback, status="ok"),
                     "previous_url": original_url})
                 url, data, content_type = fallback, alternative, alternative_type
             else:
                 diagnostics.append(document_diagnostic("decode", "unexpected_response", fallback))
     digest = hashlib.sha256(data).hexdigest()
+    if expected_digest and digest != expected_digest:
+        diagnostics.append({**document_diagnostic("identity", "current_document_mismatch", url),
+                            "attachment_hash": digest})
+        return {"status": "unreadable", "identity_status": "mismatch", "document_hash": None,
+                "document_url": url, "rules": [], "prices": [], "diagnostics": diagnostics}
     source_format = "pdf" if data.startswith(b"%PDF") else "hwp" if data.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1") else "hwpx" if data.startswith(b"PK") else "unknown"
     diagnostics.append(document_diagnostic("download", "document_downloaded", url, status="ok", source_format=source_format))
     processed = {}
@@ -953,6 +974,7 @@ async def enrich_notice(
     official_url = str(payload.get("official_url") or "")
     diagnostics = []
     candidates = {}
+    reviewed_mirror = None
     link_token = None
     if not _trusted_url(official_url):
         return _with_diagnostics(enriched, [document_diagnostic("discovery", "provider_not_supported", "")], "unsupported")
@@ -965,12 +987,14 @@ async def enrich_notice(
         else:
             links = []
             candidates = {}
+            inspected_page = False
             for current_page_url in announcement_page_candidates(official_url):
                 try:
                     page_bytes, content_type = await _download(current_page_url, client, diagnostics=diagnostics, stage="discovery")
                     if page_bytes.startswith((b"%PDF", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", b"PK")):
                         links = [current_page_url]
                     else:
+                        inspected_page = True
                         page_html = _decode_page(page_bytes, content_type)
                         discovered = find_document_candidates(page_html, current_page_url)
                         links = [item["url"] for item in discovered]
@@ -981,10 +1005,21 @@ async def enrich_notice(
                     if links:
                         break
                 except (httpx.HTTPError, ValueError) as exc:
-                    diagnostics.extend(_download_failures(exc, current_page_url, stage="discovery"))
+                    failures = _download_failures(exc, current_page_url, stage="discovery")
+                    if inspected_page:
+                        for failure in failures:
+                            failure["status"] = "resolved"
+                            failure.pop("missing_items", None)
+                            failure["resolution_message"] = "공식 상세 페이지는 열람했으며 이 대체 주소는 사용할 수 없습니다."
+                    diagnostics.extend(failures)
             # Current official discovery takes precedence; stored provenance
             # is a fallback only for this already-retained document identity.
             retained_links = _persisted_document_urls(enriched)
+            if not links:
+                from .reviewed_sources import reviewed_applyhome_mirror
+                reviewed_mirror = reviewed_applyhome_mirror(official_url, payload.get("announcement_date"))
+                if reviewed_mirror:
+                    links = [reviewed_mirror[0]]
             links = list(dict.fromkeys([*links, *retained_links]))
             seen_attachments = set()
             unique_links = []
@@ -1040,7 +1075,8 @@ async def enrich_notice(
                     # same labelled document contributes no separate clauses.
                     continue
             try:
-                local = await extract_local_document(link, client, payload=payload)
+                local = await extract_local_document(link, client, payload=payload,
+                    **({"expected_digest": reviewed_mirror[1]} if reviewed_mirror and link == reviewed_mirror[0] else {}))
                 entries = [{**entry, "document_role": role} for entry in local["diagnostics"]]
                 diagnostics.extend(entries)
                 conditions = sum(r.get("effect") != "metadata" for r in local.get("rules", [])) + int(_has_reviewed_geography(local.get("rules", [])))
