@@ -112,3 +112,17 @@ def test_changwon_price_appendix_requires_selected_primary_and_its_printed_date(
         ("114", "301", 331_000_000, 112.46), ("103", "1501", 88_000_000, 112.9928),
     }
     assert not parse_price_tables(pages, url=url, digest=digest, payload={**linked, "announcement_date": "2026-06-11"})["prices"]
+
+
+def test_actual_a2_price_tiers_use_printed_thousand_won_and_separate_unit_options():
+    fixture = json.loads((Path(__file__).parent / "fixtures" / "public-family-a2-20261030.json").read_text())
+    parsed = parse_price_tables(fixture["pages"], url=fixture["document_url"], digest=fixture["document_hash"], payload=fixture["payload"])
+    prices, costs = project_prices([PricePublic(source="lh", **p) for p in parsed["prices"]], parsed["rules"])
+    assert len(prices) == 4 and len(costs) == 9
+    assert len({(cost.building, cost.room) for cost in costs}) == 9
+    assert next(cost for cost in costs if (cost.building, cost.room) == ("208", "1203")).amount_krw == 10_972_000
+    row = next(p for p in prices if p.unit_type == "55C · 3층")
+    assert row.amount_krw == 363_300_000 and row.price_kind == "sale_total"
+    assert [c.amount_krw for c in row.payment_components] == [36_330_000, 271_970_000, 55_000_000]
+    assert "이용 불가" in row.payment_components[-1].label
+    assert row.evidence_page == 4 and all(cost.evidence_page == 5 for cost in costs)

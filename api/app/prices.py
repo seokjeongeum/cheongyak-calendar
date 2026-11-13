@@ -57,27 +57,30 @@ def project_prices(prices: list[PricePublic], rules: list[dict], preferred_hash:
     details = [entry for rule in accepted if rule.get("kind") == "price_details" for entry in rule.get("entries", [])
                if isinstance(entry, dict) and entry.get("document_hash") == rule.get("document_hash")]
     details.sort(key=lambda entry: entry.get("document_hash") != preferred_hash)
-    seen: dict[str, str] = {}
+    seen: dict[tuple[str, str], str] = {}
     for entry in details:
         amount = entry.get("amount_krw")
-        key = (entry.get("dwelling_identity"), entry.get("document_hash"))
-        if (not isinstance(key[0], str) or not key[0] or not isinstance(entry.get("unit_type"), str) or type(amount) is not int or amount <= 0
+        dwelling = entry.get("dwelling_identity")
+        identifier = dwelling or entry.get("price_row_key")
+        key = ("dwelling" if dwelling else "tier", identifier)
+        digest = entry.get("document_hash")
+        if (not isinstance(identifier, str) or not identifier or not isinstance(entry.get("unit_type"), str) or type(amount) is not int or amount <= 0
                 or entry.get("verification") != "official" or not entry.get("evidence_text")):
             continue
         components = [_cost(component, entry) for component in entry.get("payment_components", []) if isinstance(component, dict)]
         if (not components or any(c is None for c in components)
                 or len({c.kind for c in components if c is not None}) != len(components)
-                or any(c.kind not in {"down_payment", "interim_payment", "balance"} for c in components if c is not None)
+                or any(c.kind not in {"down_payment", "interim_payment", "balance", "housing_fund"} for c in components if c is not None)
                 or sum(c.amount_krw for c in components if c is not None) != amount):
             continue
         matching = [price for price in result if price.unit_type == entry.get("unit_type")
                     and price.amount_krw == amount and price.price_kind in {"sale", "sale_total"}
                     and price.document_hash == entry.get("document_hash")]
-        if key[0] in seen:
-            if seen[key[0]] != key[1]:
+        if key in seen:
+            if seen[key] != digest:
                 result = [price for price in result if not any(price is row for row in matching)]
             continue
-        seen[key[0]] = key[1]
+        seen[key] = digest
         if matching:
             price = matching[0]
             result = [p for p in result if p is price or p not in matching]
@@ -87,11 +90,12 @@ def project_prices(prices: list[PricePublic], rules: list[dict], preferred_hash:
             price = PricePublic(source="official_conditions", unit_type=entry["unit_type"], price_kind="sale_total",
                                 amount_krw=amount, verification="official", area_sqm=entry.get("exclusive_area_sqm"),
                                 evidence_url=entry.get("evidence_url"), evidence_text=entry.get("evidence_text"),
-                                document_hash=entry.get("document_hash"), basis_label="동·호별 총분양가")
+                                document_hash=entry.get("document_hash"), basis_label=entry.get("basis_label") or "동·호별 총분양가")
             result.append(price)
         for field in ("exclusive_area_sqm", "supply_area_sqm", "dwelling_identity", "unit_type_code", "building", "room"):
             setattr(price, field, entry.get(field))
-        price.area_basis = "exclusive"
+        if price.exclusive_area_sqm is not None:
+            price.area_basis = "exclusive"
         price.evidence_page = entry.get("evidence_page")
         price.payment_components = [c for c in components if c is not None]
     costs, cost_keys = [], set()

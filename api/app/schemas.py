@@ -25,6 +25,8 @@ class CostPublic(BaseModel):
     unit: Literal["KRW"] = "KRW"
     site_name: str | None = None
     dwelling_identity: str | None = None
+    building: str | None = None
+    room: str | None = None
     exclusive_area_sqm: float | None = None
     verification: str = "unknown"
     evidence_url: str | None = None

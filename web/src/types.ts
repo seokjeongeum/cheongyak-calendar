@@ -16,6 +16,8 @@ export interface NoticeCost {
   unit?: 'KRW'
   site_name?: string | null
   dwelling_identity?: string | null
+  building?: string | null
+  room?: string | null
   exclusive_area_sqm?: number | null
   verification?: Verification | null
   evidence_url?: string | null

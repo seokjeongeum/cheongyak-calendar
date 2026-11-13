@@ -90,6 +90,55 @@ def _supply_area(match: re.Match) -> float | None:
     return None
 
 
+def _family_sale_tables(pages: list[dict], *, url: str, digest: str) -> tuple[list[dict], list[dict]]:
+    """Extract the explicitly printed residual family price tiers and options."""
+    tiers, options = [], []
+    for page in pages:
+        text = page["text"]
+        sale = re.search(r"분양가격\s*\([^)]*추가선택품목비용\s*별도[^)]*\)[^■]{0,900}?\[단위\s*:\s*천원\]([^※■]{1,1200})", text)
+        if sale and all(term in sale[1] for term in ("계약금", "잔금", "융자금", "주택가격")):
+            last_type = None
+            row = re.compile(r"^(?:\d{3}\.\d{4}[A-Z]\s+)?(?:(\d{2,3}[A-Z])\s+)?"
+                             r"(\d+층(?:\s*~\s*최상층)?)\s+기본형\s+"
+                             r"(" + MONEY + r")\s+(" + MONEY + r")\s+(" + MONEY + r")\s+(" + MONEY + r")$")
+            for line in sale[1].splitlines():
+                match = row.fullmatch(line.strip())
+                if not match:
+                    continue
+                last_type = match[1] or last_type
+                if last_type is None:
+                    continue
+                total, down, balance, fund = (int(value.replace(",", "")) * 1000 for value in match.groups()[2:])
+                if total != down + balance + fund:
+                    continue
+                tier = match[2]
+                label = f"{last_type} · {tier}"
+                evidence = _evidence(url, digest, page, _normal(sale[0][:240]) + " / " + match[0])
+                fund_label = "공고 표의 주택도시기금"
+                if re.search(r"주택도시\s*기금\s*융자액[^■]{0,100}?받으실\s*수\s*없습니다", _normal(text)):
+                    fund_label += " (수분양자 이용 불가)"
+                components = [{"kind": kind, "label": name, "amount_krw": amount, **evidence}
+                              for kind, name, amount in (("down_payment", "계약금", down), ("balance", "잔금", balance),
+                                                         ("housing_fund", fund_label, fund))]
+                tiers.append({"unit_type": label, "unit_type_code": last_type, "price_row_key": label,
+                              "amount_krw": total, "basis_label": "주택형·층별 분양가격 · 별도 옵션비 제외",
+                              "payment_components": components, **evidence})
+        option = re.search(r"납부조건\s*\(단위\s*:\s*천원\)[^■]{0,300}?주택타입\s+동-호\s+선택품목\s+합계\s+계약금\s+잔금([^■]{1,5500}?)(?=\n\s*\d+\.\s+입주금|$)", text)
+        if not option:
+            continue
+        starts = list(re.finditer(r"(?m)^\s*합\s*계\s+(" + MONEY + r")\s+(" + MONEY + r")\s+(" + MONEY + r")[ \t]*$", option[1]))
+        for index, match in enumerate(starts):
+            body = option[1][match.end():starts[index + 1].start() if index + 1 < len(starts) else len(option[1])]
+            rooms = set(re.findall(r"(?<![\d-])(\d{2,5})-(\d{3,5})(?![\d-])", body))
+            total, down, balance = (int(value.replace(",", "")) * 1000 for value in match.groups())
+            if len(rooms) != 1 or total != down + balance:
+                continue
+            building, room = rooms.pop()
+            options.append({"kind": "options_total", "label": "발코니 확장·선택품목 합계", "building": building, "room": room,
+                            "amount_krw": total, **_evidence(url, digest, page, _normal(match[0] + body))})
+    return tiers, options
+
+
 def _identity(payload: dict | None, whole: str, *, url: str, digest: str) -> bool:
     """Bind to the current publication, without replacing it by a prior date."""
     if not payload:
@@ -246,6 +295,13 @@ def parse_price_tables(pages: list[dict], *, url: str, digest: str, payload: dic
             costs.append({"kind": "management_deposit", "label": "관리비예치금", "site_name": name,
                           "exclusive_area_sqm": float(match[2]), "amount_krw": amount,
                           **_evidence(url, digest, page, match[0])})
+    if "신혼희망타운" in whole:
+        tiers, options = _family_sale_tables(pages, url=url, digest=digest)
+        details.extend(tiers)
+        costs.extend(options)
+        prices.extend({"unit_type": row["unit_type"], "price_kind": "sale_total", "amount_krw": row["amount_krw"],
+                       "basis_label": row["basis_label"], **{key: row[key] for key in
+                       ("verification", "document_hash", "evidence_url", "evidence_text")}} for row in tiers)
     if not details and not costs:
         return {"prices": [], "rules": [], "complete": False, "price_identity_confirmed": bound}
     first = details[0] if details else costs[0]
@@ -253,11 +309,13 @@ def parse_price_tables(pages: list[dict], *, url: str, digest: str, payload: dic
     facts = []
     if details:
         facts.append(_rule("price_details", evidence, entries=details))
-        facts.append(_rule("unit_exclusive_areas", evidence, units=[{"unit_type": d["unit_type"], "exclusive_area_sqm": d["exclusive_area_sqm"]} for d in details]))
+        areas = [{"unit_type": d["unit_type"], "exclusive_area_sqm": d["exclusive_area_sqm"]} for d in details if d.get("exclusive_area_sqm")]
+        if areas:
+            facts.append(_rule("unit_exclusive_areas", evidence, units=areas))
     if costs:
         facts.append(_rule("additional_costs", evidence, entries=costs))
     facts.append(_rule("price_extraction", evidence, status="partial" if rejected else "complete",
-                       dwelling_count=len(details), rejected_rows=rejected, price_table_found=any_table,
+                       dwelling_count=sum("dwelling_identity" in row for row in details), rejected_rows=rejected, price_table_found=any_table or bool(details),
                        replaces_unverified=True, identity_confirmed=bound))
     return {"prices": prices, "rules": facts, "complete": not rejected,
             "price_identity_confirmed": bound}
